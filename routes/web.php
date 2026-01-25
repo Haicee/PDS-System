@@ -7,8 +7,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Dashboard Route
 Route::get('/dashboard', function () {
-    // Static sample figures for quick UI iteration/testing pero diri e call ffrom database
+    // Static sample 
     $stats = [
         'totalEmployees' => 128,
         'verifiedEmployees' => 117,
@@ -130,67 +131,277 @@ Route::get('/dashboard', function () {
     return view('dashboard', compact('stats'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+
+
+
+//PDS Review
 Route::get('/pds-form', function () {
     return view('pds-form');
 })->middleware(['auth', 'verified'])->name('pds.form');
 
+
+
+
+
+//Manage User Data sample
+if (! function_exists('manageUserEmployees')) {
+    function manageUserEmployees(): array
+    {
+        return [
+            [
+                'name' => 'Darlene Robertson',
+                'avatar' => 'https://i.pravatar.cc/96?img=47',
+                'department' => 'NSAP',
+                'email' => 'alma.lawson@example.com',
+                'phone' => '09514785214',
+                'type' => 'Permanent',
+                'status' => 'Active',
+                'location' => 'BFAR Regional HQ – Lagao, GenSan',
+            ],
+            [
+                'name' => 'Annette Black',
+                'avatar' => 'https://i.pravatar.cc/96?img=32',
+                'department' => 'PFO',
+                'email' => 'bill.sanders@example.com',
+                'phone' => '09514785214',
+                'type' => 'Job On Call',
+                'status' => 'Inactive',
+                'location' => 'General Santos Fish Port Complex',
+            ],
+            [
+                'name' => 'Ronald Richards',
+                'avatar' => 'https://i.pravatar.cc/96?img=12',
+                'department' => 'NSAP',
+                'email' => 'weaver@example.com',
+                'phone' => '09514785214',
+                'type' => 'Permanent',
+                'status' => 'Active',
+                'location' => 'City Hall Annex – San Isidro, GenSan',
+            ],
+            [
+                'name' => 'Ralph Edwards',
+                'avatar' => 'https://i.pravatar.cc/96?img=5',
+                'department' => 'PFO',
+                'email' => 'simmons@example.com',
+                'phone' => '09514785214',
+                'type' => 'Job On Call',
+                'status' => 'Inactive',
+                'location' => 'Tambler Fisheries Support Office',
+            ],
+            [
+                'name' => 'Devon Lane',
+                'avatar' => 'https://i.pravatar.cc/96?img=65',
+                'department' => 'HR',
+                'email' => 'devon.lane@example.com',
+                'phone' => '09514785214',
+                'type' => 'Permanent',
+                'status' => 'Active',
+                'location' => 'Tinagacan Satellite Desk, GenSan',
+            ],
+            [
+                'name' => 'Darlene Robertson',
+                'avatar' => 'https://i.pravatar.cc/96?img=47',
+                'department' => 'NSAP',
+                'email' => 'alma.lawson@example.com',
+                'phone' => '09514785214',
+                'type' => 'Permanent',
+                'status' => 'Active',
+                'location' => 'BFAR Regional HQ – Lagao, GenSan',
+            ],
+            [
+                'name' => 'Annette Black',
+                'avatar' => 'https://i.pravatar.cc/96?img=32',
+                'department' => 'PFO',
+                'email' => 'bill.sanders@example.com',
+                'phone' => '09514785214',
+                'type' => 'Job On Call',
+                'status' => 'Inactive',
+                'location' => 'General Santos Fish Port Complex',
+            ],
+            [
+                'name' => 'Ronald Richards',
+                'avatar' => 'https://i.pravatar.cc/96?img=12',
+                'department' => 'NSAP',
+                'email' => 'weaver@example.com',
+                'phone' => '09514785214',
+                'type' => 'Permanent',
+                'status' => 'Active',
+                'location' => 'City Hall Annex – San Isidro, GenSan',
+            ],
+            [
+                'name' => 'Ralph Edwards',
+                'avatar' => 'https://i.pravatar.cc/96?img=5',
+                'department' => 'PFO',
+                'email' => 'simmons@example.com',
+                'phone' => '09123785214',
+                'type' => 'Job On Call',
+                'status' => 'Inactive',
+                'location' => 'Tambler Fisheries Support Office',
+            ],
+            [
+                'name' => 'Devon Lane',
+                'avatar' => 'https://i.pravatar.cc/96?img=65',
+                'department' => 'HR',
+                'email' => 'devon.lane@example.com',
+                'phone' => '09514785214',
+                'type' => 'Permanent',
+                'status' => 'Active',
+                'location' => 'Tinagacan Satellite Desk, GenSan',
+            ],
+        ];
+    }
+}
+
+//Manage User Route
 Route::get('/manage-user', function(){
-    $employees = [
-        [
-            'name' => 'Darlene Robertson',
-            'avatar' => 'https://i.pravatar.cc/96?img=47',
-            'department' => 'NSAP',
-            'email' => 'alma.lawson@example.com',
-            'phone' => '09514785214',
-            'type' => 'Permanent',
-            'status' => 'Active',
-            'location' => 'BFAR Regional HQ – Lagao, GenSan',
-        ],
-        [
-            'name' => 'Annette Black',
-            'avatar' => 'https://i.pravatar.cc/96?img=32',
-            'department' => 'PFO',
-            'email' => 'bill.sanders@example.com',
-            'phone' => '09514785214',
-            'type' => 'Job On Call',
-            'status' => 'Inactive',
-            'location' => 'General Santos Fish Port Complex',
-        ],
-        [
-            'name' => 'Ronald Richards',
-            'avatar' => 'https://i.pravatar.cc/96?img=12',
-            'department' => 'NSAP',
-            'email' => 'weaver@example.com',
-            'phone' => '09514785214',
-            'type' => 'Permanent',
-            'status' => 'Active',
-            'location' => 'City Hall Annex – San Isidro, GenSan',
-        ],
-        [
-            'name' => 'Ralph Edwards',
-            'avatar' => 'https://i.pravatar.cc/96?img=5',
-            'department' => 'PFO',
-            'email' => 'simmons@example.com',
-            'phone' => '09514785214',
-            'type' => 'Job On Call',
-            'status' => 'Inactive',
-            'location' => 'Tambler Fisheries Support Office',
-        ],
-        [
-            'name' => 'Devon Lane',
-            'avatar' => 'https://i.pravatar.cc/96?img=65',
-            'department' => 'HR',
-            'email' => 'devon.lane@example.com',
-            'phone' => '09514785214',
-            'type' => 'Permanent',
-            'status' => 'Active',
-            'location' => 'Tinagacan Satellite Desk, GenSan',
-        ],
-    ];
+    $employees = manageUserEmployees();
 
     return view('manage-user', compact('employees'));
 })->middleware(['auth', 'verified'])->name('manage-user');
 
+
+
+if (! function_exists('buildEmployeesXlsx')) {
+    function buildEmployeesXlsx(array $columns, array $rows, array $colWidths): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
+        $zip = new ZipArchive();
+        if ($zip->open($tmp, ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Unable to create XLSX.');
+        }
+
+        $zip->addFromString('[Content_Types].xml', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>
+XML);
+
+        $zip->addFromString('_rels/.rels', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>
+XML);
+
+        $zip->addFromString('xl/_rels/workbook.xml.rels', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>
+XML);
+
+        $zip->addFromString('xl/workbook.xml', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Employees" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>
+XML);
+
+        // Styles: normal and header with green fill
+        $zip->addFromString('xl/styles.xml', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2">
+    <font><sz val="12"/><color theme="1"/><name val="Arial"/></font>
+    <font><sz val="12"/><color rgb="FFFFFFFF"/><name val="Arial"/><b/></font>
+  </fonts>
+  <fills count="3">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF0fb3e4"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="2">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center" wrapText="1"/>
+    </xf>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>
+XML);
+
+        // Worksheet
+        $sheetRows = [];
+
+        // Column widths
+        $colsXml = '<cols>';
+        foreach (array_values($colWidths) as $i => $width) {
+            $colsXml .= '<col min="' . ($i + 1) . '" max="' . ($i + 1) . '" width="' . $width . '" customWidth="1" />';
+        }
+        $colsXml .= '</cols>';
+
+        // Header row with style 1
+        $rowIndex = 1;
+        $cells = '';
+        foreach ($columns as $colIndex => $value) {
+            $cells .= '<c r="' . chr(65 + $colIndex) . $rowIndex . '" t="inlineStr" s="1"><is><t>' . htmlspecialchars($value, ENT_XML1) . '</t></is></c>';
+        }
+        $sheetRows[] = '<row r="' . $rowIndex . '">' . $cells . '</row>';
+
+        // Data rows style 0
+        foreach ($rows as $row) {
+            $rowIndex++;
+            $cells = '';
+            $values = [
+                $row['name'],
+                $row['department'],
+                $row['email'],
+                $row['phone'],
+                $row['type'],
+                $row['status'],
+                $row['location'],
+            ];
+            foreach ($values as $colIndex => $value) {
+                $cells .= '<c r="' . chr(65 + $colIndex) . $rowIndex . '" t="inlineStr" s="0"><is><t>' . htmlspecialchars($value, ENT_XML1) . '</t></is></c>';
+            }
+            $sheetRows[] = '<row r="' . $rowIndex . '">' . $cells . '</row>';
+        }
+
+        $sheetXml = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . $colsXml
+            . '<sheetData>' . implode('', $sheetRows) . '</sheetData>'
+            . '</worksheet>';
+
+        $zip->addFromString('xl/worksheets/sheet1.xml', $sheetXml);
+
+        $zip->close();
+
+        $content = file_get_contents($tmp);
+        @unlink($tmp);
+        return $content;
+    }
+}
+
+//Manage User Export Route
+Route::get('/manage-user/export', function () {
+    $employees = manageUserEmployees();
+    $columns = ['Name', 'Department', 'Email', 'Phone', 'Type', 'Status', 'Location Assigned'];
+    $colWidths = [30, 18, 32, 18, 18, 14, 36];
+
+    $xlsx = buildEmployeesXlsx($columns, $employees, $colWidths);
+
+    return response($xlsx, 200, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition' => 'attachment; filename="BFAR_Employees_' . date('Y-m-d') . '.xlsx"',
+    ]);
+})->middleware(['auth', 'verified'])->name('manage-user.export');
+
+
+
+
+
+//Profile Route
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

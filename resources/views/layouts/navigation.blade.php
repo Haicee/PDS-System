@@ -5,9 +5,9 @@
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                        <img src="{{ asset('images/Bfar logo.png') }}" class="h-14 w-auto"/>
-                         <img src="{{ asset('images/ph-logo.png') }}" class="h-14 w-auto"/>
-
+                    <img src="{{ asset('images/ph-logo.png') }}" class="h-14 w-auto"/>
+                    <img src="{{ asset('images/Bfar logo.png') }}" class="h-14 w-auto"/>
+                    <img src="{{ asset('images/gad-logo.jpg') }}" class="h-14 w-auto"/>
                 </div>
 
                 <!-- Navigation Links  -->

@@ -10,16 +10,30 @@
                     <p class="text-slate-500 text-sm">Review account status, employee type, and contact details in one place.</p>
                 </div>
                 <div class="flex gap-3">
-                    <button class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">Export CSV</button>
+                    <a href="{{ route('manage-user.export') }}" class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">
+                        Export Excel
+                    </a>
                 </div>
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-2xl border border-slate-100">
+            <!-- Search functionality, add if needed-->
+            <div class="bg-white shadow-sm sm:rounded-2xl border border-slate-100" 
+                x-data="{ 
+                    search: '',
+                    matchesSearch(name, phone, email) {
+                        if (!this.search) return true;
+                        const q = this.search.toLowerCase();
+                        return name.toLowerCase().includes(q) || 
+                        phone.toLowerCase().includes(q) || 
+                        email.toLowerCase().includes(q);
+                    },
+                }">
                 <div class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end border-b border-slate-100">
                     
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                         <div class="relative">
-                            <input type="text" placeholder="Search employee" class="w-full sm:w-64 rounded-2xl border border-slate-200 py-2 ps-9 pe-3 text-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                            <input type="text" placeholder="Search employee" class="w-full sm:w-64 rounded-2xl border border-slate-200 py-2 ps-9 pe-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                x-model.debounce.200ms="search" x-on:keydown.escape="search = ''" />
                             <span class="absolute left-3 top-2.5 text-slate-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
@@ -55,7 +69,14 @@
                                         default => 'text-rose-600 bg-rose-50',
                                     };
                                 @endphp
-                                <tr class="hover:bg-slate-50">
+                                <!-- Table Row -->
+                                <tr class="hover:bg-slate-50" 
+                                    x-data="{ name: @js($employee['name']), 
+                                                phone: @js($employee['phone']), 
+                                                email: @js($employee['email']) }" 
+
+                                    x-show="matchesSearch(name, phone, email)" 
+                                    x-cloak>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
                                             <img src="{{ $employee['avatar'] }}" alt="{{ $employee['name'] }} avatar" class="h-10 w-10 rounded-full object-cover shadow-sm">

@@ -15,7 +15,7 @@
 @endphp
 
 <x-modal :name="$name" :max-width="$width">
-    <div class="p-6 space-y-5">
+    <div class=" p-6 space-y-5">
         <div class="flex items-center gap-4">
             <img src="{{ $employee['avatar'] }}" alt="{{ $employee['name'] }} avatar" class="h-20 w-20 rounded-full object-cover shadow">
             <div class="space-y-1">
@@ -47,7 +47,7 @@
                     </span>
                 </dd>
             </div>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-4">
                 <dt class="font-semibold text-slate-500">Location Assigned</dt>
                 <dd class="text-right text-slate-500">{{ $employee['location'] }}</dd>
             </div>
