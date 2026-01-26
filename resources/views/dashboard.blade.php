@@ -5,8 +5,7 @@
         <div class="mx-auto sm:px-6 lg:px-20 space-y-10">
 
             <section class="flex flex-col items-center gap-10">
-                <!-- Top row: 2 cards -->
-                <div class="grid gap-6 sm:grid-cols-2 justify-items-center">
+                <div class="grid gap-6 sm:grid-cols-5 justify-items-center">
                     <div class="rounded-2xl bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-md shadow-sky-200/40 border border-white/10 w-72 h-36 flex">
                         <div class="p-5 sm:p-6 flex flex-col justify-between w-full">
                             <p class="text-lg font-semibold">Permanent Employees</p>
@@ -34,10 +33,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Second row: 3 cards -->
-                <div class="grid gap-6 sm:grid-cols-3 justify-items-center">
                     <div class="rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md shadow-amber-200/40 border border-white/10 w-72 h-36 flex">
                         <div class="p-5 sm:p-6 flex-col justify-between w-full">
                             <p class="text-lg font-semibold">Pending PDS</p>
@@ -80,6 +75,11 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Second row: 3 cards -->
+                <div class="grid gap-6 sm:grid-cols-3 justify-items-center">
+                    
+                </div>
             </section>
 
             <!-- Recent submissions table helps admins monitor latest activity -->
@@ -101,7 +101,7 @@
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
                                 <th class="px-6 py-3">Location Assigned</th>
-                                <th class="px-6 py-3">Submitted</th>
+                                <th class="px-6 py-3">Date Submitted</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">

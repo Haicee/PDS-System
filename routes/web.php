@@ -385,6 +385,10 @@ XML);
 
 //Manage User Export Route
 Route::get('/manage-user/export', function () {
+    if (! class_exists(ZipArchive::class)) {
+        abort(500, 'ZipArchive PHP extension is required to export XLSX. Please enable php_zip.');
+    }
+
     $employees = manageUserEmployees();
     $columns = ['Name', 'Department', 'Email', 'Phone', 'Type', 'Status', 'Location Assigned'];
     $colWidths = [30, 18, 32, 18, 18, 14, 36];
