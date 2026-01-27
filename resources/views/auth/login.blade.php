@@ -1,7 +1,7 @@
 <x-guest-layout>
-    <div class="flex items-center justify-center px-4">
+    <div class="flex items-center justify-center px-4 opacity-90">
         
-        <section class="w-full max-w-xl rounded-3xl border border-white/10 bg-white/95 p-8 shadow-2xl backdrop-blur">
+        <section class="w-full max-w-xl rounded-3xl border border-white/10 bg-white/70 p-8 shadow-2xl backdrop-blur drop-shadow-lg">
             <!-- Session Status -->
             <x-auth-session-status class="mb-6" :status="session('status')" />
 
@@ -17,7 +17,7 @@
                 <!-- Email Address -->
                 <div>
                     <label for="email" class="text-sm font-medium text-slate-700">{{ __('Email') }}</label>
-                    <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
+                    <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                         <svg class="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l7.89 5.26c.68.45 1.54.45 2.22 0L21 8"/><path d="M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg>
                         <input id="email" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" placeholder="name@bfar.gov.ph" />
                     </div>
@@ -27,7 +27,7 @@
                 <!-- Password -->
                 <div>
                     <label for="password" class="text-sm font-medium text-slate-700">{{ __('Password') }}</label>
-                    <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
+                    <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                         <svg class="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="11" width="18" height="10" rx="2" ry="2" />
                             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -55,7 +55,7 @@
                     {{ __('Log in') }}
                 </button>
 
-                <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <div class="rounded-2xl border border-slate-100 bg-slate-100 px-4 py-3 text-sm text-slate-600">
                     <p class="font-medium text-slate-800">Don't have an account yet?</p>
                     <p class="mt-1 text-slate-600">
                         It only takes a minute to set up your profile.

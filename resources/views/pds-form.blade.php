@@ -1,17 +1,309 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('PDS Form') }}
-        </h2>
-    </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    {{ __("You're in, ") }}
+    <div class="py-10">
+        <div class="mx-auto sm:px-6 lg:px-20 space-y-8">
+
+            {{-- Header --}}
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm uppercase tracking-wide text-indigo-500 font-semibold">PDS Review</p>
+                    <h1 class="text-2xl font-bold text-slate-900">PDS Submissions</h1>
+                    <p class="text-slate-500 text-sm">
+                        Monitor employees who submitted their Personal Data Sheets.
+                    </p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="{{ route('pds.export') }}"
+                        class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">
+                        Export Excel
+                    </a>
                 </div>
             </div>
+
+            {{-- Table --}}
+            <div
+                class="bg-white shadow-sm sm:rounded-2xl border border-slate-100"
+                x-data="{
+                    search: '',
+                    activeTab: 'all',
+                    modalOpen: false,
+                    selected: null,
+                    confirmOpen: false,
+                    confirmAction: null,
+
+                    normalized(v) {
+                        return (v ?? '').toString().trim().toLowerCase();
+                    },
+
+                    submissions: @js($submissions ?? []).map(submission => {
+                        const statusKey = (submission.status ?? '')
+                            .toString()
+                            .trim()
+                            .toLowerCase();
+
+                        return {
+                            ...submission,
+                            status_key: ['approved', 'pending', 'rejected'].includes(statusKey)
+                                ? statusKey
+                                : 'pending',
+                        };
+                    }),
+
+                    tabCount(tab) {
+                        if (tab === 'all') return this.submissions.length;
+                        return this.submissions.filter(s => s.status_key === tab).length;
+                    },
+
+                    filtered() {
+                        const q = this.normalized(this.search);
+                        const tab = this.normalized(this.activeTab);
+
+                        return this.submissions.filter(s => {
+                            if (tab !== 'all' && s.status_key !== tab) return false;
+                            if (!q) return true;
+
+                            return (
+                                this.normalized(s.name).includes(q) ||
+                                this.normalized(s.email).includes(q) ||
+                                this.normalized(s.department).includes(q)
+                            );
+                        });
+                    },
+
+                    open(submission) {
+                        this.selected = submission;
+                        this.modalOpen = true;
+                    },
+
+                    requestConfirm(newStatus) {
+                        this.confirmAction = newStatus;
+                        this.confirmOpen = true;
+                    },
+
+                    confirmStatus() {
+                        if (!this.confirmAction) return;
+                        this.setStatus(this.confirmAction);
+                        this.confirmAction = null;
+                        this.confirmOpen = false;
+                    },
+
+                    cancelConfirm() {
+                        this.confirmAction = null;
+                        this.confirmOpen = false;
+                    },
+
+                    setStatus(newStatus) {
+                        if (!this.selected) return;
+                        const statusKey = this.normalized(newStatus);
+                        const statusLabel = statusKey === 'approved'
+                            ? 'Approved'
+                            : statusKey === 'rejected'
+                                ? 'Rejected'
+                                : 'Pending';
+
+                        const updated = { ...this.selected, status_key: statusKey, status: statusLabel };
+                        this.selected = updated;
+
+                        this.submissions = this.submissions.map(s => s.key === updated.key
+                            ? { ...s, status_key: statusKey, status: statusLabel }
+                            : s);
+                    },
+
+                    downloadPds() {
+                        if (!this.selected?.key) return;
+                        const key = encodeURIComponent(this.selected.key);
+                        window.location = `/pds-form/${key}/download`;
+                    },
+
+                    close() {
+                        this.modalOpen = false;
+                        this.selected = null;
+                    }
+                }"
+            >
+
+                {{-- Tabs + Search --}}
+                <div
+                    class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
+
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
+                            :class="activeTab === 'all'
+                                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                            @click="activeTab = 'all'">
+                            All
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('all') + ')'"></span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
+                            :class="activeTab === 'pending'
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                            @click="activeTab = 'pending'">
+                            Pending
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('pending') + ')'"></span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
+                            :class="activeTab === 'approved'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                            @click="activeTab = 'approved'">
+                            Approved
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('approved') + ')'"></span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
+                            :class="activeTab === 'rejected'
+                                ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                            @click="activeTab = 'rejected'">
+                            Rejected
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('rejected') + ')'"></span>
+                        </button>
+                    </div>
+
+                    <div class="relative w-full lg:w-64">
+                        <input
+                            type="text"
+                            placeholder="Search submission"
+                            class="w-full rounded-2xl border border-slate-200 py-2 ps-9 pe-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            x-model.debounce.200ms="search"
+                            @keydown.escape="search = ''"
+                        />
+                        <span class="absolute left-3 top-2.5 text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+
+                {{-- Table --}}
+                <div class="overflow-x-auto">
+                    <table class="w-full divide-y divide-slate-100">
+                        <thead
+                            class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3">Employee</th>
+                                <th class="px-6 py-3">Department</th>
+                                <th class="px-6 py-3">Email</th>
+                                <th class="px-6 py-3">Submitted</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+
+                            <template x-if="filtered().length === 0">
+                                <tr>
+                                    <td colspan="6"
+                                        class="px-6 py-8 text-center text-slate-500">
+                                        No submissions yet.
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <template x-for="(submission, idx) in filtered()" :key="idx">
+                                <tr
+                                    class="hover:bg-slate-50"
+                                    x-data="{
+                                        statusClass() {
+                                            if (submission.status_key === 'approved')
+                                                return 'text-emerald-600 bg-emerald-50';
+                                            if (submission.status_key === 'rejected')
+                                                return 'text-rose-600 bg-rose-50';
+                                            return 'text-amber-600 bg-amber-50';
+                                        }
+                                    }"
+                                    x-cloak
+                                >
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <img :src="submission.avatar" :alt="submission.name + ' avatar'" class="h-10 w-10 rounded-full object-cover shadow-sm" />
+                                            <div>
+                                                <p class="font-semibold text-slate-900" x-text="submission.name"></p>
+                                                <span class="text-slate-500" x-text="submission.type ?? '—'"></span>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4" x-text="submission.department"></td>
+                                    <td class="px-6 py-4 text-slate-500" x-text="submission.email"></td>
+                                    <td class="px-6 py-4" x-text="submission.submitted_at ?? '—'"></td>
+
+                                    <td class="px-6 py-4">
+                                        <span
+                                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                                            :class="statusClass()"
+                                            x-text="submission.status">
+                                        </span>
+                                    </td>
+
+                                    <td class="px-6 py-4 text-center">
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center rounded-full border border-indigo-200 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                                            @click.prevent="open(submission)"
+                                        >
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Modal Component inside scope for selected/modalOpen --}}
+                <x-pds-preview x-show="modalOpen" @close="close" />
+
+                {{-- Confirmation Modal --}}
+                <template x-if="confirmOpen">
+                    <div class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/40 px-4 py-6" x-cloak @keydown.escape.window="cancelConfirm()" @click.self="cancelConfirm()">
+                        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="h-10 w-10 rounded-full flex items-center justify-center" :class="confirmAction === 'approved' ? 'bg-emerald-400' : 'bg-rose-400'">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#edf1edff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-check-icon lucide-file-check"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="m9 15 2 2 4-4"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-lg font-semibold text-slate-900" x-text="confirmAction === 'approved' ? 'Approve submission?' : 'Reject submission?'" ></p>
+                                    </div>
+                                </div>
+                                <button type="button" class="rounded-full p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100" @click="cancelConfirm()">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6m0 12L6 6" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="px-6 py-5 flex flex-col gap-4">
+                                <div class="flex items-center gap-2 text-sm text-slate-600">
+                                    <p class="text-md text-slate-700">This will update the status of submitted PDS.</p>
+                                </div>
+                                <div class="flex gap-3">
+                                    <button type="button" class="flex-1 rounded-xl border px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300" @click="cancelConfirm()">Cancel</button>
+                                    <button type="button" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm" :class="confirmAction === 'approved' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'" @click="confirmStatus()" x-text="confirmAction === 'approved' ? 'Confirm' : 'Reject'"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+
         </div>
     </div>
+
 </x-app-layout>

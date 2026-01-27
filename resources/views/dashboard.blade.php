@@ -4,7 +4,7 @@
     <div class="py-10">
         <div class="mx-auto sm:px-6 lg:px-20 space-y-10">
 
-            <section class="flex flex-col items-center gap-10">
+            <section class="flex flex-col items-center gap-10 py-6">
                 <div class="grid gap-6 sm:grid-cols-5 justify-items-center">
                     <div class="rounded-2xl bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-md shadow-sky-200/40 border border-white/10 w-72 h-36 flex">
                         <div class="p-5 sm:p-6 flex flex-col justify-between w-full">
@@ -76,10 +76,7 @@
                     </div>
                 </div>
 
-                <!-- Second row: 3 cards -->
-                <div class="grid gap-6 sm:grid-cols-3 justify-items-center">
-                    
-                </div>
+                
             </section>
 
             <!-- Recent submissions table helps admins monitor latest activity -->
@@ -88,6 +85,52 @@
                     <div>
                         <p class="text-base font-semibold text-slate-900">Latest PDS submissions</p>
                         <p class="text-sm text-slate-500">Track recent submissions</p>
+                    </div>
+                    <span class="text-sm text-slate-500 font-semibold">Updated {{ now()->format('M d, Y') }}</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full divide-y divide-slate-100">
+                        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3">Employee</th>
+                                <th class="px-6 py-3">Department</th>
+                                <th class="px-6 py-3">Email</th>
+                                <th class="px-6 py-3">Phone</th>
+                                <th class="px-6 py-3">Location Assigned</th>
+                                <th class="px-6 py-3">Date Submitted</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                            @foreach ($stats['recentSubmissions'] as $submission)
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <img src="{{ $submission['avatar'] }}" alt="{{ $submission['name'] }} avatar" class="h-10 w-10 rounded-full object-cover shadow-sm">
+                                            <div>
+                                                <p class="font-semibold text-slate-900">{{ $submission['name'] }}</p>
+                                                <span class="text-slate-500">{{ $submission['type'] }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">{{ $submission['department'] }}</td>
+                                    <td class="px-6 py-4 text-slate-500">{{ $submission['email'] }}</td>
+                                    <td class="px-6 py-4">{{ $submission['phone'] }}</td>
+                                    <td class="px-6 py-4 text-slate-500">{{ $submission['location'] }}</td>
+                                    <td class="px-6 py-4 text-slate-500">{{ $submission['submitted_at'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History of admin activity -->
+            <div class="bg-white shadow-sm sm:rounded-2xl border border-slate-100">
+                <div class="px-8 py-4 flex items-center justify-between border-b border-slate-100">
+                    <div>
+                        <p class="text-base font-semibold text-slate-900">"History of admin activity (Sample table for recent history of admin activity, need jud e connect database sori!)"</p>
+                        <p class="text-sm text-slate-500">Track recent activity</p>
                     </div>
                     <span class="text-sm text-slate-500 font-semibold">Updated {{ now()->format('M d, Y') }}</span>
                 </div>

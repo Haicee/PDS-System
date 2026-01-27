@@ -4,7 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 // Dashboard Route
@@ -135,9 +135,366 @@ Route::get('/dashboard', function () {
 
 
 //PDS Review
+if (! function_exists('pdsSubmissions')) {
+    function pdsSubmissions(): array
+    {
+        return [
+            [
+                'key' => 'pds-1',
+                'name' => 'Leslie Alexander',
+                'avatar' => 'https://i.pravatar.cc/96?img=47',
+                'department' => 'HR',
+                'email' => 'leslie.alexander@example.com',
+                'submitted_at' => 'Jan 24, 2026 • 2:10 PM',
+                'status' => 'Approved',
+                'type' => 'Permanent',
+            ],
+            [
+                'key' => 'pds-2',
+                'name' => 'Michael Scott',
+                'avatar' => 'https://i.pravatar.cc/96?img=12',
+                'department' => 'Management',
+                'email' => 'michael.scott@example.com',
+                'submitted_at' => 'Jan 23, 2026 • 9:45 AM',
+                'status' => 'Pending',
+                'type' => 'Permanent',
+            ],
+            [
+                'key' => 'pds-3',
+                'name' => 'Pam Beesly',
+                'avatar' => 'https://i.pravatar.cc/96?img=32',
+                'department' => 'Administration',
+                'email' => 'pam.beesly@example.com',
+                'submitted_at' => 'Jan 22, 2026 • 11:30 AM',
+                'status' => 'Approved',
+                'type' => 'Job On Call',
+            ],
+            [
+                'key' => 'pds-4',
+                'name' => 'Jim Halpert',
+                'avatar' => 'https://i.pravatar.cc/96?img=65',
+                'department' => 'Sales',
+                'email' => 'jim.halpert@example.com',
+                'submitted_at' => 'Jan 21, 2026 • 4:05 PM',
+                'status' => 'Rejected',
+                'type' => 'Job On Call',
+            ],
+            [
+                'key' => 'pds-5',
+                'name' => 'Dwight Schrute',
+                'avatar' => 'https://i.pravatar.cc/96?img=5',
+                'department' => 'Sales',
+                'email' => 'dwight.schrute@example.com',
+                'submitted_at' => 'Jan 20, 2026 • 1:15 PM',
+                'status' => 'Approved',
+                'type' => 'Permanent',
+            ],
+            [
+                'key' => 'pds-6',
+                'name' => 'Angela Martin',
+                'avatar' => 'https://i.pravatar.cc/96?img=17',
+                'department' => 'Accounting',
+                'email' => 'angela.martin@example.com',
+                'submitted_at' => 'Jan 19, 2026 • 10:00 AM',
+                'status' => 'Pending',
+                'type' => 'Permanent',
+            ],
+            [
+                'key' => 'pds-7',
+                'name' => 'Kevin Malone',
+                'avatar' => 'https://i.pravatar.cc/96?img=39',
+                'department' => 'Accounting',
+                'email' => 'kevin.malone@example.com',
+                'submitted_at' => 'Jan 18, 2026 • 3:40 PM',
+                'status' => 'Approved',
+                'type' => 'Job On Call',
+            ],
+            [
+                'key' => 'pds-8',
+                'name' => 'Oscar Martinez',
+                'avatar' => 'https://i.pravatar.cc/96?img=9',
+                'department' => 'Accounting',
+                'email' => 'oscar.martinez@example.com',
+                'submitted_at' => 'Jan 17, 2026 • 8:55 AM',
+                'status' => 'Approved',
+                'type' => 'Permanent',
+            ],
+            [
+                'key' => 'pds-9',
+                'name' => 'Kelly Kapoor',
+                'avatar' => 'https://i.pravatar.cc/96?img=41',
+                'department' => 'Customer Service',
+                'email' => 'kelly.kapoor@example.com',
+                'submitted_at' => 'Jan 16, 2026 • 12:20 PM',
+                'status' => 'Rejected',
+                'type' => 'Job On Call',
+            ],
+            [
+                'key' => 'pds-10',
+                'name' => 'Ryan Howard',
+                'avatar' => 'https://i.pravatar.cc/96?img=23',
+                'department' => 'Marketing',
+                'email' => 'ryan.howard@example.com',
+                'submitted_at' => 'Jan 15, 2026 • 5:10 PM',
+                'status' => 'Pending',
+                'type' => 'Permanent',
+            ],
+        ];
+    }
+}
+
+
+
+
+
+
+
+//PDS Review route
 Route::get('/pds-form', function () {
-    return view('pds-form');
+    $submissions = pdsSubmissions();
+    return view('pds-form', compact('submissions'));
 })->middleware(['auth', 'verified'])->name('pds.form');
+
+//Export/Download logic
+if (! function_exists('buildPdsSubmissionsXlsx')) {
+    function buildPdsSubmissionsXlsx(array $columns, array $rows, array $colWidths): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
+        $zip = new ZipArchive();
+        if ($zip->open($tmp, ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Unable to create XLSX.');
+        }
+
+        $zip->addFromString('[Content_Types].xml', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>
+XML);
+
+        $zip->addFromString('_rels/.rels', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>
+XML);
+
+        $zip->addFromString('xl/_rels/workbook.xml.rels', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>
+XML);
+
+        $zip->addFromString('xl/workbook.xml', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="PDS Submissions" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>
+XML);
+
+        // Styles: normal, header, approved, pending, rejected
+        $zip->addFromString('xl/styles.xml', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2">
+    <font><sz val="12"/><color theme="1"/><name val="Arial"/></font>
+    <font><sz val="12"/><color rgb="FFFFFFFF"/><name val="Arial"/><b/></font>
+  </fonts>
+  <fills count="6">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF4F46E5"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF22C55E"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF59E0B"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFEF4444"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="5">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="1" fillId="4" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="1" fillId="5" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>
+XML);
+
+        $sheetRows = [];
+
+        // Column widths
+        $colsXml = '<cols>';
+        foreach (array_values($colWidths) as $i => $width) {
+            $colsXml .= '<col min="' . ($i + 1) . '" max="' . ($i + 1) . '" width="' . $width . '" customWidth="1" />';
+        }
+        $colsXml .= '</cols>';
+
+        // Header row style index 1
+        $rowIndex = 1;
+        $cells = '';
+        foreach ($columns as $colIndex => $value) {
+            $cells .= '<c r="' . chr(65 + $colIndex) . $rowIndex . '" t="inlineStr" s="1"><is><t>' . htmlspecialchars($value, ENT_XML1) . '</t></is></c>';
+        }
+        $sheetRows[] = '<row r="' . $rowIndex . '">' . $cells . '</row>';
+
+        foreach ($rows as $row) {
+            $rowIndex++;
+            $cells = '';
+            $values = [
+                $row['name'] ?? '',
+                $row['department'] ?? '',
+                $row['email'] ?? '',
+                $row['submitted_at'] ?? '',
+                $row['type'] ?? '',
+                $row['status'] ?? '',
+            ];
+
+            $status = strtolower(trim($row['status'] ?? ''));
+            $statusStyle = match ($status) {
+                'approved' => 2,
+                'pending' => 3,
+                'rejected' => 4,
+                default => 0,
+            };
+
+            foreach ($values as $colIndex => $value) {
+                $styleId = ($colIndex === 5) ? $statusStyle : 0;
+                $cells .= '<c r="' . chr(65 + $colIndex) . $rowIndex . '" t="inlineStr" s="' . $styleId . '"><is><t>' . htmlspecialchars($value, ENT_XML1) . '</t></is></c>';
+            }
+            $sheetRows[] = '<row r="' . $rowIndex . '">' . $cells . '</row>';
+        }
+
+        $sheetXml = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . $colsXml
+            . '<sheetData>' . implode('', $sheetRows) . '</sheetData>'
+            . '</worksheet>';
+
+        $zip->addFromString('xl/worksheets/sheet1.xml', $sheetXml);
+
+        $zip->close();
+
+        $content = file_get_contents($tmp);
+        @unlink($tmp);
+        return $content;
+    }
+}
+
+// Download ni siya ayaw sa hilabta, mali ni siya kay data gi download pero as is sa ni hehe labyu mariane
+if (! function_exists('buildPdsDocx')) {
+    function buildPdsDocx(array $submission): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'docx');
+        $zip = new ZipArchive();
+        if ($zip->open($tmp, ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Unable to create DOCX.');
+        }
+
+        $zip->addFromString('[Content_Types].xml', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+XML);
+
+        $zip->addFromString('_rels/.rels', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+XML);
+
+        $zip->addFromString('word/_rels/document.xml.rels', <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>
+XML);
+
+        $safe = fn ($value) => htmlspecialchars((string) $value, ENT_XML1);
+
+        $name = $safe($submission['name'] ?? '—');
+        $dept = $safe($submission['department'] ?? '—');
+        $email = $safe($submission['email'] ?? '—');
+        $submitted = $safe($submission['submitted_at'] ?? '—');
+        $status = $safe($submission['status'] ?? '—');
+        $type = $safe($submission['type'] ?? '—');
+
+        $zip->addFromString('word/document.xml', <<<XML
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>PDS Submission</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Name: {$name}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Department: {$dept}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Email: {$email}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Submitted: {$submitted}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Type: {$type}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Status: {$status}</w:t></w:r></w:p>
+    <w:p><w:r><w:t xml:space="preserve">Preview: see attached image or system record.</w:t></w:r></w:p>
+    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+  </w:body>
+</w:document>
+XML);
+
+        $zip->close();
+
+        $content = file_get_contents($tmp);
+        @unlink($tmp);
+        return $content;
+    }
+}
+
+//Export PDS Submissions (styled XLSX)
+Route::get('/pds-form/export', function () {
+    if (! class_exists(ZipArchive::class)) {
+        abort(500, 'ZipArchive PHP extension is required to export XLSX. Please enable php_zip.');
+    }
+
+    $submissions = pdsSubmissions();
+    $columns = ['Name', 'Department', 'Email', 'Submitted', 'Type', 'Status'];
+    $colWidths = [28, 18, 30, 22, 14, 12];
+
+    $xlsx = buildPdsSubmissionsXlsx($columns, $submissions, $colWidths);
+
+    return response($xlsx, 200, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition' => 'attachment; filename="BFAR_PDS_Submissions_' . date('Y-m-d') . '.xlsx"',
+    ]);
+})->middleware(['auth', 'verified'])->name('pds.export');
+
+//Download individual PDS (DOCX placeholder)
+Route::get('/pds-form/{key}/download', function (string $key) {
+    if (! class_exists(ZipArchive::class)) {
+        abort(500, 'ZipArchive PHP extension is required to export DOCX. Please enable php_zip.');
+    }
+
+    $submission = collect(pdsSubmissions())->firstWhere('key', $key);
+    if (! $submission) {
+        abort(404, 'Submission not found.');
+    }
+
+    $docx = buildPdsDocx($submission);
+
+    $safeName = preg_replace('/[^A-Za-z0-9_-]+/', '_', $submission['name'] ?? 'PDS');
+    return response($docx, 200, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition' => 'attachment; filename="PDS_' . $safeName . '_' . date('Y-m-d') . '.docx"',
+    ]);
+})->middleware(['auth', 'verified'])->name('pds.download');
+
+
+
+
 
 
 

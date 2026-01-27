@@ -20,7 +20,7 @@
     <!-- Apply a persistent background image while keeping the form centered -->
     <body class="font-sans text-gray-900 antialiased" style="background-image: url('{{ asset('images/bg.png') }}'); background-size: cover; background-position: center; background-repeat: no-repeat;">
         <div class="min-h-screen flex flex-col items-center px-3 pt-3 pb-4 gap-4">
-            <div class="w-full max-w-5xl flex flex-col items-center text-white text-center drop-shadow-lg gap-1">
+            <div class="w-full max-w-7xl flex flex-col items-center text-white text-center drop-shadow-lg gap-1">
                 <div class="flex items-center justify-center gap-4 mb-2">
                     <img src="{{ asset('images/ph-logo.png') }}" alt="Philippines" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-16">
                     <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-16">
