@@ -28,8 +28,14 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
-    }
+       $user = Auth::user();
+
+        if ($user->role === 'employee') {
+            return redirect('/employee'); // sends BFAR12 users to employee dashboard
+        }
+
+        return redirect()->intended(route('dashboard', absolute: false)); // admin/default dashboard
+     }
 
     /**
      * Destroy an authenticated session.

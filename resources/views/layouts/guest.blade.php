@@ -27,7 +27,7 @@
                     <img src="{{ asset('images/gad-logo.jpg') }}" alt="GAD" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-16">
                 </div>
                 <p class="text-base sm:text-lg font-semibold tracking-[0.35em] text-emerald-100 [text-shadow:0_4px_12px_rgba(0,0,0,0.7)]">DEPARTMENT OF AGRICULTURE</p>
-                <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.15em] [text-shadow:0_4px_12px_rgba(0,0,0,0.55)]">BUREU OF FISHERIES AND AQUATIC RESOURCES</h1>
+                <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.15em] [text-shadow:0_4px_12px_rgba(0,0,0,0.55)]">BUREAU OF FISHERIES AND AQUATIC RESOURCES</h1>
                 <p class="text-base sm:text-lg text-emerald-100/90 [text-shadow:0_4px_12px_rgba(0,0,0,0.7)]">REGION XII</p>
             </div>
 

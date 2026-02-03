@@ -89,6 +89,7 @@
                     <span class="text-sm text-slate-500 font-semibold">Updated {{ now()->format('M d, Y') }}</span>
                 </div>
 
+
                 <div class="overflow-x-auto">
                     <table class="w-full divide-y divide-slate-100">
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">

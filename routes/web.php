@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PdsSubmissionController;
+use App\Http\Controllers\PdsStepController;
+use App\Http\Controllers\PdsPdfController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EmployeeController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -609,7 +613,7 @@ if (! function_exists('manageUserEmployees')) {
     }
 }
 
-//Manage User Route
+
 Route::get('/manage-user', function(){
     $employees = manageUserEmployees();
 
@@ -760,13 +764,26 @@ Route::get('/manage-user/export', function () {
 
 
 
-
-
 //Profile Route
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('/pds/submit', [PdsSubmissionController::class, 'store'])->name('pds.submit');
+    Route::post('/pds/save-step/{step}', [PdsStepController::class, 'saveStep'])->name('pds.saveStep');
+    Route::get('/pds/pdf', [PdsPdfController::class, 'download'])->name('pds.pdf');
 });
+
+// Employee routes
+Route::middleware(['auth','role:employee'])->group(function () {
+    Route::get('/employee', [EmployeeController::class, 'dashboard'])->name('employee.dashboard');
+    Route::view('/employee/pds/form1', 'pds_form.form1')->name('pds.form1');
+    Route::view('/employee/pds/form2', 'pds_form.form2')->name('pds.form2');
+    Route::view('/employee/pds/form3', 'pds_form.form3')->name('pds.form3');
+    Route::view('/employee/pds/form4', 'pds_form.form4')->name('pds.form4');
+    Route::view('/employee/pds/form5', 'pds_form.form5')->name('pds.form5');
+});
+
 
 require __DIR__.'/auth.php';
