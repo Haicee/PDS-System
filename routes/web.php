@@ -6,6 +6,10 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
+use App\Models\AdminUser;
+use App\Models\RegistrationUser;
 use App\Http\Controllers\EmployeeController;
 
 Route::get('/', function () {
@@ -767,6 +771,45 @@ Route::get('/manage-user/export', function () {
         'Content-Disposition' => 'attachment; filename="BFAR_Employees_' . date('Y-m-d') . '.xlsx"',
     ]);
 })->middleware(['auth:admin'])->name('manage-user.export');
+
+
+// Admin user creation (frontend modal submission)
+Route::post('/admin-users', function (Request $request) {
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:255', 'unique:admin_users,name'],
+        'email' => ['required', 'email', 'max:255', 'unique:admin_users,email'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    $admin = AdminUser::create([
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'password' => Hash::make($validated['password']),
+        'role' => 'admin',
+    ]);
+
+    return response()->json([
+        'message' => 'Admin created successfully.',
+        'admin' => $admin->only(['id', 'name', 'email', 'role', 'created_at']),
+    ], 201);
+})->middleware(['auth:admin'])->name('admin-users.store');
+
+
+// Employee creation (Add Employee modal)
+Route::post('/registration-users', function (Request $request) {
+    $validated = $request->validate([
+        'full_name' => ['required', 'string', 'max:255', 'unique:registration_users,full_name'],
+    ]);
+
+    $employee = RegistrationUser::create([
+        'full_name' => $validated['full_name'],
+    ]);
+
+    return response()->json([
+        'message' => 'Employee added successfully.',
+        'employee' => $employee->only(['id', 'full_name', 'created_at']),
+    ], 201);
+})->middleware(['auth:admin'])->name('registration-users.store');
 
 
 
