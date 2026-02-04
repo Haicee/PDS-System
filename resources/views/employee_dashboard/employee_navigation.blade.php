@@ -1,8 +1,8 @@
     <nav x-data="{ open: false }" class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <!-- Primary Navigation Menu -->
         <div class="max-w-20xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20">
-                <div class="flex items-center gap-6">
+            <div class="flex justify-between h-20">
+                <div class="flex">
                     <!-- Logo -->
                     <div class="shrink-0 flex items-center">
                         <img src="{{ asset('images/ph-logo.png') }}" class="h-14 w-auto"/>

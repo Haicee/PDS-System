@@ -1,5 +1,9 @@
 <?php
 
+// employee 'auth:web'
+// admin 'auth:admin'
+
+
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EmployeeController;
@@ -7,6 +11,11 @@ use App\Http\Controllers\EmployeeController;
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+// Employee dashboard
+Route::get('/employee', [EmployeeController::class, 'dashboard'])
+    ->middleware(['auth:web'])
+    ->name('employee.dashboard');
 
 // Dashboard Route
 Route::get('/dashboard', function () {
@@ -130,7 +139,7 @@ Route::get('/dashboard', function () {
     ];
 
     return view('dashboard', compact('stats'));
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth:admin,web'])->name('dashboard');
 
 
 
@@ -254,7 +263,7 @@ if (! function_exists('pdsSubmissions')) {
 Route::get('/pds-form', function () {
     $submissions = pdsSubmissions();
     return view('pds-form', compact('submissions'));
-})->middleware(['auth', 'verified'])->name('pds.form');
+})->middleware(['auth:admin', 'verified'])->name('pds.form');
 
 //Export/Download logic
 if (! function_exists('buildPdsSubmissionsXlsx')) {
@@ -615,7 +624,7 @@ Route::get('/manage-user', function(){
     $employees = manageUserEmployees();
 
     return view('manage-user', compact('employees'));
-})->middleware(['auth', 'verified'])->name('manage-user');
+})->middleware(['auth:admin'])->name('manage-user');
 
 
 
@@ -757,12 +766,12 @@ Route::get('/manage-user/export', function () {
         'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition' => 'attachment; filename="BFAR_Employees_' . date('Y-m-d') . '.xlsx"',
     ]);
-})->middleware(['auth', 'verified'])->name('manage-user.export');
+})->middleware(['auth:admin'])->name('manage-user.export');
 
 
 
 //Profile Route
-Route::middleware('auth')->group(function () {
+Route::middleware('auth:admin,web')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

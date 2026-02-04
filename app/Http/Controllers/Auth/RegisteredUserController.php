@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\RegistrationUser;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -31,26 +32,33 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
-        
-    $role = str_starts_with($request->email, 'BFAR12_') ? 'employee' : 'admin';
 
-       $user = User::create([
-    'name' => $request->name,
-    'email' => $request->email,
-    'password' => Hash::make($request->password),
-    'role' => $role,
+        $approved = RegistrationUser::whereRaw('LOWER(full_name) = ?', [mb_strtolower($request->name)])->first();
+
+        if (! $approved) {
+            return back()
+                ->withInput()
+                ->withErrors(['name' => 'Name not found in the official employee list.']);
+        }
+
+        $role = 'employee';
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $role,
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        if ($user->role === 'employee') {
-            return redirect('/employee');
-        }
-        return redirect(route('dashboard', absolute: false));
+        return $user->role === 'employee'
+            ? redirect('/employee')
+            : redirect(route('dashboard', absolute: false));
     }
 }
