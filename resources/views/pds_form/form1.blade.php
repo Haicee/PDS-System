@@ -1,4 +1,6 @@
 <x-app-layout>
+    <form method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
+    @csrf
     <style>
         /* Print-friendly, spreadsheet-like grid */
         table { border-collapse: collapse; width: 100%; }
@@ -17,6 +19,48 @@
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Prefill from session cache (pds) so going back restores values
+            const sessionData = @json(session('pds', []));
+            const flat = {};
+            const walk = (obj, prefix = '') => {
+                if (obj === null || obj === undefined) return;
+                if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
+                if (Array.isArray(obj)) {
+                    obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
+                } else {
+                    Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
+                }
+            };
+            walk(sessionData);
+
+            const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
+            const setField = (el, value) => {
+                if (!el) return;
+                if (el.type === 'checkbox' || el.type === 'radio') {
+                    el.checked = Array.isArray(value) ? value.map(String).includes(String(el.value)) : String(el.value) === String(value);
+                } else {
+                    el.value = value;
+                    if (el.tagName === 'TEXTAREA') {
+                        el.dispatchEvent(new Event('input'));
+                    }
+                }
+            };
+
+            Object.entries(flat).forEach(([name, value]) => {
+                const exact = Array.from(document.querySelectorAll(`[name="${cssName(name)}"]`));
+                if (exact.length) {
+                    exact.forEach(el => setField(el, value));
+                    return;
+                }
+                const matchIndex = name.match(/\[(\d+)\]$/);
+                if (matchIndex) {
+                    const idx = parseInt(matchIndex[1], 10);
+                    const base = name.replace(/\[\d+\]$/, '[]');
+                    const arrFields = Array.from(document.querySelectorAll(`[name="${cssName(base)}"]`));
+                    if (arrFields[idx]) setField(arrFields[idx], value);
+                }
+            });
+            // Keep textarea input uppercase
             document.querySelectorAll('textarea').forEach(el => {
                 el.addEventListener('input', () => {
                     const start = el.selectionStart;
@@ -28,16 +72,153 @@
                     }
                 });
             });
+
+            // NA handling: only disable fields BELOW the first NA in each [] group; do not clear existing values
+            const isNA = (val) => {
+                const v = (val || '').trim().toUpperCase();
+                return v === 'NA' || v === 'N/A' || v === 'NONE';
+            };
+
+            const names = new Set();
+            document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
+                const name = el.getAttribute('name');
+                if (name) names.add(name);
+            });
+            // Also include education rows (not []-suffixed) for per-row NA locking
+            document.querySelectorAll('textarea[name*="[school_name]"]').forEach(el => {
+                const name = el.getAttribute('name');
+                if (name) names.add(name);
+            });
+
+            names.forEach(name => {
+                const selectorName = name.replace(/["'\\]/g, '\\$&');
+                const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
+                if (!fields.length) return;
+
+                // Default: existing logic for pure [] groups
+                const refreshArray = () => {
+                    const firstNAIndex = fields.findIndex(f => isNA(f.value));
+                    fields.forEach((f, idx) => {
+                        const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
+                        f.disabled = shouldDisable;
+                        f.classList.toggle('bg-gray-200', shouldDisable);
+                        f.classList.toggle('text-gray-500', shouldDisable);
+                        f.classList.toggle('cursor-not-allowed', shouldDisable);
+                    });
+                };
+
+                // Special handling for education rows: when school_name is NA, disable ONLY siblings in same row
+                if (selectorName.includes('education[') && selectorName.endsWith('[school_name]')) {
+                    const schoolFields = fields;
+                    const rowSelectors = [
+                        '[basic_education]',
+                        '[from]',
+                        '[to]',
+                        '[highest_level]',
+                        '[year_graduated]',
+                        '[scholarship_acadhonors]'
+                    ];
+
+                    const refreshRow = () => {
+                        schoolFields.forEach(schoolField => {
+                            const isRowNA = isNA(schoolField.value);
+                            // derive row key prefix like education[elementary]
+                            const rowPrefix = schoolField.name.replace(/\[school_name\]$/, '');
+                            rowSelectors.forEach(sel => {
+                                const targetName = `${rowPrefix}${sel}`;
+                                const targets = document.querySelectorAll(`textarea[name="${targetName}"], input[name="${targetName}"]`);
+                                targets.forEach(target => {
+                                    target.disabled = isRowNA;
+                                    target.readOnly = isRowNA;
+                                    target.classList.toggle('bg-gray-200', isRowNA);
+                                    target.classList.toggle('text-gray-500', isRowNA);
+                                    target.classList.toggle('cursor-not-allowed', isRowNA);
+                                    target.classList.toggle('pointer-events-none', isRowNA);
+                                });
+                            });
+                        });
+                    };
+
+                    schoolFields.forEach(f => f.addEventListener('input', refreshRow));
+                    refreshRow();
+                    return;
+                }
+
+                fields.forEach(f => f.addEventListener('input', refreshArray));
+                refreshArray();
+            });
+
+            // Next button gating: require all required fields on this page + at least one checked per checkbox group
+            const nextBtn = document.getElementById('next-btn');
+            const requiredFields = Array.from(document.querySelectorAll('input[required], textarea[required], select[required]'));
+            const checkboxGroups = [
+                'sex[]',
+                'civilstatus[]',
+                'citizenship[]'
+            ];
+
+            const validateRequired = () => {
+                const missingRequiredInputs = requiredFields.some(el => {
+                    if (el.disabled || el.readOnly) return false;
+                    if (el.type === 'file') return !(el.files && el.files.length > 0);
+                    return !((el.value || '').trim());
+                });
+
+                const missingCheckboxGroup = checkboxGroups.some(name => {
+                    const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
+                    if (!boxes.length) return false;
+                    return !boxes.some(b => b.checked);
+                });
+
+                const hasMissing = missingRequiredInputs || missingCheckboxGroup;
+
+                if (!nextBtn) return;
+                if (hasMissing) {
+                    nextBtn.setAttribute('aria-disabled', 'true');
+                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                } else {
+                    nextBtn.removeAttribute('aria-disabled');
+                    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                }
+            };
+
+            requiredFields.forEach(el => {
+                el.addEventListener('input', validateRequired);
+                el.addEventListener('change', validateRequired);
+            });
+
+            checkboxGroups.forEach(name => {
+                document.querySelectorAll(`input[type="checkbox"][name="${name}"]`).forEach(box => {
+                    box.addEventListener('change', validateRequired);
+                });
+            });
+
+            validateRequired();
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', (e) => {
+                    if (nextBtn.getAttribute('aria-disabled') === 'true') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        validateRequired();
+                    }
+                });
+            }
         });
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
   <!-- HEADER -->
-  <header class="mb-4">
+  <header class="mb-4 flex items-start justify-between gap-4">
     <div class="text-sm font-bold italic">CS Form No. 212</div>
     <div class="italic text-xs">Revised 2025</div>
-    <h1 class="font-extrabold text-4xl text-center mb-4 font-['Arial_Black','sans-serif']">
+    <h1 class="font-extrabold text-4xl text-center mb-4 font-['Arial_Black','sans-serif'] flex-1">
       PERSONAL DATA SHEET
     </h1>
+    <div class="flex items-center">
+      <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
+        Download PDF
+      </a>
+    </div>
   </header>
 
   <p class=" font-['Arial','sans-serif'] text-base italic font-bold mb-1">
@@ -708,7 +889,7 @@
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border">14. TIN ID</td>
       <td class="border px-2 h-10">
         <textarea
-      name="tin_id"
+      name="tin_no"
       required
       rows="1"
       class="w-full text-lg resize-none
@@ -760,7 +941,7 @@
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border">15. AGENCY EMPLOYEE ID</td>
       <td class="border px-2 h-10">
          <textarea
-      name="agency_employee_id"
+      name="agency_employee_no"
       required
       rows="1"
       class="w-full text-lg resize-none
@@ -838,7 +1019,7 @@
       <td colspan="3"
           class="border">
            <textarea
-      name="spouse_surname_familybg"
+      name="spouse_surname"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -870,7 +1051,7 @@
        <td colspan="2"
           class="border">
            <textarea
-      name="firstname_familybg"
+      name="spouse_firstname"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -885,7 +1066,7 @@
         <span class="italic text-xs px-2">NAME EXTENSION (JR., SR)</span>
         <div>
             <textarea
-      name="spouse_name_extension_familybg"
+      name="spouse_name_extension"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -933,7 +1114,7 @@
           class="border border-b-2 h-10">
           <div class="h-full w-full">
          <textarea
-      name="middlename_familybg"
+      name="spouse_middlename"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -978,7 +1159,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="occupation_familybg"
+      name="spouse_occupation"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1023,7 +1204,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="employer_familybg"
+      name="spouse_employer_business_name"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1069,7 +1250,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="business_address_familybg"
+      name="spouse_business_address"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1115,7 +1296,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="telephone_no_familybg"
+      name="spouse_telephone_no"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1165,7 +1346,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="father_surname_familybg"
+      name="father_surname"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1213,7 +1394,7 @@
        <td colspan="2"
           class="border">
            <textarea
-      name="father_firstname_familybg"
+      name="father_firstname"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1228,7 +1409,7 @@
         <span class="italic text-xs px-2">NAME EXTENSION (JR., SR)</span>
         <div>
             <textarea
-      name="father_name_extension_familybg"
+      name="father_name_extension"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1277,7 +1458,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="father_middlename_familybg"
+      name="father_middlename"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1326,7 +1507,7 @@
           class="border-t-2 border h-10">
           <div class="h-full w-full">
          <textarea
-      name="mother_maiden_familybg"
+      name="mother_maiden_name"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1374,7 +1555,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="mother_surname_familybg"
+      name="mother_surname"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1423,7 +1604,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="mother_firstname_familybg"
+      name="mother_firstname"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1470,7 +1651,7 @@
           class="border h-10">
           <div class="h-full w-full">
          <textarea
-      name="mother_middlename_familybg"
+      name="mother_middlename"
       required
       rows="1"
       class="w-full h-full text-lg resize-none
@@ -1613,19 +1794,19 @@
     ></textarea>
       </td>
 
-     <td
-          class="border h-10">
-          <div class="h-full w-full">
-         <textarea
-      name="education[elementary][highest_level]"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
-      </td>
+      <td
+            class="border h-10">
+            <div class="h-full w-full">
+          <textarea
+        name="education[elementary][highest_level]"
+        required
+        rows="1"
+        class="w-full h-full text-lg resize-none
+              focus:outline-none focus:ring-0
+              whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+        oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
+      ></textarea>
+        </td>
 
      <td
           class="border h-10">
@@ -2103,13 +2284,14 @@
 
 <table class="bg-transparent">
     <div class="flex justify-end mr-2 font-['Arial_Narrow','sans-serif']">
-    CS FORM 212 (Revised 2025), Page 1 of 4
+    CS FORM 212 (Revised 2025), Page 1 of 5
     </div>
 </table>
 
     <div class="flex justify-end mt-4">
-        <a href="{{ route('pds.form2') }}" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</a>
+        <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</button>
     </div>
     </div>
+    </form>
 
 </x-app-layout>

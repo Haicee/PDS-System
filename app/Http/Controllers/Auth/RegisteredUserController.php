@@ -35,6 +35,8 @@ class RegisteredUserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
+        
+    $role = str_starts_with($request->email, 'admin1@gmail.com') ? 'admin' : 'employee';
 
         $approved = RegistrationUser::whereRaw('LOWER(full_name) = ?', [mb_strtolower($request->name)])->first();
 

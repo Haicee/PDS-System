@@ -5,6 +5,9 @@
 
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PdsSubmissionController;
+use App\Http\Controllers\PdsStepController;
+use App\Http\Controllers\PdsPdfController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
@@ -623,7 +626,7 @@ if (! function_exists('manageUserEmployees')) {
     }
 }
 
-//Manage User Route
+
 Route::get('/manage-user', function(){
     $employees = manageUserEmployees();
 
@@ -811,13 +814,15 @@ Route::post('/registration-users', function (Request $request) {
     ], 201);
 })->middleware(['auth:admin'])->name('registration-users.store');
 
-
-
 //Profile Route
 Route::middleware('auth:admin,web')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('/pds/submit', [PdsSubmissionController::class, 'store'])->name('pds.submit');
+    Route::post('/pds/save-step/{step}', [PdsStepController::class, 'saveStep'])->name('pds.saveStep');
+    Route::get('/pds/pdf', [PdsPdfController::class, 'download'])->name('pds.pdf');
 });
 
 // Employee routes

@@ -23,6 +23,7 @@
                         </x-nav-link>
                     </div>
                 </div>
+                
 
                 <!-- Settings Dropdown (right aligned) -->
                 <div class="hidden sm:flex sm:items-center sm:ms-auto">
