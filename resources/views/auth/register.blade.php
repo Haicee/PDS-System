@@ -2,9 +2,9 @@
     <div class="flex items-center justify-center px-4">
         <section class="w-full max-w-xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur">
             <div class="mb-8 space-y-2">
-                <p class="text-sm font-semibold uppercase tracking-[0.35em] text-emerald-600">BFAR XII</p>
-                <h2 class="text-3xl font-semibold text-slate-900">Sign up for BFAR Portal</h2>
-                <p class="text-sm text-slate-500">Fill in your details to get started.</p>
+                <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
+                <h2 class="text-3xl font-semibold text-slate-900 text-center">Sign up for BFAR Portal</h2>
+                <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>
 
             <form class="space-y-6" method="POST" action="{{ route('register') }}">

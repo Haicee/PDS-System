@@ -22,6 +22,12 @@
             adminError: '',
             adminFieldErrors: {},
 
+            init() {
+                window.addEventListener('employee-deleted', (e) => {
+                    const email = e.detail?.email;
+                    if (email) this.removeEmployeeByEmail(email);
+                });
+            },
             openEmployee() {
                 this.employeeError = '';
                 this.employeeFieldErrors = {};
@@ -225,6 +231,7 @@
                 });
             }
         }"
+        x-init="init()"
         x-cloak>
         
 
@@ -305,6 +312,10 @@
                         this.filterType = '';
                         this.sortKey = 'name';
                         this.sortDir = 'asc';
+                    },
+                    removeEmployeeByEmail(email) {
+                        const norm = (v) => (v ?? '').toString().trim().toLowerCase();
+                        this.employees = this.employees.filter(e => norm(e.email) !== norm(email));
                     }
                 }">
                 <div class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end border-b border-slate-100">

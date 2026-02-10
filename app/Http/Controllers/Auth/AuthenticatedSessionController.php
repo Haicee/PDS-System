@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -47,13 +48,24 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('admin')->logout();
-        Auth::guard('web')->logout();
+        // Logout both guards to avoid lingering admin sessions
+        $adminGuard = Auth::guard('admin');
+        $webGuard = Auth::guard('web');
+
+        $adminGuard->logout();
+        $webGuard->logout();
+
+        // Clear remember-me cookies for both guards if present
+        if (method_exists($adminGuard, 'getRecallerName')) {
+            Cookie::queue(Cookie::forget($adminGuard->getRecallerName()));
+        }
+        if (method_exists($webGuard, 'getRecallerName')) {
+            Cookie::queue(Cookie::forget($webGuard->getRecallerName()));
+        }
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('login');
     }
 }

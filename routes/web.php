@@ -626,6 +626,39 @@ if (! function_exists('manageUserEmployees')) {
     }
 }
 
+// Admin Users sample data
+if (! function_exists('manageAdminUsers')) {
+    function manageAdminUsers(): array
+    {
+        return [
+            [
+                'name' => 'Choco Mi',
+                'avatar' => 'https://i.pravatar.cc/96?img=10',
+                'email' => 'choco@example.com',
+                'role' => 'Main Admin',
+                'status' => 'Active',
+                'created_at' => '2024-01-10',
+            ],
+            [
+                'name' => 'Althea Ramos',
+                'avatar' => 'https://i.pravatar.cc/96?img=48',
+                'email' => 'althea.ramos@example.com',
+                'role' => 'Admin User',
+                'status' => 'Active',
+                'created_at' => '2024-03-22',
+            ],
+            [
+                'name' => 'Noel Diaz',
+                'avatar' => 'https://i.pravatar.cc/96?img=41',
+                'email' => 'noel.diaz@example.com',
+                'role' => 'Admin User',
+                'status' => 'Inactive',
+                'created_at' => '2023-12-05',
+            ],
+        ];
+    }
+}
+
 
 Route::get('/manage-user', function(){
     $employees = manageUserEmployees();
@@ -774,6 +807,12 @@ Route::get('/manage-user/export', function () {
         'Content-Disposition' => 'attachment; filename="BFAR_Employees_' . date('Y-m-d') . '.xlsx"',
     ]);
 })->middleware(['auth:admin'])->name('manage-user.export');
+
+// Admin Users page (placeholder)
+Route::get('/admin-users', function () {
+    $admins = manageAdminUsers();
+    return view('admin-users', compact('admins'));
+})->middleware(['auth:admin'])->name('admin.users');
 
 
 // Admin user creation (frontend modal submission)

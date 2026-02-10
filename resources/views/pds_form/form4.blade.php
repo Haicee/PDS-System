@@ -33,26 +33,80 @@
     textarea:focus { outline: none; box-shadow: none; }
   </style>
   <script>
-    function previewPhoto(event) {
-      const input = event.target;
-      const file = input.files && input.files[0];
+    
+    
+    // PHOTO capture helpers
+    let photoStream;
+    const photoConstraints = { video: { width: { ideal: 640 }, height: { ideal: 480 } } };
+
+    async function startPhotoCamera() {
+      const video = document.getElementById('photoVideo');
+      if (!video) return;
+
+      try {
+        photoStream = await navigator.mediaDevices.getUserMedia(photoConstraints);
+        video.srcObject = photoStream;
+        video.play();
+        video.classList.remove('hidden');
+        document.getElementById('photoCaptureBtn')?.classList.remove('hidden');
+        document.getElementById('photoStartBtn')?.classList.add('hidden');
+      } catch (err) {
+        alert('Unable to access camera. Please check permissions or use file upload.');
+        console.error(err);
+      }
+    }
+
+    function stopPhotoCamera() {
+      if (photoStream) {
+        photoStream.getTracks().forEach(t => t.stop());
+        photoStream = null;
+      }
+    }
+
+    function dataUrlToFile(dataUrl, fileName) {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      return new File([u8arr], fileName, { type: mime });
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById('photoVideo');
+      const canvas = document.createElement('canvas');
       const img = document.getElementById('photoPreview');
       const placeholder = document.getElementById('photoPlaceholder');
-      if (!img || !placeholder) return;
-      if (!file) {
-        img.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-        return;
-      }
+      const hiddenInput = document.getElementById('photoData');
+      const fileInput = document.getElementById('photoFile');
+      if (!video || !img || !placeholder || !hiddenInput || !fileInput) return;
+      if (!photoStream) return alert('Camera is not active. Click "Open camera" first.');
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        img.src = e.target.result;
-        img.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-      };
-      reader.readAsDataURL(file);
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      img.src = dataUrl;
+      img.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      hiddenInput.value = dataUrl;
+
+      // Populate the hidden file input so the server still receives a file
+      const file = dataUrlToFile(dataUrl, 'photo.jpg');
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      fileInput.files = transfer.files;
+
+      stopPhotoCamera();
+      document.getElementById('photoStartBtn')?.classList.remove('hidden');
+      document.getElementById('photoCaptureBtn')?.classList.add('hidden');
+      video.classList.add('hidden');
     }
+
+    // No upload fallback; enforce camera capture only.
 
     // Auto-grow textareas used in the references table and ID/date fields
     function autoSize(el) {
@@ -497,7 +551,7 @@
   <div class="mt-12 flex flex-col items-center">
 
     <!-- PASSPORT PHOTO -->
-    <label class="cursor-pointer">
+    <div class="w-full flex flex-col items-center gap-2">
       <div class="border-2 border-black w-[3.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
         <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
         <div id="photoPlaceholder">
@@ -506,11 +560,19 @@
           the last 6 months<br>
           4.5 cm × 3.5 cm
         </div>
+        <video id="photoVideo" class="absolute inset-0 w-full h-full object-cover hidden" playsinline></video>
       </div>
-      <input type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhoto(event)" required>
-    </label>
 
-    <div class="mt-2 text-xs">PHOTO</div>
+      <div class="flex flex-col items-center gap-2 text-xs w-full">
+        <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
+        <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-sky-600 text-white rounded shadow hidden" onclick="capturePhoto()">Capture photo</button>
+        <!-- Hidden file input populated by capturePhoto; not user-interactive -->
+        <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" required>
+        <input type="hidden" id="photoData" name="photo_data">
+      </div>
+
+      <div class="mt-2 text-xs">PHOTO</div>
+    </div>
 
     <!-- THUMB MARK -->
     <label class="cursor-pointer mt-6">
