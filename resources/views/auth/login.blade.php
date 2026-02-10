@@ -7,8 +7,8 @@
 
             <div class="mb-4 space-y-2">
                 <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
-                <h2 class="text-3xl font-semibold text-slate-900">Sign in to BFAR Portal</h2>
-                <p class="text-sm text-slate-500">Use your official BFAR email account to continue.</p>
+                <h2 class="text-3xl font-semibold text-slate-900 text-center">Sign in to BFAR Portal</h2>
+                <p class="text-sm text-slate-500 text-center">Use your official BFAR email account to continue.</p>
             </div>
 
             <form class="space-y-6" method="POST" action="{{ route('login') }}">

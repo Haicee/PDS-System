@@ -276,16 +276,16 @@
       </td>
       <td class="border px-2 align-top border-black">
         <div class="flex h-full gap-20 mt-20">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="YES"> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="YES" @checked(($declaration->q34_a ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="NO" @checked(($declaration->q34_a ?? '') === 'NO')> NO</label>
         </div>
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_b" value="YES"> YES</label>
-          <label class="flex items-center gap-3"><input type="checkbox" name="q34_b" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_b" value="YES" @checked(($declaration->q34_b ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-3"><input type="checkbox" name="q34_b" value="NO" @checked(($declaration->q34_b ?? '') === 'NO')> NO</label>
         </div>
         <p class="mt-2">if yes, give details:</p>
-        <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a">
-        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b">
+        <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a" value="{{ $declaration->q34_a_details ?? '' }}">
+        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b" value="{{ $declaration->q34_b_details ?? '' }}">
       </td>
     </tr>
 
@@ -295,11 +295,11 @@
       </td>
       <td class="border px-2 align-top border-black">
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="YES"> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="YES" @checked(($declaration->q35_a ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="NO" @checked(($declaration->q35_a ?? '') === 'NO')> NO</label>
         </div>
         <p class="mt-2">if yes, give details:</p>
-        <input type="text" class="mb-2 w-full" name="q35_a_details" data-detail-for="q35_a">
+        <input type="text" class="mb-2 w-full" name="q35_a_details" data-detail-for="q35_a" value="{{ $declaration->q35_a_details ?? '' }}">
       </td>
     </tr>
 
@@ -310,12 +310,12 @@
       </td>
       <td class="border px-2 border-black">
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="YES"> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="YES" @checked(($declaration->q35_b ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="NO" @checked(($declaration->q35_b ?? '') === 'NO')> NO</label>
         </div>
         <p class="mt-2 mb-2">if yes, give details:</p>
-        <span class="ml-9">Date Filed:</span> <input class="border-b mb-2 mr-40" type="text" data-detail-for="q35_b" name="q35_b_details_date">
-        <span class="ml-1">Status of Case/s:</span> <input class="border-b mb-2" type="text" data-detail-for="q35_b" name="q35_b_details_status">
+        <span class="ml-9">Date Filed:</span> <input class="border-b mb-2 mr-40" type="text" data-detail-for="q35_b" name="q35_b_details_date" value="{{ $declaration->q35_b_details_date ?? '' }}">
+        <span class="ml-1">Status of Case/s:</span> <input class="border-b mb-2" type="text" data-detail-for="q35_b" name="q35_b_details_status" value="{{ $declaration->q35_b_details_status ?? '' }}">
       </td>
     </tr>
 
@@ -329,15 +329,15 @@
      <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-3">
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q36" value="YES"> YES
+        <input type="checkbox" name="q36" value="YES" @checked(($declaration->q36 ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q36" value="NO"> NO
+        <input type="checkbox" name="q36" value="NO" @checked(($declaration->q36 ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" data-detail-for="q36" name="q36_details">
+    <input class="border-b mb-2 w-full" type="text" name="q36_details" data-detail-for="q36" value="{{ $declaration->q36_details ?? '' }}">
 
 </tr>
 
@@ -350,39 +350,39 @@
      <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-3">
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q37" value="YES"> YES
+        <input type="checkbox" name="q37" value="YES" @checked(($declaration->q37 ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q37" value="NO"> NO
+        <input type="checkbox" name="q37" value="NO" @checked(($declaration->q37 ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" data-detail-for="q37" name="q37_details">
+    <input class="border-b mb-2 w-full" type="text" name="q37_details" data-detail-for="q37" value="{{ $declaration->q37_details ?? '' }}">
 
 </tr>
 
 
 
 <tr>
-      <td class="border w-2/3 align-top border-black border-b-0">
+      <td class="border w-2/3 align-top border-black">
               <div class="ml-5 mb-3 mt-3">38. a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?
         </div>
         
       </td>
       
-     <td class=" px-2 border-black">
+     <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q38_a" value="YES"> YES
+        <input type="checkbox" name="q38_a" value="YES" @checked(($declaration->q38_a ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q38_a" value="NO"> NO
+        <input type="checkbox" name="q38_a" value="NO" @checked(($declaration->q38_a ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" data-detail-for="q38_a" name="q38_a_details">
+    <input class="border-b mb-2 w-full" type="text" name="q38_a_details" data-detail-for="q38_a" value="{{ $declaration->q38_a_details ?? '' }}">
 
 </tr>
 
@@ -398,16 +398,15 @@
      <td class="border  px-2  border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q38_b" value="YES"> YES
+        <input type="checkbox" name="q38_b" value="YES" @checked(($declaration->q38_b ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q38_b" value="NO"> NO
+        <input type="checkbox" name="q38_b" value="NO" @checked(($declaration->q38_b ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q38_b" name="q38_b_details">
-   
+  <input class="border-b mb-2 w-full" type="text" name="q38_b_details" data-detail-for="q38_b" value="{{ $declaration->q38_b_details ?? '' }}">   
 
 </tr>
 
@@ -423,16 +422,15 @@
      <td class="border  px-2 border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q39" value="YES"> YES
+        <input type="checkbox" name="q39" value="YES" @checked(($declaration->q39 ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q39" value="NO"> NO
+        <input type="checkbox" name="q39" value="NO" @checked(($declaration->q39 ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q39" name="q39_details">
-   
+  <input class="border-b mb-2 w-full" type="text" name="q39_details" data-detail-for="q39" value="{{ $declaration->q39_details ?? '' }}">   
 
 </tr>
 
@@ -451,38 +449,38 @@
      <td class="border  px-2 border-black">
     <div class="flex h-full gap-20 mt-12">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_a" value="YES"> YES
+        <input type="checkbox" name="q40_a" value="YES" @checked(($declaration->q40_a ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_a" value="NO"> NO
+        <input type="checkbox" name="q40_a" value="NO" @checked(($declaration->q40_a ?? '') === 'NO')> NO
       </label>
     </div>
 
       <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_a" name="q40_a_details">
+  <input class="border-b mb-2 w-full" type="text" name="q40_a_details" data-detail-for="q40_a" value="{{ $declaration->q40_a_details ?? '' }}">
 
      <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_b" value="YES"> YES
+        <input type="checkbox" name="q40_b" value="YES" @checked(($declaration->q40_b ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_b" value="NO"> NO
+        <input type="checkbox" name="q40_b" value="NO" @checked(($declaration->q40_b ?? '') === 'NO')> NO
       </label>
     </div>
 
       <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_b" name="q40_b_details">
+  <input class="border-b mb-2 w-full" type="text" name="q40_b_details" data-detail-for="q40_b" value="{{ $declaration->q40_b_details ?? '' }}">
 
      <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_c" value="YES"> YES
+        <input type="checkbox" name="q40_c" value="YES" @checked(($declaration->q40_c ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_c" value="NO"> NO
+        <input type="checkbox" name="q40_c" value="NO" @checked(($declaration->q40_c ?? '') === 'NO')> NO
       </label>
     </div>
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_c" name="q40_c_details">
+  <input class="border-b mb-2 w-full" type="text" name="q40_c_details" data-detail-for="q40_c" value="{{ $declaration->q40_c_details ?? '' }}">
 </td>
 </tr>
 
@@ -530,16 +528,22 @@
         <th class="border font-light border-black">OFFICE / RESIDENTIAL ADDRESS </th>
         <th class="border font-light w-52 border-r-2 border-black">CONTACT NO. AND / OR EMAIL</th>
       </tr>
-      @for ($i = 0; $i < 7; $i++)
+      @php
+        // Reindex to zero-based keys so array-style access works for all saved references
+        $refRows = ($references ?? collect())->values();
+        $maxRef = max(7, $refRows->count());
+      @endphp
+      @for ($i = 0; $i < $maxRef; $i++)
+      @php $ref = $refRows[$i] ?? null; @endphp
       <tr class="border border-r-0 border-l-3 border-black align-top">
-        <td class="border border-black align-top p-0 w-60">
-          <textarea name="reference_name[]" class="align-middle text-center ref-field w-full border-none outline-none p-2 text-xs resize-none" rows="1" placeholder=""></textarea>
+        <td class="border border-black align-top p-0 w-60 text-center" style="height:25px;">
+          {{ $ref->name ?? '' }}
         </td>
-        <td class="border border-black align-top p-0">
-          <textarea name="reference_address[]" class="align-middle text-center ref-field w-full border-none outline-none p-2 text-xs resize-none" rows="1" placeholder=""></textarea>
+        <td class="border border-black align-top p-0 text-center" style="height:25px;">
+          {{ $ref->address ?? '' }}
         </td>
-        <td class="border border-r-3 align-top p-0 border-r-2 border-black">
-          <textarea name="reference_contact[]" class="align-middle text-center ref-field w-full border-none outline-none p-2 text-xs resize-none" rows="1" placeholder=""></textarea>
+        <td class="border border-r-3 align-top p-0 border-r-2 border-black text-center" style="height:25px;">
+          {{ $ref->contact ?? '' }}
         </td>
       </tr>
       @endfor
@@ -568,7 +572,7 @@
       Government Issued ID:
     </td>
     <td class="border px-2 py-1 w-2/3 border-black">
-      <textarea class="text-base w-full h-8 resize-none outline-none align-middle" name="gov_id"></textarea>
+      {{ $idInfo->gov_id ?? '' }}
     </td>
   </tr>
 
@@ -578,7 +582,7 @@
       ID/License/Passport No.:
     </td>
     <td class="border px-2 py-1 border-black">
-      <textarea class="text-base w-full h-8 resize-none outline-none" name="licence_passport_id"></textarea>
+      {{ $idInfo->passport_licence_id?? '' }}
     </td>
   </tr>
 
@@ -588,7 +592,7 @@
       Date/Place of Issuance:
     </td>
     <td class="border px-2 py-1 border-black">
-      <textarea class="text-base w-full h-8 resize-none outline-none" name="id_issue_date_place"></textarea>
+      {{ $idInfo->date_place_issuance ?? '' }}
     </td>
   </tr>
 
@@ -686,8 +690,8 @@
     CS FORM 212 (Revised 2025), Page 4 of 5
     </div>
       <div class="flex justify-between mt-4">
-    <a href="{{ route('pds.form3') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300 print:text-white print:bg-gray-600">Previous Page</a>
-    <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</button>
+    <a href="{{ route('pdsreview.pdsreview3') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
+            <a href="{{ route('pdsreview.pdsreview5') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
   </div>
   </div>
 </form>

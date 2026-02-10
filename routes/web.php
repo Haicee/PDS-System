@@ -5,7 +5,11 @@
 
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PdsSubmissionController;
+use App\Http\Controllers\PdsStepController;
+use App\Http\Controllers\PdsPdfController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PdsController;
 use App\Http\Controllers\EmployeeController;
 
 Route::get('/', function () {
@@ -619,7 +623,7 @@ if (! function_exists('manageUserEmployees')) {
     }
 }
 
-//Manage User Route
+
 Route::get('/manage-user', function(){
     $employees = manageUserEmployees();
 
@@ -775,6 +779,10 @@ Route::middleware('auth:admin,web')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('/pds/submit', [PdsSubmissionController::class, 'store'])->name('pds.submit');
+    Route::post('/pds/save-step/{step}', [PdsStepController::class, 'saveStep'])->name('pds.saveStep');
+    Route::get('/pds/pdf', [PdsPdfController::class, 'download'])->name('pds.pdf');
 });
 
 // Employee routes
@@ -786,6 +794,32 @@ Route::middleware(['auth','role:employee'])->group(function () {
     Route::view('/employee/pds/form4', 'pds_form.form4')->name('pds.form4');
     Route::view('/employee/pds/form5', 'pds_form.form5')->name('pds.form5');
 });
+
+
+
+// Employee routes
+Route::middleware(['auth','role:employee'])->group(function () {
+Route::get('/pds/view', [PdsController::class, 'view'])->name('pds.view');
+    Route::get('/employee/pdsreview/form1', [PdsController::class, 'view'])->name('pdsreview.pdsreview1');
+    Route::get('/employee/pdsreview/form2', [PdsController::class, 'review2'])->name('pdsreview.pdsreview2');
+    Route::get('/employee/pdsreview/form3', [PdsController::class, 'review3'])->name('pdsreview.pdsreview3');
+    Route::get('/employee/pdsreview/form4', [PdsController::class, 'review4'])->name('pdsreview.pdsreview4');
+    Route::get('/employee/pdsreview/form5', [PdsController::class, 'review5'])->name('pdsreview.pdsreview5');
+    Route::get('/employee/pdsreview/form1/pdf', [PdsPdfController::class, 'preview1'])->name('pdsreview1.pdf');
+});
+
+
+Route::get('/pds/pdf-preview', [PdsPdfController::class, 'preview'])
+    ->name('pds.pdf.preview')
+    ->middleware('signed'); 
+
+
+Route::middleware('auth')->group(function () {
+    Route::get('/pds/pdf-download', [PdsPdfController::class, 'download'])
+        ->name('pds.pdf.download');
+});
+
+
 
 
 require __DIR__.'/auth.php';

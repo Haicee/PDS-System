@@ -1,11 +1,6 @@
 <x-app-layout>
 <form method="POST" action="{{ route('pds.saveStep', 2) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
     <style>
         body { margin: 24px; }
         table { border-collapse: collapse; width: 100%; }
@@ -20,6 +15,7 @@
 
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
+        td { height: 30px }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -204,16 +200,22 @@
     <th class="border text-center bg-[#e7e7e7]">VALID UNTIL</th>
    </tr>
 
-   @for ($i = 0; $i < 7; $i++)
-      <tr>
-        <td class="border align-top"><textarea rows="1" placeholder="Eligibility" name="eligibility[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Rating" name="rating[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Date" name="date[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Place" name="place[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="License No." name="license_no[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Validity" name="validity[]"></textarea></td>
-      </tr>
-   @endfor
+  @php
+    $rows = $eligibilities ?? collect();
+    $maxRows = max(7, $rows->count()); // 7 display rows
+@endphp
+
+@for ($i = 0; $i < $maxRows; $i++)
+  @php $row = $rows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $row->eligibility ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->rating ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->exam_date ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->exam_place ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->license_no ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->validity ?? '—' }}</td>
+  </tr>
+@endfor
     </table>
     
 
@@ -259,16 +261,22 @@
       <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
      </tr>
 
-    @for ($i = 0; $i < 8; $i++)
-     <tr>
-      <td class="border align-top"><textarea rows="1" placeholder="From" name="work_from[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="To" name="work_to[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Position Title" name="work_position_title[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Department/Agency/Office/Company" name="work_department[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Status" name="work_status[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Y/N" name="work_govt_service[]"></textarea></td>
-     </tr>
-    @endfor
+   @php
+    $workRows = $workExperiences ?? collect();
+    $maxRows = max(28, $workRows->count());
+@endphp
+
+@for ($i = 0; $i < $maxRows; $i++)
+  @php $workRow = $workRows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $workRow->from ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->to ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->position_title ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->department ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->status ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->govt_service ?? " " }}</td>
+  </tr>
+@endfor
     <tr>
       <table class="border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
         <colgroup>
@@ -318,53 +326,10 @@
 
     <div class="flex justify-end mt-4">
         <div class="flex gap-2">
-            <a href="{{ route('pds.form1') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
-            <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</button>
+            <a href="{{ route('pdsreview.pdsreview1') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
+            <a href="{{ route('pdsreview.pdsreview3') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
         </div>
     </div>
     </div>
 </form>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form');
-  if (!form) return;
-  const storageKey = 'pds_form_step2_' + ({{ auth()->id() ?? 0 }});
-
-  const loadCache = () => {
-    try {
-      const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      Object.entries(cached).forEach(([name, value]) => {
-        const field = form.elements[name];
-        if (!field) return;
-        if (field.type === 'checkbox' || field.type === 'radio') {
-          field.checked = !!value;
-        } else {
-          field.value = value;
-          if (field.tagName === 'TEXTAREA') field.dispatchEvent(new Event('input'));
-        }
-      });
-    } catch (e) {}
-  };
-
-  const saveCache = () => {
-    const data = {};
-    Array.from(form.elements).forEach(el => {
-      if (!el.name || el.disabled) return;
-      if (['button','submit','reset','file'].includes(el.type)) return;
-      if (el.type === 'checkbox' || el.type === 'radio') {
-        data[el.name] = el.checked;
-      } else {
-        data[el.name] = el.value;
-      }
-    });
-    try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {}
-  };
-
-  loadCache();
-  form.addEventListener('input', saveCache);
-  form.addEventListener('change', saveCache);
-  form.addEventListener('submit', () => { localStorage.removeItem(storageKey); });
-});
-</script>
-
 </x-app-layout>

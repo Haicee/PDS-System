@@ -1,11 +1,6 @@
 <x-app-layout>
 <form method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
     <style>
   body { margin: 24px; }
   table {
@@ -20,6 +15,7 @@
         }
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
+        td { height: 30px; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -191,15 +187,21 @@
     <th class="border text-center bg-[#e7e7e7]">TO</th>
    </tr>
 
-   @for ($i = 0; $i < 7; $i++)
-      <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Organization" name="voluntary_organization[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="From" name="voluntary_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="To" name="voluntary_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Hours" name="voluntary_hours[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Position/Nature of Work" name="voluntary_position_nature_of_work[]"></textarea></td>
-      </tr>
-   @endfor
+    @php
+    $volRows = $voluntaryWorks ?? collect();
+    $maxRows = max(7, $volRows->count());
+@endphp
+
+@for ($i = 0; $i < $maxRows; $i++)
+  @php $row = $volRows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $row->organization ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->from ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->to ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->hours ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->position ?? '—' }}</td>
+  </tr>
+@endfor
 
     </table>
     
@@ -246,16 +248,22 @@
       <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
      </tr>
 
-    @for ($i = 0; $i < 8; $i++)
-     <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Title of L&D / Training" name="learning_title_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="From" name="learning_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="To" name="learning_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Hours" name="learning_hours[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Type of L&D" name="learning_type_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Conducted/Sponsored By" name="learning_conducted_sponsored_by[]"></textarea></td>
-     </tr>
-    @endfor
+      @php
+    $trainingRows = $training ?? collect();
+    $maxTraining = max(21, $trainingRows->count());
+@endphp
+
+@for ($i = 0; $i < $maxTraining; $i++)
+  @php $trow = $trainingRows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $trow->title ?? '' }}</td>
+    <td class="border align-top text-center">{{ $trow->from ?? '' }}</td>
+    <td class="border align-top text-center">{{ $trow->to ?? '' }}</td>
+    <td class="border align-top text-center">{{ $trow->hours ?? '' }}</td>
+    <td class="border align-top text-center">{{ $trow->type_of_ld ?? '' }}</td>
+    <td class="border align-top text-center">{{ $trow->conducted_by ?? '' }}</td>
+  </tr>
+@endfor
 
     </table>
 
@@ -286,13 +294,21 @@
   
       </tr>
 
-    @for ($i = 0; $i < 7; $i++)
-      <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Special Skills and Hobbies" name="special_skills_hobbies[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Non-Academic Distinctions/Recognition" name="non_academic_distinctions_recognition[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Membership in Association/Organization" name="membership_in_association_organization[]"></textarea></td> 
-      </tr>
-    @endfor
+    @php
+    $otherCollection = $other ?? collect();
+    $skills = $otherCollection->where('category', 'skills')->pluck('description')->values();
+    $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->values();
+    $assoc = $otherCollection->where('category', 'association')->pluck('description')->values();
+    $maxOther = max(7, $skills->count(), $recognition->count(), $assoc->count());
+@endphp
+
+@for ($i = 0; $i < $maxOther; $i++)
+  <tr>
+    <td class="border align-top text-center">{{ $skills[$i] ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $recognition[$i] ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $assoc[$i] ?? '—' }}</td>
+  </tr>
+@endfor
 
     </table>
 
@@ -339,8 +355,8 @@
     CS FORM 212 (Revised 2025), Page 3 of 5
     </div>
     <div class="flex justify-between mt-4">
-        <a id="pds3-prev" href="{{ route('pds.form2') }}" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Previous Page</a>
-        <button type="submit" id="pds3-next" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Submit</button>
+        <a href="{{ route('pdsreview.pdsreview2') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
+            <a href="{{ route('pdsreview.pdsreview4') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
     </div>
     </div>
 </form>
