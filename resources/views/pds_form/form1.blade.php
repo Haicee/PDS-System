@@ -209,8 +209,10 @@
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
   <!-- HEADER -->
   <header class="mb-4 flex items-start justify-between gap-4">
-    <div class="text-sm font-bold italic">CS Form No. 212</div>
-    <div class="italic text-xs">Revised 2025</div>
+    <div class="text-sm font-bold italic font-['Arial_Narrow','sans-serif']">CS Form No. 212
+      <br>
+    <span class="font-light text-sm italic font-['Arial_Narrow','sans-serif']">Revised 2025</span>
+    </div>
     <h1 class="font-extrabold text-4xl text-center mb-4 font-['Arial_Black','sans-serif'] flex-1">
       PERSONAL DATA SHEET
     </h1>
@@ -391,8 +393,8 @@
           <p class="py-3 flex justify-center">Pls. indicate country:</p>
           <div class="border mb-2 mt-1 w-full text-center" style="min-height: 38px;">
             <textarea
-      name="surname"
-      id="surname"
+      name="country"
+      id="country"
       required
       rows="1"
       class="w-full text-lg resize-none
@@ -1040,6 +1042,14 @@
 
     </tr>
 
+    @php
+        $childNames = collect(old('children_familybg', isset($children) ? $children->pluck('firstname')->toArray() : []));
+        $childDobs = collect(old('children_dateofbirth_familybg', isset($children) ? $children->pluck('date_of_birth')->toArray() : []));
+        $childRowCount = max(14, $childNames->count(), $childDobs->count());
+        while ($childNames->count() < $childRowCount) { $childNames->push(''); }
+        while ($childDobs->count() < $childRowCount) { $childDobs->push(''); }
+    @endphp
+
     
 
 
@@ -1077,7 +1087,11 @@
     ></textarea>
         </div>
       </td>
-      
+
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
       <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1087,7 +1101,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1100,7 +1114,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1125,6 +1139,10 @@
     ></textarea>
       </td>
 
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
       <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1134,7 +1152,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1147,7 +1165,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1170,6 +1188,10 @@
     ></textarea>
       </td>
 
+    @php
+        $childName = $childNames->shift();
+        $childDob = $childDobs->shift();
+    @endphp
     <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1179,7 +1201,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1192,7 +1214,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1216,6 +1238,10 @@
       </td>
 
 
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
         <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1225,7 +1251,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1238,7 +1264,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1262,6 +1288,10 @@
       </td>
 
 
+    @php
+        $childName = $childNames->shift();
+        $childDob = $childDobs->shift();
+    @endphp
      <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1271,7 +1301,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1284,7 +1314,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1307,8 +1337,11 @@
     ></textarea>
       </td>
 
-
-       <td class="border">
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
+      <td class="border">
        <div class="h-full w-full">
          <textarea
       name="children_familybg[]"
@@ -1317,7 +1350,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1330,7 +1363,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1357,7 +1390,10 @@
     ></textarea>
       </td>
 
-
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
        <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1367,7 +1403,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1380,7 +1416,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1420,7 +1456,10 @@
     ></textarea>
         </div>
       </td>
-
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
        <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1430,7 +1469,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1443,7 +1482,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1469,6 +1508,10 @@
     ></textarea>
       </td>
 
+     @php
+         $childName = $childNames->shift();
+         $childDob = $childDobs->shift();
+     @endphp
      <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1478,7 +1521,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1491,7 +1534,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1518,6 +1561,10 @@
     ></textarea>
       </td>
 
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
       <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1527,7 +1574,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1540,7 +1587,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1566,7 +1613,10 @@
     ></textarea>
       </td>
 
-
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
       <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1576,7 +1626,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1589,7 +1639,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1615,6 +1665,10 @@
     ></textarea>
       </td>
 
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
       <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1624,7 +1678,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1637,7 +1691,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -1663,6 +1717,10 @@
       </td>
 
       
+      @php
+          $childName = $childNames->shift();
+          $childDob = $childDobs->shift();
+      @endphp
        <td class="border">
        <div class="h-full w-full">
          <textarea
@@ -1672,7 +1730,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childName }}</textarea>
           </div>
       </td>
 
@@ -1685,7 +1743,7 @@
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+    >{{ $childDob }}</textarea>
        </div>
       </td>
     </tr>
@@ -2293,5 +2351,47 @@
     </div>
     </div>
     </form>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('form');
+  if (!form) return;
+  const storageKey = 'pds_form_step1_' + ({{ auth()->id() ?? 0 }});
+
+  const loadCache = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      Object.entries(cached).forEach(([name, value]) => {
+        const field = form.elements[name];
+        if (!field) return;
+        if (field.type === 'checkbox' || field.type === 'radio') {
+          field.checked = !!value;
+        } else {
+          field.value = value;
+          if (field.tagName === 'TEXTAREA') field.dispatchEvent(new Event('input'));
+        }
+      });
+    } catch (e) {}
+  };
+
+  const saveCache = () => {
+    const data = {};
+    Array.from(form.elements).forEach(el => {
+      if (!el.name || el.disabled) return;
+      if (['button','submit','reset','file'].includes(el.type)) return;
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        data[el.name] = el.checked;
+      } else {
+        data[el.name] = el.value;
+      }
+    });
+    try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {}
+  };
+
+  loadCache();
+  form.addEventListener('input', saveCache);
+  form.addEventListener('change', saveCache);
+  form.addEventListener('submit', () => { localStorage.removeItem(storageKey); });
+});
+</script>
 
 </x-app-layout>

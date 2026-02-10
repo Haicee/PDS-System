@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('weight')->nullable();
             $table->string('blood_type')->nullable();
             $table->string('umid_no')->nullable();
+            $table->string('country')->nullable();
             $table->string('pagibig_no')->nullable();
             $table->string('philhealth_no')->nullable();
             $table->string('philsys_no')->nullable();

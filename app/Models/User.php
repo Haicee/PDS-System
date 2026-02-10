@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
@@ -46,4 +47,18 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    
+    public function hasSubmittedPds(): bool
+    {
+    // Only employees can have PDS submissions
+    if ($this->role !== 'employee') {
+        return false;
+    }
+
+    return DB::table('pds_personal_infos')
+        ->where('user_id', $this->id)
+        ->exists();
 }
+}
+
+

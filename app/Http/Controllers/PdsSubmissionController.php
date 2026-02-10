@@ -59,6 +59,7 @@ class PdsSubmissionController extends Controller
                     'weight' => $req->input('weight'),
                     'blood_type' => $req->input('blood_type'),
                     'umid_no' => $req->input('umid_id_no'),
+                    'country' => $req->input('country'),
                     'pagibig_no' => $req->input('pagibig_id_no'),
                     'philhealth_no' => $req->input('philhealth_no'),
                     'philsys_no' => $req->input('philsys_no'),
@@ -109,6 +110,31 @@ class PdsSubmissionController extends Controller
                 ['user_id' => $userId],
                 [
                     'date_accomplished' => $req->input('date5') ?? $req->input('date_accomplished'),
+                    'q34_a' => $req->input('q34_a'),
+                    'q34_a_details' => $req->input('q34_a_details'),
+                    'q34_b' => $req->input('q34_b'),
+                    'q34_b_details' => $req->input('q34_b_details'),
+                    'q35_a' => $req->input('q35_a'),
+                    'q35_a_details' => $req->input('q35_a_details'),
+                    'q35_b' => $req->input('q35_b'),
+                    'q35_b_details_date' => $req->input('q35_b_details_date'),
+                    'q35_b_details_status' => $req->input('q35_b_details_status'),
+                    'q36' => $req->input('q36'),
+                    'q36_details' => $req->input('q36_details'),
+                    'q37' => $req->input('q37'),
+                    'q37_details' => $req->input('q37_details'),
+                    'q38_a' => $req->input('q38_a'),
+                    'q38_a_details' => $req->input('q38_a_details'),
+                    'q38_b' => $req->input('q38_b'),
+                    'q38_b_details' => $req->input('q38_b_details'),
+                    'q39' => $req->input('q39'),
+                    'q39_details' => $req->input('q39_details'),
+                    'q40_a' => $req->input('q40_a'),
+                    'q40_a_details' => $req->input('q40_a_details'),
+                    'q40_b' => $req->input('q40_b'),
+                    'q40_b_details' => $req->input('q40_b_details'),
+                    'q40_c' => $req->input('q40_c'),
+                    'q40_c_details' => $req->input('q40_c_details'),
                 ]
             );
 
@@ -296,7 +322,6 @@ class PdsSubmissionController extends Controller
                 DB::table('pds_other_info')->insert($otherCombined->all());
             }
 
-            DB::table('pds_references')->where('user_id', $userId)->delete();
             $refs = collect($req->input('reference_name', []))->map(function ($name, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -307,7 +332,14 @@ class PdsSubmissionController extends Controller
             })->filter($rowHasData);
             if ($refs->isNotEmpty()) {
                 $validateNa([$req->input('reference_name', [])], 'References');
-                DB::table('pds_references')->insert($refs->all());
+                // Use upsert to avoid PK collisions
+                DB::table('pds_references')->upsert($refs->all(), ['id'], ['name','address','contact','user_id']);
+                // ensure only current user's refs remain
+                DB::table('pds_references')->where('user_id', $userId)->whereNotIn('id', function ($q) use ($refs, $userId) {
+                    $q->select('id')->from('pds_references')->where('user_id', $userId)->orderBy('id')->limit($refs->count());
+                });
+            } else {
+                DB::table('pds_references')->where('user_id', $userId)->delete();
             }
 
             DB::table('pds_form5_remarks')->where('user_id', $userId)->delete();

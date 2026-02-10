@@ -1,8 +1,8 @@
     <nav x-data="{ open: false }" class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <!-- Primary Navigation Menu -->
         <div class="max-w-20xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20">
-                <div class="flex">
+            <div class="flex justify-between h-20 items-stretch">
+                <div class="flex flex-1 items-stretch">
                     <!-- Logo -->
                     <div class="shrink-0 flex items-center">
                         <img src="{{ asset('images/ph-logo.png') }}" class="h-14 w-auto"/>
@@ -11,22 +11,27 @@
                     </div>
 
                     <!-- Navigation Links  -->
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex items-stretch">
                         <x-nav-link :href="route('employee.dashboard')" :active="request()->routeIs('employee.dashboard')">
                             {{ __('Dashboard') }}
                         </x-nav-link>
                     </div>
 
-                       <div class="hidden space-x-8 sm:-my-px sm:ms-2 sm:flex">
-                        <x-nav-link :href="route('pds.form1')" :active="request()->routeIs('pds.form*')">
-                            {{ __('PDS Form') }}
-                        </x-nav-link>
-                    </div>
-                </div>
-                
+                                <div class="hidden space-x-8 sm:-my-px sm:ms-2 sm:flex items-stretch">
+                @if($hasSubmittedPds)
+                    <x-nav-link :href="route('pds.view')" :active="request()->routeIs('pds.view')">
+                        {{ __('View PDS') }}
+                    </x-nav-link>
+                @else
+                    <x-nav-link :href="route('pds.form1')" :active="request()->routeIs('pds.form*')">
+                        {{ __('PDS Form') }}
+                    </x-nav-link>
+                @endif
+            </div>
+
 
                 <!-- Settings Dropdown (right aligned) -->
-                <div class="hidden sm:flex sm:items-center sm:ms-auto">
+                <div class="hidden sm:flex sm:items-center ml-auto gap-3">
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
                             <button class="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">

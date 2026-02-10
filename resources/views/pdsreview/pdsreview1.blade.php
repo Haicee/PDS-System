@@ -1,17 +1,28 @@
 @if(!empty($pdfMode))
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>PDS PDF</title>
-  @vite('resources/css/app.css')
-<style>
-        /* Print-friendly, spreadsheet-like grid tuned for Legal portrait */
-        @page { size: Legal portrait; margin: 4mm; }
-        body { font-family: 'Arial', sans-serif; font-size: 8.5px; margin: 4mm auto; max-width: 100%; width: 100%; }
-        table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-        td, th { padding: 1.2px; word-wrap: break-word; overflow: visible; line-height: 1.05; }
-        .table-wrapper { width: 100%; }
+<head><meta charset="UTF-8"></head>
+<body>
+@else
+<x-app-layout>
+@endif
+    <form method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
+    @csrf
+    @if (empty($pdfMode))
+    <div class="max-w-6xl mx-auto p-4 flex justify-end gap-3">
+      <a href="{{ route('pdsreview1.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">Preview PDF</a>
+      <a href="{{ route('pds.pdf.download') }}" class="px-4 py-2 bg-slate-700 text-white rounded shadow border border-slate-800 hover:bg-slate-800">Download PDF</a>
+    </div>
+    @endif
+    <style>
+         @if(!empty($pdfMode))
+            body { font-size: 10px; line-height: 1.2; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { padding: 2px; font-size: 9px; }
+            .section { page-break-inside: avoid; }
+        @endif
+        
+        /* Only apply borders where classes already exist */
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
         /* Keep header cells distinct and preserve colors for print */
@@ -20,7 +31,7 @@
         }
         /* Form controls styled as lined cells */
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
-        textarea:focus { outline: none; box-shadow: none; }
+        textarea:focus { outline: none; box-shadow: none;}
         input[type="checkbox"] { width: 12px; height: 12px;}
         @if (!empty($pdfMode))
         /* Minimal utility shims for Dompdf rendering */
@@ -73,10 +84,7 @@
         .bg-gray-300 { background: #d1d5db; }
         .max-w-9xl, .max-w-7xl, .max-w-6xl { max-width: 100%; }
         body { font-family: 'Arial', sans-serif; }
-         @page {
-            size: A4;
-            margin: 10mm;
-        }
+        @page { margin: 20px; }
         /* Grid helpers used in the table layout */
         .grid { display: grid; }
         .grid-cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -110,11 +118,7 @@
         .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; }
         @endif
     </style>
-</head>
-<body>
-@endif
-
-<div class="p-2 font-serif text-sm" @if(!empty($pdfMode)) style="width:100%;max-width:100%;" @endif>
+    <div class="max-w-6xl mx-auto p-4 font-serif text-sm" @if(!empty($pdfMode)) style="max-width:100%;" @endif>
   <!-- HEADER -->
   <header class="mb-4 flex items-start justify-between gap-4 w-full">
     <span class="text-sm font-bold italic font-['Arial_Narrow','sans-serif']">CS Form No. 212
@@ -137,9 +141,8 @@
     Print legibly if accomplished through own handwriting. Tick appropriate boxes and use separate sheet if necessary. Indicate <span class="font-bold">N/A</span> if not applicable. <span class="font-bold">DO NOT ABBREVIATE.</span>
   </p>
 
-<!-- Your table content goes here -->
-<!-- MAIN TABLE -->
-  <table class="align-middle w-full border border-black table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+  <!-- MAIN TABLE -->
+  <table class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base">
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -779,13 +782,13 @@
 
       <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -1426,9 +1429,56 @@
     CS FORM 212 (Revised 2025), Page 1 of 5
     </div>
 </table>
-</div>
 
+    <div class="flex justify-end mt-4">
+        <a href="{{ route('pdsreview.pdsreview2') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</a>
+    </div>
+    </div>
+    </form>
+@if(empty($pdfMode))
+<script>
+(() => {
+  const form = document.querySelector('form');
+  if (!form) return;
+  const storageKey = 'pds_form1_' + ({{ auth()->id() ?? '0' }});
+  const loadCache = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      for (const [name, value] of Object.entries(cached)) {
+        const field = form.elements[name];
+        if (!field) continue;
+        if (field.type === 'checkbox' || field.type === 'radio') {
+          field.checked = !!value;
+        } else {
+          field.value = value;
+        }
+      }
+    } catch (e) {}
+  };
+
+  const saveCache = () => {
+    const data = {};
+    Array.from(form.elements).forEach(el => {
+      if (!el.name || el.disabled) return;
+      if (['button','submit','reset','file'].includes(el.type)) return;
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        data[el.name] = el.checked;
+      } else {
+        data[el.name] = el.value;
+      }
+    });
+    try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {}
+  };
+
+  loadCache();
+  form.addEventListener('input', saveCache);
+  form.addEventListener('change', saveCache);
+})();
+</script>
+@endif
 @if(!empty($pdfMode))
 </body>
 </html>
+@else
+</x-app-layout>
 @endif
