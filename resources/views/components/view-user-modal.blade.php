@@ -18,6 +18,10 @@
                 window.dispatchEvent(new CustomEvent('employee-updated', { detail: { key: this.key, employee: this.employee } }));
                 this.$dispatch('close');
             },
+            deleteUser() {
+                window.dispatchEvent(new CustomEvent('employee-deleted', { detail: { key: this.key, email: this.working.email } }));
+                this.$dispatch('close');
+            },
             statusClass() { return this.working.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'; },
             typeClass() { return this.working.type === 'Permanent' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'; },
         }">
@@ -85,7 +89,11 @@
         </div>
 
         <div class="flex items-center justify-between gap-3 pt-2">
-            <button type="button" class="text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Reset</button>
+            <div class="flex items-center gap-6">
+                <button type="button" class="text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Reset</button>
+                <button type="button" class="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-400"
+                    x-on:click="deleteUser && deleteUser()">Delete</button>
+            </div>
             <div class="flex gap-3">
                 <x-secondary-button x-on:click="$dispatch('close')">Cancel</x-secondary-button>
                 <x-primary-button x-on:click="save()">Save changes</x-primary-button>

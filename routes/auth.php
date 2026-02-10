@@ -56,13 +56,15 @@ Route::middleware('auth')->group(function () {
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
-        ->name('logout');
-
 });
 
 Route::middleware(['auth','role:employee'])->group(function () {
     Route::get('/employee', [EmployeeController::class, 'dashboard'])->name('employee.dashboard');
 });
+
+// Allow logout for both admin and web guards
+Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->middleware('auth:admin,web')
+    ->name('logout');
 
 

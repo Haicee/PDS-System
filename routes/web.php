@@ -8,8 +8,12 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PdsSubmissionController;
 use App\Http\Controllers\PdsStepController;
 use App\Http\Controllers\PdsPdfController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PdsController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
+use App\Models\AdminUser;
+use App\Models\RegistrationUser;
 use App\Http\Controllers\EmployeeController;
 
 Route::get('/', function () {
@@ -623,6 +627,39 @@ if (! function_exists('manageUserEmployees')) {
     }
 }
 
+// Admin Users sample data
+if (! function_exists('manageAdminUsers')) {
+    function manageAdminUsers(): array
+    {
+        return [
+            [
+                'name' => 'Choco Mi',
+                'avatar' => 'https://i.pravatar.cc/96?img=10',
+                'email' => 'choco@example.com',
+                'role' => 'Main Admin',
+                'status' => 'Active',
+                'created_at' => '2024-01-10',
+            ],
+            [
+                'name' => 'Althea Ramos',
+                'avatar' => 'https://i.pravatar.cc/96?img=48',
+                'email' => 'althea.ramos@example.com',
+                'role' => 'Admin User',
+                'status' => 'Active',
+                'created_at' => '2024-03-22',
+            ],
+            [
+                'name' => 'Noel Diaz',
+                'avatar' => 'https://i.pravatar.cc/96?img=41',
+                'email' => 'noel.diaz@example.com',
+                'role' => 'Admin User',
+                'status' => 'Inactive',
+                'created_at' => '2023-12-05',
+            ],
+        ];
+    }
+}
+
 
 Route::get('/manage-user', function(){
     $employees = manageUserEmployees();
@@ -772,7 +809,50 @@ Route::get('/manage-user/export', function () {
     ]);
 })->middleware(['auth:admin'])->name('manage-user.export');
 
+// Admin Users page (placeholder)
+Route::get('/admin-users', function () {
+    $admins = manageAdminUsers();
+    return view('admin-users', compact('admins'));
+})->middleware(['auth:admin'])->name('admin.users');
 
+
+// Admin user creation (frontend modal submission)
+Route::post('/admin-users', function (Request $request) {
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:255', 'unique:admin_users,name'],
+        'email' => ['required', 'email', 'max:255', 'unique:admin_users,email'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    $admin = AdminUser::create([
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'password' => Hash::make($validated['password']),
+        'role' => 'admin',
+    ]);
+
+    return response()->json([
+        'message' => 'Admin created successfully.',
+        'admin' => $admin->only(['id', 'name', 'email', 'role', 'created_at']),
+    ], 201);
+})->middleware(['auth:admin'])->name('admin-users.store');
+
+
+// Employee creation (Add Employee modal)
+Route::post('/registration-users', function (Request $request) {
+    $validated = $request->validate([
+        'full_name' => ['required', 'string', 'max:255', 'unique:registration_users,full_name'],
+    ]);
+
+    $employee = RegistrationUser::create([
+        'full_name' => $validated['full_name'],
+    ]);
+
+    return response()->json([
+        'message' => 'Employee added successfully.',
+        'employee' => $employee->only(['id', 'full_name', 'created_at']),
+    ], 201);
+})->middleware(['auth:admin'])->name('registration-users.store');
 
 //Profile Route
 Route::middleware('auth:admin,web')->group(function () {

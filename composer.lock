@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b5902edaf42334076830d211ad5dafb8",
+    "content-hash": "90ba1bfa56afef0cd88d7d3c0cdcf358",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -1918,7 +1918,7 @@
                 "parser"
             ],
             "support": {
-                "docs": "https://commonmark.thephpleague.com/",
+                "docs": "https://commonmark.thephpleague.com",
                 "forum": "https://github.com/thephpleague/commonmark/discussions",
                 "issues": "https://github.com/thephpleague/commonmark/issues",
                 "rss": "https://github.com/thephpleague/commonmark/releases.atom",
@@ -2005,7 +2005,7 @@
                 "schema"
             ],
             "support": {
-                "docs": "https://config.thephpleague.com/",
+                "docs": "https://config.thephpleague.com",
                 "issues": "https://github.com/thephpleague/config/issues",
                 "rss": "https://github.com/thephpleague/config/releases.atom",
                 "source": "https://github.com/thephpleague/config"

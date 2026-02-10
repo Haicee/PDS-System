@@ -33,26 +33,80 @@
     textarea:focus { outline: none; box-shadow: none; }
   </style>
   <script>
-    function previewPhoto(event) {
-      const input = event.target;
-      const file = input.files && input.files[0];
+    
+    
+    // PHOTO capture helpers
+    let photoStream;
+    const photoConstraints = { video: { width: { ideal: 640 }, height: { ideal: 480 } } };
+
+    async function startPhotoCamera() {
+      const video = document.getElementById('photoVideo');
+      if (!video) return;
+
+      try {
+        photoStream = await navigator.mediaDevices.getUserMedia(photoConstraints);
+        video.srcObject = photoStream;
+        video.play();
+        video.classList.remove('hidden');
+        document.getElementById('photoCaptureBtn')?.classList.remove('hidden');
+        document.getElementById('photoStartBtn')?.classList.add('hidden');
+      } catch (err) {
+        alert('Unable to access camera. Please check permissions or use file upload.');
+        console.error(err);
+      }
+    }
+
+    function stopPhotoCamera() {
+      if (photoStream) {
+        photoStream.getTracks().forEach(t => t.stop());
+        photoStream = null;
+      }
+    }
+
+    function dataUrlToFile(dataUrl, fileName) {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      return new File([u8arr], fileName, { type: mime });
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById('photoVideo');
+      const canvas = document.createElement('canvas');
       const img = document.getElementById('photoPreview');
       const placeholder = document.getElementById('photoPlaceholder');
-      if (!img || !placeholder) return;
-      if (!file) {
-        img.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-        return;
-      }
+      const hiddenInput = document.getElementById('photoData');
+      const fileInput = document.getElementById('photoFile');
+      if (!video || !img || !placeholder || !hiddenInput || !fileInput) return;
+      if (!photoStream) return alert('Camera is not active. Click "Open camera" first.');
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        img.src = e.target.result;
-        img.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-      };
-      reader.readAsDataURL(file);
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      img.src = dataUrl;
+      img.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      hiddenInput.value = dataUrl;
+
+      // Populate the hidden file input so the server still receives a file
+      const file = dataUrlToFile(dataUrl, 'photo.jpg');
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      fileInput.files = transfer.files;
+
+      stopPhotoCamera();
+      document.getElementById('photoStartBtn')?.classList.remove('hidden');
+      document.getElementById('photoCaptureBtn')?.classList.add('hidden');
+      video.classList.add('hidden');
     }
+
+    // No upload fallback; enforce camera capture only.
 
     // Auto-grow textareas used in the references table and ID/date fields
     function autoSize(el) {
@@ -276,16 +330,16 @@
       </td>
       <td class="border px-2 align-top border-black">
         <div class="flex h-full gap-20 mt-20">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="YES"> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a"> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a"> NO</label>
         </div>
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_b" value="YES"> YES</label>
-          <label class="flex items-center gap-3"><input type="checkbox" name="q34_b" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_b"> YES</label>
+          <label class="flex items-center gap-3"><input type="checkbox" name="q34_b"> NO</label>
         </div>
         <p class="mt-2">if yes, give details:</p>
-        <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a">
-        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b">
+        <input type="text" class="mb-2 w-full" data-detail-for="q34_a">
+        <input type="text" class="mb-2 w-full" data-detail-for="q34_b">
       </td>
     </tr>
 
@@ -295,11 +349,11 @@
       </td>
       <td class="border px-2 align-top border-black">
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="YES"> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a"> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a"> NO</label>
         </div>
         <p class="mt-2">if yes, give details:</p>
-        <input type="text" class="mb-2 w-full" name="q35_a_details" data-detail-for="q35_a">
+        <input type="text" class="mb-2 w-full" data-detail-for="q35_a">
       </td>
     </tr>
 
@@ -310,12 +364,12 @@
       </td>
       <td class="border px-2 border-black">
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="YES"> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="NO"> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b"> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b"> NO</label>
         </div>
         <p class="mt-2 mb-2">if yes, give details:</p>
-        <span class="ml-9">Date Filed:</span> <input class="border-b mb-2 mr-40" type="text" data-detail-for="q35_b" name="q35_b_details_date">
-        <span class="ml-1">Status of Case/s:</span> <input class="border-b mb-2" type="text" data-detail-for="q35_b" name="q35_b_details_status">
+        <span class="ml-9">Date Filed:</span> <input class="border-b mb-2 mr-40" type="text" data-detail-for="q35_b">
+        <span class="ml-1">Status of Case/s:</span> <input class="border-b mb-2" type="text" data-detail-for="q35_b">
       </td>
     </tr>
 
@@ -329,15 +383,15 @@
      <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-3">
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q36" value="YES"> YES
+        <input type="checkbox" name="q36"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q36" value="NO"> NO
+        <input type="checkbox" name="q36"> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" data-detail-for="q36" name="q36_details">
+    <input class="border-b mb-2 w-full" type="text" data-detail-for="q36">
 
 </tr>
 
@@ -350,39 +404,39 @@
      <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-3">
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q37" value="YES"> YES
+        <input type="checkbox" name="q37"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q37" value="NO"> NO
+        <input type="checkbox" name="q37"> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" data-detail-for="q37" name="q37_details">
+    <input class="border-b mb-2 w-full" type="text" data-detail-for="q37">
 
 </tr>
 
 
 
 <tr>
-      <td class="border w-2/3 align-top border-black border-b-0">
+      <td class="border w-2/3 align-top border-black">
               <div class="ml-5 mb-3 mt-3">38. a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?
         </div>
         
       </td>
       
-     <td class=" px-2 border-black">
+     <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q38_a" value="YES"> YES
+        <input type="checkbox" name="q38_a"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q38_a" value="NO"> NO
+        <input type="checkbox" name="q38_a"> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" data-detail-for="q38_a" name="q38_a_details">
+    <input class="border-b mb-2 w-full" type="text" data-detail-for="q38_a">
 
 </tr>
 
@@ -398,15 +452,15 @@
      <td class="border  px-2  border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q38_b" value="YES"> YES
+        <input type="checkbox" name="q38_b"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q38_b" value="NO"> NO
+        <input type="checkbox" name="q38_b"> NO
       </label>
     </div>
 
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q38_b" name="q38_b_details">
+  <input class="border-b mb-2 w-full" type="text" data-detail-for="q38_b">
    
 
 </tr>
@@ -423,15 +477,15 @@
      <td class="border  px-2 border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q39" value="YES"> YES
+        <input type="checkbox" name="q39"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q39" value="NO"> NO
+        <input type="checkbox" name="q39"> NO
       </label>
     </div>
 
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q39" name="q39_details">
+  <input class="border-b mb-2 w-full" type="text" data-detail-for="q39">
    
 
 </tr>
@@ -451,38 +505,38 @@
      <td class="border  px-2 border-black">
     <div class="flex h-full gap-20 mt-12">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_a" value="YES"> YES
+        <input type="checkbox" name="q40_a"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_a" value="NO"> NO
+        <input type="checkbox" name="q40_a"> NO
       </label>
     </div>
 
       <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_a" name="q40_a_details">
+  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_a">
 
      <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_b" value="YES"> YES
+        <input type="checkbox" name="q40_b"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_b" value="NO"> NO
+        <input type="checkbox" name="q40_b"> NO
       </label>
     </div>
 
       <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_b" name="q40_b_details">
+  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_b">
 
      <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_c" value="YES"> YES
+        <input type="checkbox" name="q40_c"> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_c" value="NO"> NO
+        <input type="checkbox" name="q40_c"> NO
       </label>
     </div>
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_c" name="q40_c_details">
+  <input class="border-b mb-2 w-full" type="text" data-detail-for="q40_c">
 </td>
 </tr>
 
@@ -497,7 +551,7 @@
   <div class="mt-12 flex flex-col items-center">
 
     <!-- PASSPORT PHOTO -->
-    <label class="cursor-pointer">
+    <div class="w-full flex flex-col items-center gap-2">
       <div class="border-2 border-black w-[3.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
         <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
         <div id="photoPlaceholder">
@@ -506,11 +560,19 @@
           the last 6 months<br>
           4.5 cm × 3.5 cm
         </div>
+        <video id="photoVideo" class="absolute inset-0 w-full h-full object-cover hidden" playsinline></video>
       </div>
-      <input type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhoto(event)" required>
-    </label>
 
-    <div class="mt-2 text-xs">PHOTO</div>
+      <div class="flex flex-col items-center gap-2 text-xs w-full">
+        <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
+        <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-sky-600 text-white rounded shadow hidden" onclick="capturePhoto()">Capture photo</button>
+        <!-- Hidden file input populated by capturePhoto; not user-interactive -->
+        <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" required>
+        <input type="hidden" id="photoData" name="photo_data">
+      </div>
+
+      <div class="mt-2 text-xs">PHOTO</div>
+    </div>
 
     <!-- THUMB MARK -->
     <label class="cursor-pointer mt-6">

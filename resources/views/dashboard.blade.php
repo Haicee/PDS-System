@@ -22,7 +22,7 @@
 
                     <div class="rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-md shadow-emerald-200/40 border border-white/10 w-72 h-36 flex">
                         <div class="p-5 sm:p-6 flex flex-col justify-between w-full">
-                            <p class="text-lg font-semibold">Job On Call</p>
+                            <p class="text-lg font-semibold">Job On Site</p>
                             <div class="mt-4 flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/15">
@@ -95,10 +95,10 @@
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
                             <tr>
                                 <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Department</th>
+                                <th class="px-6 py-3">Office</th>
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
-                                <th class="px-6 py-3">Location Assigned</th>
+                                <th class="px-6 py-3">Place of Assignment</th>
                                 <th class="px-6 py-3">Date Submitted</th>
                             </tr>
                         </thead>
@@ -141,10 +141,10 @@
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
                             <tr>
                                 <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Department</th>
+                                <th class="px-6 py-3">Office</th>
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
-                                <th class="px-6 py-3">Location Assigned</th>
+                                <th class="px-6 py-3">Place of Assignment</th>
                                 <th class="px-6 py-3">Date Submitted</th>
                             </tr>
                         </thead>
