@@ -19,10 +19,44 @@
 
         <div>
             <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
+            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full uppercase" :value="old('name', $user->name)" required autofocus autocomplete="name" oninput="this.value = this.value.toUpperCase();" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <x-input-label for="unit" :value="__('Unit')" />
+                <x-text-input id="unit" name="unit" type="text" class="mt-1 block w-full uppercase" :value="old('unit', $user->unit)" required autocomplete="organization" oninput="this.value = this.value.toUpperCase();" />
+                <x-input-error class="mt-2" :messages="$errors->get('unit')" />
+            </div>
+
+            <div>
+                <x-input-label for="phone" :value="__('Phone (11 digits)')" />
+                <x-text-input id="phone" name="phone" type="tel" class="mt-1 block w-full" :value="old('phone', $user->phone)" required maxlength="11" pattern="\d{11}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);" />
+                <x-input-error class="mt-2" :messages="$errors->get('phone')" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <x-input-label for="gender" :value="__('Gender')" />
+                <select id="gender" name="gender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                    <option value="Male" {{ old('gender', $user->gender) === 'Male' ? 'selected' : '' }}>Male</option>
+                <option value="Female" {{ old('gender', $user->gender) === 'Female' ? 'selected' : '' }}>Female</option>
+            </select>
+            <x-input-error class="mt-2" :messages="$errors->get('gender')" />
+            </div>
+
+            <div>
+                <x-input-label for="type" :value="__('Type')" />
+                <select id="type" name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                    <option value="Permanent Employee" {{ old('type', $user->type) === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
+                    <option value="Job On Site" {{ old('type', $user->type) === 'Job On Site' ? 'selected' : '' }}>Job On Site</option>
+                </select>
+                <x-input-error class="mt-2" :messages="$errors->get('type')" />
+            </div>
+        </div>  
+        
         <div>
             <x-input-label for="email" :value="__('Email')" />
             <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
@@ -45,6 +79,12 @@
                     @endif
                 </div>
             @endif
+        </div>
+
+        <div>
+            <x-input-label for="location_assigned" :value="__('Location Assigned')" />
+            <x-text-input id="location_assigned" name="location_assigned" type="text" class="mt-1 block w-full uppercase" :value="old('location_assigned', $user->location_assigned)" required oninput="this.value = this.value.toUpperCase();" />
+            <x-input-error class="mt-2" :messages="$errors->get('location_assigned')" />
         </div>
 
         <div class="flex items-center gap-4">

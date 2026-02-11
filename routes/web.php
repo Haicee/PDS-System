@@ -9,6 +9,7 @@ use App\Http\Controllers\PdsSubmissionController;
 use App\Http\Controllers\PdsStepController;
 use App\Http\Controllers\PdsPdfController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ManageUserController;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use App\Models\AdminUser;
@@ -661,11 +662,17 @@ if (! function_exists('manageAdminUsers')) {
 }
 
 
-Route::get('/manage-user', function(){
-    $employees = manageUserEmployees();
+Route::get('/manage-user', [ManageUserController::class, 'index'])
+    ->middleware(['auth:admin'])
+    ->name('manage-user');
 
-    return view('manage-user', compact('employees'));
-})->middleware(['auth:admin'])->name('manage-user');
+Route::patch('/manage-user/{user}', [ManageUserController::class, 'update'])
+    ->middleware(['auth:admin'])
+    ->name('manage-user.update');
+
+Route::delete('/manage-user/{user}', [ManageUserController::class, 'destroy'])
+    ->middleware(['auth:admin'])
+    ->name('manage-user.destroy');
 
 
 

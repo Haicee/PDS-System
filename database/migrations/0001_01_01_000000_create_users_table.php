@@ -14,9 +14,15 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->enum('gender', ['Male', 'Female'])->nullable();
+            $table->string('unit')->nullable();
+            $table->string('phone', 32)->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->enum('type', ['Permanent Employee', 'Job On Site'])->default('Permanent Employee');
+            $table->enum('status', ['Active', 'Inactive'])->default('Active');
+            $table->string('location_assigned')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

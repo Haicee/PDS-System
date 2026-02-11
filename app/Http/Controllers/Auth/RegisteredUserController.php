@@ -32,8 +32,13 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'gender' => ['required', 'in:Male,Female'],
+            'unit' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'digits:11'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'type' => ['required', 'in:Permanent Employee,Job On Site'],
+            'location_assigned' => ['required', 'string', 'max:255'],
         ]);
         
     $role = str_starts_with($request->email, 'admin1@gmail.com') ? 'admin' : 'employee';
@@ -47,11 +52,18 @@ class RegisteredUserController extends Controller
         }
 
         $role = 'employee';
+        $status = 'Active';
 
         $user = User::create([
             'name' => $request->name,
+            'gender' => $request->gender,
+            'unit' => $request->unit,
+            'phone' => $request->phone,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'type' => $request->type,
+            'status' => $status,
+            'location_assigned' => $request->location_assigned,
             'role' => $role,
         ]);
 

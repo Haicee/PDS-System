@@ -24,8 +24,13 @@
 
             init() {
                 window.addEventListener('employee-deleted', (e) => {
+                    const id = e.detail?.id;
                     const email = e.detail?.email;
-                    if (email) this.removeEmployeeByEmail(email);
+                    if (id !== undefined && id !== null) {
+                        this.removeEmployeeById(id);
+                    } else if (email) {
+                        this.removeEmployeeByEmail?.(email);
+                    }
                 });
             },
             openEmployee() {
@@ -313,9 +318,9 @@
                         this.sortKey = 'name';
                         this.sortDir = 'asc';
                     },
-                    removeEmployeeByEmail(email) {
-                        const norm = (v) => (v ?? '').toString().trim().toLowerCase();
-                        this.employees = this.employees.filter(e => norm(e.email) !== norm(email));
+                    removeEmployeeById(id) {
+                        const targetId = Number(id);
+                        this.employees = this.employees.filter(e => Number(e.id) !== targetId);
                     }
                 }">
                 <div class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end border-b border-slate-100">
@@ -328,8 +333,8 @@
                             </select>
                             <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500" x-model="filterType">
                                 <option value="">Type: All</option>
-                                <option value="Permanent">Permanent</option>
-                                <option value="Job On Call">Job On Call</option>
+                                <option value="Permanent Employee">Permanent</option>
+                                <option value="Job On Site">Job On Call</option>
                             </select>
                             <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                                 <option value="name">Sort: Name</option>
@@ -358,7 +363,7 @@
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
                             <tr>
                                 <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Office</th>
+                                <th class="px-6 py-3">Unit</th>
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
                                 <th class="px-6 py-3">Status</th>
@@ -367,10 +372,10 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
-                            <template x-for="(employee, idx) in filteredSorted()" :key="idx">
+                            <template x-for="employee in filteredSorted()" :key="employee.id">
                                 <tr class="hover:bg-slate-50"
                                     x-data="{
-                                        key: 'employee-details-' + idx,
+                                        key: 'employee-details-' + employee.id,
                                         employee,
                                         statusClass() { return this.employee.status === 'Active' ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'; },
                                     }"
@@ -386,7 +391,7 @@
                                         </div>
                                     </td>
 
-                                    <td class="px-6 py-4" x-text="employee.department"></td>
+                                    <td class="px-6 py-4" x-text="employee.unit"></td>
                                     <td class="px-6 py-4 text-slate-500" x-text="employee.email"></td>
                                     <td class="px-6 py-4" x-text="employee.phone"></td>
                                     <td class="px-6 py-4">
@@ -408,8 +413,8 @@
                 </div>
             </div>
 
-            @foreach ($employees as $index => $employee)
-                <x-view-user-modal :employee="$employee" :name="'employee-details-' . $index" :key="'employee-details-' . $index" width="2xl" />
+            @foreach ($employees as $employee)
+                <x-view-user-modal :employee="$employee" :name="'employee-details-' . $employee['id']" :key="'employee-details-' . $employee['id']" width="2xl" />
             @endforeach
 
             <!-- Add Employee Modal -->

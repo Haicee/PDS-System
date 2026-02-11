@@ -17,6 +17,9 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'gender' => ['required', 'in:Male,Female'],
+            'unit' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'digits:11'],
             'email' => [
                 'required',
                 'string',
@@ -25,6 +28,8 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'type' => ['required', 'in:Permanent Employee,Job On Site'],
+            'location_assigned' => ['required', 'string', 'max:255'],
         ];
     }
 }
