@@ -23,15 +23,7 @@
             adminFieldErrors: {},
 
             init() {
-                window.addEventListener('employee-deleted', (e) => {
-                    const id = e.detail?.id;
-                    const email = e.detail?.email;
-                    if (id !== undefined && id !== null) {
-                        this.removeEmployeeById(id);
-                    } else if (email) {
-                        this.removeEmployeeByEmail?.(email);
-                    }
-                });
+                // reserved for future outer-level setup
             },
             openEmployee() {
                 this.employeeError = '';
@@ -74,7 +66,7 @@
                     if (this.savingEmployee) return;
                     this.confirmTitle = 'Add New Employee';
                     this.confirmBody = 'You are about to add {newEmployeeName} to the directory. Are you sure?';
-                }
+                }       
                 this.confirmType = type;
                 this.confirmOpen = true;
             },
@@ -276,6 +268,17 @@
                     sortKey: 'name',
                     sortDir: 'asc',
                     employees: @js($employees),
+                    init() {
+                        window.addEventListener('employee-deleted', (e) => {
+                            const id = e.detail?.id;
+                            const email = e.detail?.email;
+                            if (id !== undefined && id !== null) {
+                                this.removeEmployeeById(id);
+                            } else if (email) {
+                                this.removeEmployeeByEmail?.(email);
+                            }
+                        });
+                    },
                     filteredSorted() {
                         const norm = (v) => (v ?? '').toString().trim().toLowerCase();
 
@@ -321,12 +324,17 @@
                     removeEmployeeById(id) {
                         const targetId = Number(id);
                         this.employees = this.employees.filter(e => Number(e.id) !== targetId);
+                    },
+                    removeEmployeeByEmail(email) {
+                        const norm = (v) => (v ?? '').toString().trim().toLowerCase();
+                        this.employees = this.employees.filter(e => norm(e.email) !== norm(email));
                     }
-                }">
+                }"
+                x-init="init()">
                 <div class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end border-b border-slate-100">
                     <div class="flex flex-col gap-3 w-full lg:flex-row lg:items-center lg:justify-between">
                         <div class="flex flex-wrap gap-2">
-                            <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
+                            <select class="w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
                                 <option value="">Status: All</option>
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>

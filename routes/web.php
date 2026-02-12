@@ -8,6 +8,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PdsSubmissionController;
 use App\Http\Controllers\PdsStepController;
 use App\Http\Controllers\PdsPdfController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ManageUserController;
 use Illuminate\Support\Facades\Hash;
@@ -28,10 +29,14 @@ Route::get('/employee', [EmployeeController::class, 'dashboard'])
 
 // Dashboard Route
 Route::get('/dashboard', function () {
-    // Static sample 
+    $permanentCount = User::where('type', 'Permanent Employee')->count();
+    $jobOnSiteCount = User::where('type', 'Job On Site')->count();
+
     $stats = [
-        'totalEmployees' => 128,
-        'verifiedEmployees' => 117,
+        // Permanent Employees card
+        'totalEmployees' => $permanentCount,
+        // Job On Site card
+        'verifiedEmployees' => $jobOnSiteCount,
         'recentHires' => 6,
         'recentSubmissions' => [
             [

@@ -109,8 +109,9 @@
                 </div>
                 <div class="space-y-2 flex-1">
                 <div class="flex-col gap-1">
-                    <input type="text" class="px-2 py-1 text-2xl font-semibold text-slate-900 border-slate-200 rounded-xl p-0 focus:ring-0 focus:outline-none"
-                        x-model="working.name" />
+                    <input type="text" class="px-2 py-1 text-2xl font-semibold text-slate-900 border-slate-200 rounded-xl p-0 focus:ring-0 focus:outline-none uppercase"
+                        x-model="working.name"
+                        x-on:input="working.name = (working.name || '').toUpperCase()" />
                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="typeClass()" x-text="working.type"></span>
                 </div>
                 <div class="flex items-center gap-2 text-sm text-slate-500">
@@ -122,8 +123,9 @@
         <div class="grid gap-4 text-sm text-slate-700">
             <label class="flex flex-col gap-1">
                 <span class="font-semibold text-slate-500">Unit</span>
-                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" 
-                x-model="working.unit" />
+                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500 uppercase" 
+                x-model="working.unit"
+                x-on:input="working.unit = (working.unit || '').toUpperCase()" />
             </label>
 
             <label class="flex flex-col gap-1">
@@ -156,7 +158,8 @@
 
             <label class="flex flex-col gap-1">
                 <span class="font-semibold text-slate-500">Location Assigned</span>
-                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.location" />
+                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500 uppercase" x-model="working.location"
+                x-on:input="working.location = (working.location || '').toUpperCase()" />
             </label>
         </div>
 
@@ -170,7 +173,7 @@
 
         <div class="flex items-center justify-between gap-3 pt-2" x-show="!confirmingDelete">
             <div class="flex items-center gap-6">
-                <button type="button" class="text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Reset</button>
+                <button type="button" class="text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Undo</button>
                 <button type="button" class="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-400"
                     x-on:click="deleteUser()">Delete</button>
             </div>
