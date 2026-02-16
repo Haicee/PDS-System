@@ -11,14 +11,26 @@ use Illuminate\Support\Facades\URL;
 class PdsPdfController extends Controller
 {
     // This method will render the PDF preview (auth)
-    public function preview1()
+    public function preview1(Request $request)
     {
         $userId = Auth::id();
         if (!$userId) {
             abort(403, 'Unauthorized');
         }
 
-        return $this->renderPdfView($userId);
+        // If debug=1, show raw HTML for troubleshooting
+        if ($request->boolean('debug')) {
+            return $this->renderPdfView($userId);
+        }
+
+        $data = $this->buildPdfData($userId);
+        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
+        $pdfBinary = $this->makeShot($html)->pdf();
+
+        return response($pdfBinary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="PDS_preview.pdf"'
+        ]);
     }
 
     // Signed preview endpoint for Browsershot
@@ -32,7 +44,7 @@ class PdsPdfController extends Controller
         return $this->renderPdfView($userId);
     }
 
-    private function renderPdfView($userId)
+    private function buildPdfData($userId)
     {
         $personal = DB::table('pds_personal_infos')->where('user_id', $userId)->first();
         $address = DB::table('pds_addresses')->where('user_id', $userId)->first();
@@ -54,7 +66,7 @@ class PdsPdfController extends Controller
         $references = DB::table('pds_references')->where('user_id', $userId)->get();
         $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
 
-        $data = compact(
+        return compact(
             'personal',
             'address',
             'contact',
@@ -74,44 +86,72 @@ class PdsPdfController extends Controller
             'references',
             'remarks'
         );
+    }
+
+    private function renderPdfView($userId)
+    {
+        $data = $this->buildPdfData($userId);
 
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
     }
 
-    // This method downloads the PDF
+    // This method downloads the PDF via Spatie Browsershot
     public function download()
     {
         $userId = Auth::id();
         if (!$userId) abort(403, 'Unauthorized');
 
-        $personal = DB::table('pds_personal_infos')->where('user_id', $userId)->first();
+        $data = $this->buildPdfData($userId);
+        $personal = $data['personal'];
         $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
-        $path = storage_path('app/' . $filename);
 
-        $signedUrl = URL::signedRoute('pds.pdf.preview', ['user_id' => $userId], now()->addMinutes(10));
+        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
 
-        // Generate PDF with Browsershot (Legal, full-width, print media)
-        Browsershot::url($signedUrl)
-            ->windowSize(1800, 2800)
-            ->format('Legal')
-            ->margins(4, 4, 4, 4)
-            ->scale(0.95)
+        $pdfBinary = $this->makeShot($html)->pdf();
+
+        return response()->streamDownload(
+            function () use ($pdfBinary) {
+                echo $pdfBinary;
+            },
+            $filename,
+            ['Content-Type' => 'application/pdf']
+        );
+    }
+
+    private function makeShot(string $html): Browsershot
+    {
+        // Browsershot forbids HTML containing file://. Strip any accidental file:// references to prevent HtmlIsNotAllowedToContainFile.
+        $html = preg_replace('/file:\/\/[\w\.\-\/:]+/i', '', $html ?? '');
+
+        $chromePath = env('BROWSERSHOT_CHROME_PATH', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
+        $nodePath = env('BROWSERSHOT_NODE_PATH', 'C:\\Program Files\\nodejs\\node.exe');
+        $npmPath = env('BROWSERSHOT_NPM_PATH', 'C:\\Program Files\\nodejs\\npm.cmd');
+
+        $shot = Browsershot::html($html)
+            ->format('A4')
+            ->margins(10, 10, 10, 10)
+            ->scale(0.49) // reduced scale to fit content better
             ->emulateMedia('print')
             ->showBackground()
-            ->waitUntilNetworkIdle()
-            ->timeout(120)
-            ->save($path);
+            ->setOption('printBackground', true)
+            ->waitUntilNetworkIdle(false)
+            ->timeout(240) // increased timeout for multiple pages
+            ->setDelay(1000) // increased delay to ensure all content loads
+            ->hideHeaderAndFooter()
+            ->setOption('preferCSSPageSize', true)
+            ->setOption('args', ['--disable-dev-shm-usage', '--no-sandbox'])
+            ->paperSize(8.27, 11.7); // A4 size in inches
 
-        // Send PDF as download (force attachment)
-        return response()
-            ->download(
-                $path,
-                $filename,
-                [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'attachment; filename="' . $filename . '"'
-                ]
-            )
-            ->deleteFileAfterSend();
+        if (is_file($nodePath)) {
+            $shot->setNodeBinary($nodePath);
+        }
+        if (is_file($npmPath)) {
+            $shot->setNpmBinary($npmPath);
+        }
+        if (is_file($chromePath)) {
+            $shot->setChromePath($chromePath);
+        }
+
+        return $shot;
     }
 }

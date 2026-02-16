@@ -14,14 +14,10 @@
       <a href="{{ route('pds.pdf.download') }}" class="px-4 py-2 bg-slate-700 text-white rounded shadow border border-slate-800 hover:bg-slate-800">Download PDF</a>
     </div>
     @endif
-    <style>
-         @if(!empty($pdfMode))
-            body { font-size: 10px; line-height: 1.2; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { padding: 2px; font-size: 9px; }
-            .section { page-break-inside: avoid; }
-        @endif
-        
+   <style>
+        /* Print-friendly, spreadsheet-like grid */
+        table { border-collapse: collapse; width: 100%; }
+        td, th { padding: 4px; vertical-align: middle; }
         /* Only apply borders where classes already exist */
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
@@ -31,92 +27,8 @@
         }
         /* Form controls styled as lined cells */
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
-        textarea:focus { outline: none; box-shadow: none;}
-        input[type="checkbox"] { width: 12px; height: 12px;}
-        @if (!empty($pdfMode))
-        /* Minimal utility shims for Dompdf rendering */
-        .flex { display: flex; }
-        .items-center { align-items: center; }
-        .items-start { align-items: flex-start; }
-        .items-end { align-items: flex-end; }
-        .justify-between { justify-content: space-between; }
-        .justify-center { justify-content: center; }
-        .gap-4 { gap: 1rem; }
-        .gap-6 { gap: 1.5rem; }
-        .gap-3 { gap: 0.75rem; }
-        .gap-2 { gap: 0.5rem; }
-        .flex-1 { flex: 1 1 0; }
-        .w-full { width: 100%; }
-        .w-1\/2 { width: 50%; }
-        .w-1\/3 { width: 33.333%; }
-        .w-2\/3 { width: 66.666%; }
-        .w-1\/4 { width: 25%; }
-        .w-3\/4 { width: 75%; }
-        .w-1\/5 { width: 20%; }
-        .w-1\/6 { width: 16.666%; }
-        .w-60 { width: 15rem; }
-        .w-40 { width: 10rem; }
-        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
-        .px-4 { padding-left: 1rem; padding-right: 1rem; }
-        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-        .mt-2 { margin-top: 0.5rem; }
-        .mt-4 { margin-top: 1rem; }
-        .mb-2 { margin-bottom: 0.5rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .text-center { text-align: center; }
-        .text-sm { font-size: 0.875rem; }
-        .text-xs { font-size: 0.75rem; }
-        .font-bold { font-weight: 700; }
-        .font-semibold { font-weight: 600; }
-        .italic { font-style: italic; }
-        .uppercase { text-transform: uppercase; }
-        .mx-auto { margin-left: auto; margin-right: auto; }
-        .p-4 { padding: 1rem; }
-        .p-2 { padding: 0.5rem; }
-        .p-1 { padding: 0.25rem; }
-        .ml-2 { margin-left: 0.5rem; }
-        .mr-2 { margin-right: 0.5rem; }
-        .ml-4 { margin-left: 1rem; }
-        .mr-4 { margin-right: 1rem; }
-        .leading-tight { line-height: 1.2; }
-        .whitespace-nowrap { white-space: nowrap; }
-        .bg-gray-200 { background: #e5e7eb; }
-        .bg-gray-300 { background: #d1d5db; }
-        .max-w-9xl, .max-w-7xl, .max-w-6xl { max-width: 100%; }
-        body { font-family: 'Arial', sans-serif; }
-        @page { margin: 20px; }
-        /* Grid helpers used in the table layout */
-        .grid { display: grid; }
-        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
-        .grid-cols-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
-        .grid-cols-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
-        .grid-cols-[100px_120px] { grid-template-columns: 100px 120px; }
-        .grid-cols-[200px_1fr] { grid-template-columns: 200px 1fr; }
-        .table-fixed { table-layout: fixed; }
-        /* Border/color utilities frequently used */
-        .border-black { border-color: #000 !important; }
-        .border-b-0 { border-bottom: 0 !important; }
-        .border-b-2 { border-bottom: 2px solid #000 !important; }
-        .border-t { border-top: 1px solid #000 !important; }
-        .border-l { border-left: 1px solid #000 !important; }
-        .border-r { border-right: 1px solid #000 !important; }
-        .border-black\/50 { border-color: rgba(0,0,0,0.5) !important; }
-        .bg-\[\#e7e7e7\] { background: #e7e7e7; }
-        .bg-\[\#8a8a8a\] { background: #8a8a8a; color: #fff; }
-        .bg-\[\#8a8a8a\] * { color: #fff; }
-        /* Text sizing fallbacks */
-        .text-xl { font-size: 1.1rem; }
-        .text-2xl { font-size: 1.25rem; }
-        .text-3xl { font-size: 1.4rem; }
-        .text-4xl { font-size: 1.6rem; }
-        .text-base { font-size: 1rem; }
-        .text-lg { font-size: 1.05rem; }
-        /* Width helpers */
-        .w-300 { width: 300px; }
-        .w-200 { width: 200px; }
-        /* Misc */
-        .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; }
-        @endif
+        textarea:focus { outline: none; box-shadow: none; }
+        input[type="checkbox"] { width: 12px; height: 12px; }
     </style>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm" @if(!empty($pdfMode)) style="max-width:100%;" @endif>
   <!-- HEADER -->
@@ -192,26 +104,24 @@
 
     <!-- MIDDLE NAME -->
     <tr>
-      <td class="bg-[#e7e7e7] align-middle px-7 border-b-2"> 
+      <td class="bg-[#e7e7e7] align-middle px-7 border-b-2" style="height: 60px;"> 
         MIDDLE NAME
       </td>
-      <td colspan="3" class="border border-b-2 border-black h-10 align-middle">
+      <td colspan="3" class="border  border-black h-10 align-middle">
         <div>
           {{ $personal->middlename ?? '—' }}
         </div>
       </td>
     </tr>
 
-    <!-- DATE OF BIRTH + CITIZENSHIP -->
+    <!-- DATE OF BIRTH + CITIZENSHIP (match form1 layout) -->
     <tr>
-      <td class="bg-[#e7e7e7] px-2 align-middle border">
+      <td class="bg-[#e7e7e7] px-2 align-middle" style="height: 60px;">
         3. DATE OF BIRTH
         <p class="text-xs font-normal ml-4">(dd/mm/yyyy)</p>
       </td>
       <td class="border h-10">
-        <div>
-          {{ $personal->date_of_birth ?? '—' }}
-      </div>
+        <div class="py-2 text-lg">{{ $personal->date_of_birth ?? '—' }}</div>
       </td>
 
       <td rowspan="3" class="bg-[#e7e7e7] px-2 align-top border-l-5">
@@ -228,15 +138,15 @@
 
         <div class="flex flex-col items-center text-center w-full space-y-1">
           <div class="flex flex-wrap justify-center gap-6 mr-20">
-            <label class="inline-flex items-center gap-2"><input type="checkbox" class="mt-1 mb-1" name="citizenship[]" value="filipino" {{ $personal->citizenship  == 'filipino' ? 'checked' : '' }} disabled>   Filipino</label>
-            <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="dual_citizenship" {{ $personal->citizenship  == 'dual_citizenship' ? 'checked' : '' }} disabled>  Dual Citizenship</label>
+            <label class="inline-flex items-center gap-2"><input type="checkbox" class="mt-1 mb-1" name="citizenship[]" value="filipino" {{ $personal->citizenship  == 'filipino' ? 'checked' : '' }} disabled> Filipino</label>
+            <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="dual_citizenship" {{ $personal->citizenship  == 'dual_citizenship' ? 'checked' : '' }} disabled> Dual Citizenship</label>
           </div>
           <div class="flex flex-wrap justify-center gap-6 ml-20">
-            <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="by_birth" {{ $personal->citizenship  == 'by_birth' ? 'checked' : '' }} disabled>  by birth</label>
-            <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="by_naturalization" {{ $personal->citizenship  == 'by_naturalization' ? 'checked' : '' }} disabled>  by naturalization</label>
+            <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="by_birth" {{ $personal->citizenship  == 'by_birth' ? 'checked' : '' }} disabled> by birth</label>
+            <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="by_naturalization" {{ $personal->citizenship  == 'by_naturalization' ? 'checked' : '' }} disabled> by naturalization</label>
           </div>
-          <p class="py-3 flex justify-center">Pls. indicate country:</p>
-          <div class="border mb-2 mt-1 w-full text-center" style="min-height: 38px;">
+          <p class="py-3 flex justify-center align-middle">Pls. indicate country:</p>
+          <div class="border mt-1 w-full text-center align-middle py-2 text-xl flex justify-center items-center" style="min-height: 38px; margin-bottom:10px;">
             {{ $personal->country ?? '—' }}
           </div>
         </div>
@@ -249,15 +159,7 @@
         4. PLACE OF BIRTH
       </td>
       <td class="border px-2 h-10">
-        <div 
-          class="h-full w-full
-           min-h-full
-           wrap-break-words whitespace-normal
-           outline-none
-            py-2
-           text-lg">
-    {{ $personal->place_of_birth ?? '—' }}
-      </div>
+        <div class="py-2 text-lg">{{ $personal->place_of_birth ?? '—' }}</div>
       </td>
     </tr>
 
@@ -267,17 +169,16 @@
         5. SEX AT BIRTH
       </td>
       <td class="border px-2 text-base">
-       <label class="mr-10 mt-2 ml-7">
-    <input type="checkbox" value="male" disabled
-        {{ $personal->sex == 'male' ? 'checked' : '' }}>
-    Male
-</label>
-
-<label>
-    <input class="ml-10" type="checkbox" value="female" disabled
-        {{ $personal->sex == 'female' ? 'checked' : '' }}>
-    Female
-</label>
+        <div class="flex items-center gap-6">
+          <label class="inline-flex items-center gap-2">
+            <input class="ml-10" type="checkbox" value="male" disabled {{ $personal->sex == 'male' ? 'checked' : '' }}>
+            Male
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" value="female" disabled {{ $personal->sex == 'female' ? 'checked' : '' }}>
+            Female
+          </label>
+        </div>
       </td>
     </tr>
 
@@ -325,9 +226,9 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class="bg-[#e7e7e7] w-2/3">
+      <table class="bg-[#e7e7e7]" style="width:35%; border-right:1px solid #000;">
         <tr>
-          <td class="px-2 py-1 align-top border-black border-t">
+          <td class="px-2 py-1 align-top border-black">
             17. RESIDENTIAL ADDRESS
           </td>
         </tr>
@@ -339,17 +240,13 @@
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white w-300 border border-b-0">
+      <table class="bg-white" style="width:65%; border-collapse:collapse;">
 
           <tr>
             <td class="h-auto align-top">
               <div class="grid grid-cols-2 mt-2 w-full text-center">
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->present_house_block_lot ?? '—' }}</div>
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->present_street ?? '—' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->present_house_block_lot ?? '' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->present_street ?? '' }}</div>
               </div>
             </td>
           </tr>
@@ -366,12 +263,8 @@
            <tr>
             <td class="h-auto align-top">
               <div class="grid grid-cols-2 mt-2 w-full text-center">
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->present_subdivision_village ?? '—' }}</div>
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->present_barangay ?? '—' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->present_subdivision_village ?? '' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->present_barangay ?? '' }}</div>
               </div>
             </td>
           </tr>
@@ -387,12 +280,8 @@
           <tr>
             <td class="h-auto align-top">
               <div class="grid grid-cols-2 mt-2 w-full text-center">
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->present_city_municipality ?? '—' }}</div>
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->present_province ?? '—' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->present_city_municipality ?? '' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->present_province ?? '' }}</div>
               </div>
             </td>
           </tr>
@@ -405,34 +294,9 @@
             </div>
           </td>
         </tr>
-        <tr class="h-2">
-          <td>
-            <div class="flex">
-            </div>
-          </td>
-        </tr>
-        <tr class="h-2">
-          <td class="border-t border-black">
-            <div>
-            
-            </div>
-          </td>
-        </tr>
-
-        <tr class="h-2">
-          <td>
-            <div>
-            
-            </div>
-          </td>
-        </tr>
-
-        
-        <tr class="h-2">
-          <td>
-             <div class="border-none h-8 mb-2 mt-1 text-center">
-            {{ $address->present_zip_code ?? '—' }}
-        </div>
+        <tr>
+          <td class="border-t border-black text-center py-2 text-base">
+            {{ $address->present_zip_code ?? '' }}
           </td>
         </tr>
       </table>
@@ -470,26 +334,22 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class="bg-[#e7e7e7] w-2/3 border-b font-['Arial_Narrow','Arial',sans-serif] text-base">
+      <table class="bg-[#e7e7e7] border-b font-['Arial_Narrow','Arial',sans-serif] text-base" style="width:35%; border-right:1px solid #000;">
         <tr>
-          <td class="px-2 py-1 align-top">
+          <td class="px-2 py-1 align-top border-r border-black">
             18. PERMANENT ADDRESS
           </td>
         </tr>
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white w-300 border-black border-l">
+      <table class="bg-white" style="width:65%; border-collapse:collapse;">
 
             <tr>
             <td class="h-auto align-top">
               <div class="grid grid-cols-2 mt-2 w-full text-center">
-                  <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->permanent_house_block_lot ?? '—' }}</div>
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->permanent_street ?? '—' }}</div>
+                  <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->permanent_house_block_lot ?? '' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->permanent_street ?? '' }}</div>
               </div>
             </td>
           </tr>
@@ -506,12 +366,8 @@
            <tr>
             <td class="h-auto align-top">
               <div class="grid grid-cols-2 mt-2 w-full text-center">
-                  <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->permanent_subdivision_village ?? '—' }}</div>
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->permanent_barangay ?? '—' }}</div>
+                  <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->permanent_subdivision_village ?? '' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->permanent_barangay ?? '' }}</div>
               </div>
             </td>
           </tr>
@@ -527,12 +383,8 @@
           <tr>
             <td class="h-auto align-top">
              <div class="grid grid-cols-2 mt-2 w-full text-center">
-                  <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->permanent_city_municipality ?? '—' }}</div>
-                <div required rows="1"
-                  class="px-2 py-2 text-lg text-center resize-none bg-transparent border-none outline-none whitespace-pre-wrap overflow-hidden"
-                  oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';">{{ $address->permanent_province ?? '—' }}</div>
+                  <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->permanent_city_municipality ?? '' }}</div>
+                <div class="px-2 py-2 text-lg text-center whitespace-pre-wrap">{{ $address->permanent_province ?? '' }}</div>
               </div>
             </td>
           </tr>
@@ -545,11 +397,8 @@
             </div>
           </td>
         </tr>
-        <tr class="h-10">
-          <td class="border-t border-black">
-            <div>
-            
-            </div>
+        <tr>
+          <td class="border-t border-black text-center py-2 text-base h-10">
           </td>
         </tr>
       </table>
@@ -582,51 +431,48 @@
         $childNames = $children->pluck('firstname')->toArray();
         $childDobs = $children->pluck('date_of_birth')->toArray();
         $childRowCount = max(14, count($childNames), count($childDobs));
-        $childNames = array_pad($childNames, $childRowCount, '—');
-        $childDobs = array_pad($childDobs, $childRowCount, '—');
+        $childNames = array_pad($childNames, $childRowCount, '');
+        $childDobs = array_pad($childDobs, $childRowCount, '');
         $childIndex = 0;
-    @endphp
+      @endphp
 
-    
-    <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif]  px-2 border h-8">13. PhilSys Number (PSN):</td>
-      <td class="border px-2 align-middle">
-          {{ $personal->philsys_no ?? '—' }}
+    <tr>
+      <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif]  px-2 border h-8">13. PhilSys Number (PSN):</td>
+      <td class="border px-2 h-10">
+        {{ $personal->philsys_no ?? '—' }}
       </td>
-    
-  
-    <td rowspan="1" colspan="2"
-      class="border p-0 align-top bg-[#e7e7e7]">
 
-    <div class="flex w-full h-full">
-      
-      <!-- LEFT TABLE -->
-      <table class="border-l bg-[#e7e7e7] w-2/3 border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]">
+      <td rowspan="1" colspan="2"
+        class="border p-0 align-top bg-[#e7e7e7]">
+
+        <div class="flex w-full h-full">
+          <!-- LEFT TABLE -->
+          <table class="border-l bg-[#e7e7e7] border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]" style="width: 53.4%;">
 
         <tr>
-          <td class="px-2 py-1 align-middle w-full">
+          <td class="px-2 align-middle w-full">
             19. TELEPHONE NO.
           </td>
         </tr>
       </table>
 
-      <!-- RIGHT TABLE -->
-      <table class="bg-white w-300 border-l border-r border-t-0">
-          <tr class="h-5">
-            <td class="border-black border-l">
-              <div class="flex">
-            {{ $contact->telephone_no ?? '—' }}
-            </div>
-            </td>
-          </tr>
-      </table>
-    </div>
-  </td>
-       
+          <!-- RIGHT TABLE -->
+          <table class="bg-white border-l border-r border-t-0">
+              <tr class="h-5">
+                <td class="border-black border-l">
+                  <div class="flex">
+                 {{ $contact->telephone_no ?? '—' }}
+                  </div>
+                </td>
+              </tr>
+          </table>
+        </div>
+      </td>
+
+
     <tr>
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border">14. TIN ID</td>
-      <td class="border px-2 h-10">
-        {{ $personal->tin_no ?? '—' }}
-      </td>
+      <td class="border px-2 h-10">{{ $personal->tin_no ?? '—' }}</td>
 
        <td rowspan="1" colspan="2"
       class="border p-0 align-top bg-[#e7e7e7]">
@@ -634,7 +480,7 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class=" border-l bg-[#e7e7e7] w-2/3 border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]">
+      <table class=" border-l bg-[#e7e7e7] border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]" style="width: 53.4%;">
         <tr>
           <td class="px-2 py-1 align-middle">
             20. MOBILE NO.
@@ -643,7 +489,7 @@
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white w-300 border-l border-r border-t-0">
+      <table class="bg-white border-l border-r border-t-0">
           <tr class="h-5">
             <td class="border-black border-l">
               <div class="flex">
@@ -658,9 +504,7 @@
 
     <tr>
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border">15. AGENCY EMPLOYEE ID</td>
-      <td class="border px-2 h-10">
-         {{ $personal->agency_employee_no ?? '—' }}
-      </td>
+      <td class="border px-2 h-10">{{ $personal->agency_employee_no ?? '—' }}</td>
 
        <td rowspan="1" colspan="2"
       class="border p-0 align-top bg-[#e7e7e7]">
@@ -668,7 +512,7 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class="border-l  bg-[#e7e7e7] w-2/3 border-b-0 border-r-0 font-['Arial_Narrow','Arial',sans-serif]">
+      <table class="border-l  bg-[#e7e7e7] border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]" style="width: 53.4%;">
         <tr>
           <td class="px-2 align-middle">
            21. E-MAIL ADDRESS (if any)
@@ -677,7 +521,7 @@
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white w-300 border-l border-r border-t-0 h-10">
+      <table class="bg-white border-l border-r border-t-0">
           <tr class="h-2">
             <td class="border-black border-l">
               <div>
@@ -756,13 +600,13 @@
       
       <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? '' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? '' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -782,13 +626,13 @@
 
       <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? ' ' }}
+         {{ $childNames[$childIndex] ?? '' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? ' ' }}
+         {{ $childDobs[$childIndex] ?? '' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -805,13 +649,13 @@
 
     <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -829,13 +673,13 @@
 
         <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -853,13 +697,13 @@
 
      <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -877,13 +721,13 @@
 
         <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -905,13 +749,13 @@
 
         <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -940,13 +784,13 @@
 
        <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -967,13 +811,13 @@
 
     <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -995,13 +839,13 @@
 
        <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -1023,13 +867,13 @@
 
       <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -1050,13 +894,13 @@
 
        <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -1077,13 +921,13 @@
       
         <td class="border">
        <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '—' }}
+         {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
 
       <td class="border">
        <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '—' }}
+         {{ $childDobs[$childIndex] ?? ' ' }}
        </div>
       </td>
       @php $childIndex++; @endphp
@@ -1097,18 +941,18 @@
       $eduByLevel = $education->keyBy('level');
       $eduVal = function(string $level, string $field) use ($eduByLevel) {
           $rec = $eduByLevel->get($level);
-          return $rec && isset($rec->$field) ? $rec->$field : '—';
+          return ($rec && isset($rec->$field)) ? $rec->$field : '';
       };
       $eduCourse = function(string $level) use ($eduVal) {
           $course = $eduVal($level, 'degree_course');
-          if ($course === '—') {
+          if ($course === '') {
               $course = $eduVal($level, 'basic_education');
           }
           return $course;
       };
       $eduHonors = function(string $level) use ($eduVal) {
           $honors = $eduVal($level, 'academic_honors');
-          if ($honors === '—') {
+          if ($honors === '') {
               $honors = $eduVal($level, 'scholarship_acadhonors');
           }
           return $honors;
@@ -1401,7 +1245,9 @@
 
     <td class="border" colspan="2">
       <div class="h-full w-full flex flex-col items-center justify-center p-2">
+        @if(empty($pdfMode))
         <input type="file" name="signature_attachment_1" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+        @endif
       </div>
     </td>
 
@@ -1436,45 +1282,6 @@
     </div>
     </form>
 @if(empty($pdfMode))
-<script>
-(() => {
-  const form = document.querySelector('form');
-  if (!form) return;
-  const storageKey = 'pds_form1_' + ({{ auth()->id() ?? '0' }});
-  const loadCache = () => {
-    try {
-      const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      for (const [name, value] of Object.entries(cached)) {
-        const field = form.elements[name];
-        if (!field) continue;
-        if (field.type === 'checkbox' || field.type === 'radio') {
-          field.checked = !!value;
-        } else {
-          field.value = value;
-        }
-      }
-    } catch (e) {}
-  };
-
-  const saveCache = () => {
-    const data = {};
-    Array.from(form.elements).forEach(el => {
-      if (!el.name || el.disabled) return;
-      if (['button','submit','reset','file'].includes(el.type)) return;
-      if (el.type === 'checkbox' || el.type === 'radio') {
-        data[el.name] = el.checked;
-      } else {
-        data[el.name] = el.value;
-      }
-    });
-    try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {}
-  };
-
-  loadCache();
-  form.addEventListener('input', saveCache);
-  form.addEventListener('change', saveCache);
-})();
-</script>
 @endif
 @if(!empty($pdfMode))
 </body>

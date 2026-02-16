@@ -1,4 +1,12 @@
+@if(!empty($pdfMode))
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"></head>
+<body>
+@endif
+@if(empty($pdfMode))
 <x-app-layout>
+@endif
 <form method="POST" action="{{ route('pds.submit') }}" class="w-full" enctype="multipart/form-data">
 @csrf
 
@@ -170,6 +178,17 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <div class="border-b-2 border-black w-full absolute bottom-6 left-0"></div>
 
 <div class="flex justify-center space-x-1 relative">
+@if(empty($pdfMode))
+<input type="file" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base" style="display: none;">
+@endif
+<span class="mt-2">/</span>
+@if(empty($pdfMode))
+<input type="file" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none" style="display: none;">
+@endif
+<span class="mt-2">/</span>
+@if(empty($pdfMode))
+<input type="file" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none" style="display: none;">
+@endif
 <input type="text" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base">
 <span class="mt-2">/</span>
 <input type="text" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none">
@@ -185,8 +204,16 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 CS FORM 212 (Revised 2025), Page 5 of 5
 </div>
 
+@if(empty($pdfMode))
  <a href="{{ route('pdsreview.pdsreview4') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
+@endif
 
 </div>
 </form>
+@if(empty($pdfMode))
 </x-app-layout>
+@endif
+@if(!empty($pdfMode))
+</body>
+</html>
+@endif

@@ -1,4 +1,12 @@
+@if(!empty($pdfMode))
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"></head>
+<body>
+@endif
+@if(empty($pdfMode))
 <x-app-layout>
+@endif
 <form method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
 @csrf
     <style>
@@ -195,11 +203,11 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $row = $volRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $row->organization ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->from ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->to ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->hours ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->position ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->organization ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->from ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->to ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->hours ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->position ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -256,12 +264,12 @@
 @for ($i = 0; $i < $maxTraining; $i++)
   @php $trow = $trainingRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $trow->title ?? '' }}</td>
-    <td class="border align-top text-center">{{ $trow->from ?? '' }}</td>
-    <td class="border align-top text-center">{{ $trow->to ?? '' }}</td>
-    <td class="border align-top text-center">{{ $trow->hours ?? '' }}</td>
-    <td class="border align-top text-center">{{ $trow->type_of_ld ?? '' }}</td>
-    <td class="border align-top text-center">{{ $trow->conducted_by ?? '' }}</td>
+    <td class="border align-top text-center">{{ $trow->title ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->from ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->to ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->hours ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->conducted_by ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -304,9 +312,9 @@
 
 @for ($i = 0; $i < $maxOther; $i++)
   <tr>
-    <td class="border align-top text-center">{{ $skills[$i] ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $recognition[$i] ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $assoc[$i] ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $skills[$i] ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $recognition[$i] ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $assoc[$i] ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -326,7 +334,9 @@
 
        <td class="border" colspan="2">
       <div class="h-full w-full flex flex-col items-center justify-center p-2">
+        @if(empty($pdfMode))
         <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+        @endif
       </div>
     </td>
 
@@ -354,10 +364,18 @@
      <div class="flex justify-end mr-2 border-b-0 font-['Arial_Narrow','sans-serif']">
     CS FORM 212 (Revised 2025), Page 3 of 5
     </div>
+    @if(empty($pdfMode))
     <div class="flex justify-between mt-4">
         <a href="{{ route('pdsreview.pdsreview2') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
             <a href="{{ route('pdsreview.pdsreview4') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
     </div>
+    @endif
     </div>
 </form>
+@if(empty($pdfMode))
 </x-app-layout>
+@endif
+@if(!empty($pdfMode))
+</body>
+</html>
+@endif

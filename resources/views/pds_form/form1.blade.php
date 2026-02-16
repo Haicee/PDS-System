@@ -493,21 +493,21 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class="bg-[#e7e7e7] w-2/3">
+      <table class="bg-[#e7e7e7]" style="width:35%;">
         <tr>
-          <td class="px-2 py-1 align-top border-black border-t">
+          <td class="px-2 py-1 align-top border-black border-r">
             17. RESIDENTIAL ADDRESS
           </td>
         </tr>
         <tr class="h-10">
-          <td class="text-center text-xl py-2">
+          <td class="text-center text-xl py-2 border-r border-black">
             ZIP CODE
           </td>
         </tr>
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white w-300 border border-b-0">
+      <table class="bg-white" style="width:65%; border-collapse:collapse;">
 
           <tr>
             <td class="h-auto align-top">
@@ -686,16 +686,16 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class="bg-[#e7e7e7] w-2/3 border-b font-['Arial_Narrow','Arial',sans-serif] text-base">
+      <table class="bg-[#e7e7e7] border-b font-['Arial_Narrow','Arial',sans-serif] text-base" style="width:35%;">
         <tr>
-          <td class="px-2 py-1 align-top">
+          <td class="px-2 py-1 align-top border-r border-black">
             18. PERMANENT ADDRESS
           </td>
         </tr>
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white w-300 border-black border-l">
+      <table class="bg-white" style="width:65%; border-collapse:collapse;">
 
             <tr>
             <td class="h-auto align-top">
@@ -856,10 +856,10 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class="border-l bg-[#e7e7e7] w-2/3 border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]">
+      <table class="border-l bg-[#e7e7e7] border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]" style="width: 53.4%;">
 
         <tr>
-          <td class="px-2 py-1 align-middle w-full">
+          <td class="px-2 align-middle w-full">
             19. TELEPHONE NO.
           </td>
         </tr>
@@ -908,7 +908,7 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class=" border-l bg-[#e7e7e7] w-2/3 border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]">
+      <table class=" border-l bg-[#e7e7e7] border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]" style="width: 53.4%;">
         <tr>
           <td class="px-2 py-1 align-middle">
             20. MOBILE NO.
@@ -960,7 +960,7 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table class="border-l  bg-[#e7e7e7] w-2/3 border-b-0 border-r-0 font-['Arial_Narrow','Arial',sans-serif]">
+      <table class="border-l  bg-[#e7e7e7] border-b-0 border-r-0 h-10 font-['Arial_Narrow','Arial',sans-serif]" style="width: 53.4%;">
         <tr>
           <td class="px-2 align-middle">
            21. E-MAIL ADDRESS (if any)

@@ -54,7 +54,7 @@ class PdsController extends Controller
         }
 
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
-        $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->orderByDesc('from')->get();
+        $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->orderBy('from')->get();
 
         return view('pdsreview.pdsreview2', compact('eligibilities', 'workExperiences'));
     }
@@ -68,12 +68,12 @@ class PdsController extends Controller
 
         $voluntaryWorks = DB::table('pds_voluntary_work')
             ->where('user_id', $userId)
-            ->orderByDesc('from')
+            ->orderBy('from')
             ->get();
 
         $training = DB::table('pds_training_programs')
             ->where('user_id', $userId)
-            ->orderByDesc('from')
+            ->orderBy('from')
             ->get();
         
         $other = DB::table('pds_other_info')

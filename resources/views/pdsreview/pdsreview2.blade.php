@@ -1,4 +1,12 @@
+@if(!empty($pdfMode))
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"></head>
+<body>
+@endif
+@if(empty($pdfMode))
 <x-app-layout>
+@endif
 <form method="POST" action="{{ route('pds.saveStep', 2) }}" enctype="multipart/form-data">
 @csrf
     <style>
@@ -16,145 +24,7 @@
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
         td { height: 30px }
-    </style>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const autoSize = (el) => {
-                el.style.height = 'auto';
-                el.style.height = `${el.scrollHeight}px`;
-            };
-
-            document.querySelectorAll('textarea').forEach(el => {
-                // uppercase enforcement
-                el.addEventListener('input', () => {
-                    const start = el.selectionStart;
-                    const end = el.selectionEnd;
-                    const upper = el.value.toUpperCase();
-                    if (el.value !== upper) {
-                        el.value = upper;
-                        el.setSelectionRange(start, end);
-                    }
-                    autoSize(el);
-                });
-
-                // initial sizing
-                requestAnimationFrame(() => autoSize(el));
-            });
-
-            // NA locking for any [] group on this page: disable only fields BELOW the first NA/N/A/NONE, keep existing values above
-            const isNA = (val) => {
-                const v = (val || '').trim().toUpperCase();
-                return v === 'NA' || v === 'N/A' || v === 'NONE';
-            };
-
-            const names = new Set();
-            document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
-                const name = el.getAttribute('name');
-                if (name) names.add(name);
-            });
-
-            names.forEach(name => {
-                const selectorName = name.replace(/["'\\]/g, '\\$&');
-                const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
-                if (!fields.length) return;
-
-                const refresh = () => {
-                    const firstNAIndex = fields.findIndex(f => isNA(f.value));
-                    fields.forEach((f, idx) => {
-                        const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
-                        f.disabled = shouldDisable;
-                        f.classList.toggle('bg-gray-200', shouldDisable);
-                        f.classList.toggle('text-gray-500', shouldDisable);
-                        f.classList.toggle('cursor-not-allowed', shouldDisable);
-                    });
-                };
-
-                fields.forEach(f => f.addEventListener('input', refresh));
-                refresh();
-            });
-
-            // Next button gating: require all visible fields (treat NA/N/A/NONE as filled)
-            const nextBtn = document.getElementById('next-btn');
-            const visibleFields = () => Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'))
-                .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
-
-            const isFilled = (el) => {
-                if (el.type === 'file') return el.files && el.files.length > 0;
-                if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
-                const val = (el.value || '').trim();
-                if (isNA(val)) return true;
-                return val !== '';
-            };
-
-            const validateRequired = () => {
-                const hasMissing = visibleFields().some(el => !isFilled(el));
-
-                if (!nextBtn) return;
-                if (hasMissing) {
-                    nextBtn.setAttribute('aria-disabled', 'true');
-                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                } else {
-                    nextBtn.removeAttribute('aria-disabled');
-                    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                }
-            };
-
-            document.addEventListener('input', validateRequired, true);
-            document.addEventListener('change', validateRequired, true);
-            validateRequired();
-
-            if (nextBtn) {
-                nextBtn.addEventListener('click', (e) => {
-                    if (nextBtn.getAttribute('aria-disabled') === 'true') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        validateRequired();
-                    }
-                });
-            }
-
-            const sessionData = @json(session('pds', []));
-            const flat = {};
-            const walk = (obj, prefix = '') => {
-                if (obj === null || obj === undefined) return;
-                if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
-                if (Array.isArray(obj)) {
-                    obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
-                } else {
-                    Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
-                }
-            };
-            walk(sessionData);
-
-            const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
-            const setField = (el, value) => {
-                if (!el) return;
-                if (el.type === 'checkbox' || el.type === 'radio') {
-                    el.checked = Array.isArray(value) ? value.map(String).includes(String(el.value)) : String(el.value) === String(value);
-                } else {
-                    el.value = value;
-                    if (el.tagName === 'TEXTAREA') {
-                        el.dispatchEvent(new Event('input'));
-                    }
-                }
-            };
-
-            Object.entries(flat).forEach(([name, value]) => {
-                const exact = Array.from(document.querySelectorAll(`[name="${cssName(name)}"]`));
-                if (exact.length) {
-                    exact.forEach(el => setField(el, value));
-                    return;
-                }
-                const matchIndex = name.match(/\[(\d+)\]$/);
-                if (matchIndex) {
-                    const idx = parseInt(matchIndex[1], 10);
-                    const base = name.replace(/\[\d+\]$/, '[]');
-                    const arrFields = Array.from(document.querySelectorAll(`[name="${cssName(base)}"]`));
-                    if (arrFields[idx]) setField(arrFields[idx], value);
-                }
-            });
-        });
-    </script>
+    </style>  
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
     <table class="border border-black w-full font-['Arial_Narrow','sans-serif']">
@@ -208,12 +78,12 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $row = $rows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $row->eligibility ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->rating ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->exam_date ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->exam_place ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->license_no ?? '—' }}</td>
-    <td class="border align-top text-center">{{ $row->validity ?? '—' }}</td>
+    <td class="border align-top text-center">{{ $row->eligibility ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->rating ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->exam_date ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->exam_place ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->license_no ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->validity ?? ' ' }}</td>
   </tr>
 @endfor
     </table>
@@ -292,7 +162,9 @@
 
        <td class="border" colspan="2">
       <div class="h-full w-full flex flex-col items-center justify-center p-2">
+        @if(empty($pdfMode))
         <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+        @endif
       </div>
     </td>
 
@@ -324,12 +196,19 @@
     CS FORM 212 (Revised 2025), Page 2 of 5
     </div>
 
-    <div class="flex justify-end mt-4">
-        <div class="flex gap-2">
-            <a href="{{ route('pdsreview.pdsreview1') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
-            <a href="{{ route('pdsreview.pdsreview3') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
-        </div>
+
+    @if(empty($pdfMode))
+    <div class="flex justify-between mt-4">
+        <a href="{{ route('pdsreview.pdsreview1') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
+        <a href="{{ route('pdsreview.pdsreview3') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
     </div>
+    @endif
     </div>
 </form>
+@if(empty($pdfMode))
 </x-app-layout>
+@endif
+@if(!empty($pdfMode))
+</body>
+</html>
+@endif
