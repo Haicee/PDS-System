@@ -130,7 +130,7 @@ class PdsPdfController extends Controller
         $shot = Browsershot::html($html)
             ->format('A4')
             ->margins(10, 10, 10, 10)
-            ->scale(0.49) // reduced scale to fit content better
+            ->scale(0.48) // reduced scale to fit content better
             ->emulateMedia('print')
             ->showBackground()
             ->setOption('printBackground', true)

@@ -141,7 +141,7 @@
   </p>
 
   <!-- MAIN TABLE -->
-  <table class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base edu-table">
+  <table class="align-middle w-full border-2  border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base edu-table border-b-0">
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -227,7 +227,7 @@
       <table class="w-full text-base" style="border-collapse:collapse;">
         <tr>
           <td class="py-1">
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-6>
               <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle" name="citizenship[]" value="filipino" {{ $personal->citizenship  == 'filipino' ? 'checked' : '' }} disabled> Filipino</label>
               <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle" name="citizenship[]" value="dual_citizenship" {{ $personal->citizenship  == 'dual_citizenship' ? 'checked' : '' }} disabled> Dual Citizenship</label>
             </div>
@@ -245,11 +245,12 @@
           <td class="py-2 text-center">Pls. indicate country:</td>
         </tr>
         <tr>
-          <td class="py-1">
-            <div class="border text-center" style="min-height:32px; padding:4px 6px; margin-bottom: 10px;">
-              {{ $personal->country ?? '—' }}
-            </div>
-          </td>
+                <td class="py-1">
+        <div class="border text-xl flex justify-center items-center" 
+            style="min-height:30px; padding:6px 8px; margin-bottom:10px; font-size:20px;">
+          {{ $personal->country ?? '—' }}
+        </div>
+      </td>
         </tr>
       </table>
     </td>
@@ -326,31 +327,31 @@
     <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
-      <table style="width:38%;">
+      <table style="width:37.8%; padding:0px;">
         <tr>
-          <td class="px-2 align-top border-black border-t-0 border-r" style="background-color:#e7e7e7;">
+          <td class="align-top border-black border-t-0" style="background-color:#e7e7e7;">
             17. RESIDENTIAL ADDRESS
           </td>
         </tr>
         <tr class="h-10">
-          <td class="text-center text-lg py-2 border-r" style="background-color:#e7e7e7;">
+          <td class="text-center text-lg py-2" style="background-color:#e7e7e7;">
             ZIP CODE
           </td>
         </tr>
       </table>
       <!-- RIGHT TABLE -->
-      <table class="bg-white h-full" style="width:65%; border-collapse:collapse;">
+      <table class="bg-white h-full border-l" style="width:65%; border-collapse:collapse;">
         <tr>
-          <td class="h-auto align-top">
+          <td class="align-top">
             <div class="grid grid-cols-2 w-full text-center">
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->present_house_block_lot ?? '—' }}</div>
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->present_street ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->present_house_block_lot ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->present_street ?? '—' }}</div>
             </div>
           </td>
         </tr>
         <tr>
           <td class="border-t border-black/50">
-            <div class="grid grid-cols-2 px-4 text-center">
+            <div class="grid grid-cols-2 text-center ">
               <p>House/Block/Lot No.</p>
               <p>Street</p>
             </div>
@@ -359,14 +360,14 @@
         <tr>
           <td class="h-auto align-top border-t border-black">
             <div class="grid grid-cols-2 w-full text-center">
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->present_subdivision_village ?? '—' }}</div>
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->present_barangay ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->present_subdivision_village ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->present_barangay ?? '—' }}</div>
             </div>
           </td>
         </tr>
         <tr>
           <td class="border-t border-black/50">
-            <div class="grid grid-cols-2 px-4 text-center">
+            <div class="grid grid-cols-2 text-center">
               <p>Subdivision/Village</p>
               <p>Barangay</p>
             </div>
@@ -375,14 +376,14 @@
         <tr>
           <td class="h-auto align-top border-t border-black">
             <div class="grid grid-cols-2 w-full text-center">
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->present_city_municipality ?? '—' }}</div>
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->present_province ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->present_city_municipality ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->present_province ?? '—' }}</div>
             </div>
           </td>
         </tr>
         <tr>
           <td class="border-t border-black/50">
-            <div class="grid grid-cols-2 px-4 text-center">
+            <div class="grid grid-cols-2 text-center">
               <p>City/Municipality</p>
               <p>Province</p>
             </div>
@@ -430,26 +431,26 @@
       <!-- LEFT TABLE -->
       <table class="bg-[#e7e7e7] border-b font-['Arial_Narrow','Arial',sans-serif] text-base" style="width:38%;">
         <tr>
-          <td class="px-2 py-1 align-top border-r" style="background-color:#e7e7e7;">
+          <td class="px-2 py-1 align-top" style="background-color:#e7e7e7;">
             18. PERMANENT ADDRESS
           </td>
         </tr>
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white" style="width:65%; border-collapse:collapse;">
+      <table class="bg-white border-l" style="width:65%; border-collapse:collapse;">
         <tr>
-          <td class="h-auto align-top">
+          <td class="align-top">
             <div class="grid grid-cols-2 w-full text-center">
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->permanent_house_block_lot ?? '—' }}</div>
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->permanent_street ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->permanent_house_block_lot ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->permanent_street ?? '—' }}</div>
             </div>
           </td>
         </tr>
           
           <tr class="h-2">
           <td class="border-t border-black/50">
-            <div class="grid grid-cols-2 px-4 text-center">
+            <div class="grid grid-cols-2 text-center">
               <p>House/Block/Lot No.</p>
               <p>Street</p>
             </div>
@@ -458,14 +459,14 @@
         <tr>
           <td class="h-auto align-top border-t border-black">
             <div class="grid grid-cols-2 w-full text-center">
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->permanent_subdivision_village ?? '—' }}</div>
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->permanent_barangay ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->permanent_subdivision_village ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->permanent_barangay ?? '—' }}</div>
             </div>
           </td>
         </tr>
         <tr>
           <td class="border-t border-black/50 ">
-            <div class="grid grid-cols-2 px-4 text-center">
+            <div class="grid grid-cols-2 text-center">
               <p>Subdivision/Village</p>
               <p>Baranggay</p>
             </div>
@@ -474,14 +475,14 @@
         <tr>
           <td class="h-auto align-top border-t border-black">
             <div class="grid grid-cols-2 w-full text-center">
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->permanent_city_municipality ?? '—' }}</div>
-              <div class="px-1 py-1 text-base whitespace-pre-wrap">{{ $address->permanent_province ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->permanent_city_municipality ?? '—' }}</div>
+              <div class="py-1 text-base whitespace-pre-wrap">{{ $address->permanent_province ?? '—' }}</div>
             </div>
           </td>
         </tr>
         <tr >
           <td class="border-t border-black/50">
-            <div class="grid grid-cols-2 px-4 text-center">
+            <div class="grid grid-cols-2 text-center">
               <p>City/Municipality</p>
               <p>Province</p>
             </div>
@@ -542,7 +543,7 @@
     </tr>
 
     <tr>
-      <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border" style="background-color:#e7e7e7;">15. AGENCY EMPLOYEE ID</td>
+      <td class="bg-[#e7e7e7] border font-['Arial_Narrow','Arial',sans-serif] px-2" style="background-color:#e7e7e7;">15. AGENCY EMPLOYEE ID</td>
       <td class="border px-2 align-middle">
          {{ $personal->agency_employee_no ?? '—' }}
       </td>
@@ -553,7 +554,7 @@
   </table>
 
 
-   <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+   <table class="w-full border-2 border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -565,7 +566,7 @@
 
     <!-- SECTION HEADER -->
     <tr>
-      <td colspan="6" class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black border-t">
+      <td colspan="6" class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-b-2">
         II. FAMILY BACKGROUND
       </td>
     </tr>
@@ -950,28 +951,55 @@
   </table>
 
 
-<table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+<table class="w-full border-2 border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base border-t-0">
 
   @php
       $eduByLevel = $education->keyBy('level');
-      $eduVal = function(string $level, string $field) use ($eduByLevel) {
-          $rec = $eduByLevel->get($level);
-          return $rec && isset($rec->$field) ? $rec->$field : '';
-      };
-      $eduCourse = function(string $level) use ($eduVal) {
-          $course = $eduVal($level, 'degree_course');
-          if ($course === '') {
-              $course = $eduVal($level, 'basic_education');
-          }
-          return $course;
-      };
-      $eduHonors = function(string $level) use ($eduVal) {
-          $honors = $eduVal($level, 'academic_honors');
-          if ($honors === '') {
-              $honors = $eduVal($level, 'scholarship_acadhonors');
-          }
-          return $honors;
-      };
+      // Raw accessor (no default); NA will display only if stored as such
+    $eduValRaw = function(string $level, string $field) use ($education) {
+        $rec = $education->firstWhere('level', $level);
+        return $rec && isset($rec->$field) ? $rec->$field : '';
+    };
+
+    // School name: default to NA when empty
+    $eduSchool = function(string $level) use ($eduValRaw) {
+        $name = trim((string)$eduValRaw($level, 'school_name'));
+        return $name === '' ? 'NA' : $name;
+    };
+
+    // Return raw value; if school is NA, hide other fields
+    $eduVal = function(string $level, string $field) use ($eduValRaw) {
+        $school = strtolower(trim((string)$eduValRaw($level, 'school_name')));
+        if ($field !== 'school_name' && $school === 'na') {
+            return '';
+        }
+        $value = $eduValRaw($level, $field);
+        return ($value === null) ? '' : $value;
+    };
+
+    $eduCourse = function(string $level) use ($eduValRaw) {
+        $school = strtolower(trim((string)$eduValRaw($level, 'school_name')));
+        if ($school === 'na') {
+            return '';
+        }
+        $course = $eduValRaw($level, 'degree_course');
+        if ($course === '') {
+            $course = $eduValRaw($level, 'basic_education');
+        }
+        return ($course === null) ? '' : $course;
+    };
+
+    $eduHonors = function(string $level) use ($eduValRaw) {
+        $school = strtolower(trim((string)$eduValRaw($level, 'school_name')));
+        if ($school === 'na') {
+            return '';
+        }
+        $honors = $eduValRaw($level, 'academic_honors');
+        if ($honors === '') {
+            $honors = $eduValRaw($level, 'scholarship_acadhonors');
+        }
+        return ($honors === null) ? '' : $honors;
+    };
   @endphp
 
   <!-- EXACT COLUMN GRID (8 columns) -->
@@ -988,7 +1016,7 @@
 
   <tr>
     <td colspan="8"
-        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2  border-black border-2 border-t-0">
+        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-b-2">
       III. EDUCATIONAL BACKGROUND
     </td>
   </tr>
@@ -1021,7 +1049,7 @@
      <td
           class="border h-10 align">
           <div class="edu-cell h-full w-full text-center align-middle">
-            {{ $eduVal('elementary','school_name') }}
+            {{ $eduSchool('elementary') }}
           </div>
       </td>
 
@@ -1070,7 +1098,7 @@
      <td
           class="border h-10">
           <div class="edu-cell h-full w-full text-center align-middle">
-            {{ $eduVal('secondary','school_name') }}
+            {{ $eduSchool('secondary') }}
       </td>
 
       <td
@@ -1116,8 +1144,8 @@
     <!-- EDITABLE CELL PATTERN -->
     <td
           class="border h-10">
-          <div class="edu-cell h-full w-full text-center">
-            {{ $eduVal('vocational','school_name') }}
+          <div class="edu-cell h-full w-full text-center align-middle">
+            {{ $eduSchool('vocational') }}
       </td>
 
       <td
@@ -1163,8 +1191,8 @@
     <!-- EDITABLE CELL PATTERN -->
     <td
           class="border h-10">
-          <div class="edu-cell h-full w-full px-2 text-center">
-            {{ $eduVal('college','school_name') }}
+          <div class="edu-cell h-full w-full text-center align-middle">
+            {{ $eduSchool('college') }}
       </td>
 
       <td
@@ -1210,8 +1238,8 @@
     <!-- EDITABLE CELL PATTERN -->
    <td
           class="border h-10">
-          <div class="edu-cell h-full w-full px-2 text-center">
-            {{ $eduVal('graduate_studies','school_name') }}
+             <div class="edu-cell h-full w-full text-center align-middle">
+            {{ $eduSchool('graduate_studies') }}
       </td>
 
       <td
@@ -1286,299 +1314,920 @@
 <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 1 of 5
 </div>
+
+<div style="page-break-before: always;">
+<table>
+  <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
+      IV.  CIVIL SERVICE ELIGIBILITY
+    </th>
+
+    <tr>
+      <th class="border bg-[#e7e7e7]" rowspan="2" style="width: 30%";>
+        27. CES/CSEE/CAREER SERVICE/RA 1080 (BOARD/ BAR)/UNDER SPECIAL LAWS/CATEGORY II/ IV ELIGIBILITY and ELIGIBILITIES FOR UNIFORMED PERSONNEL
+      </th>
+
+      <th class="border bg-[#e7e7e7]" rowspan="2">
+        RATING <p>(If Applicable) </p>
+      </th>
+
+      <th class="border bg-[#e7e7e7]" rowspan="2">
+        DATE OF EXAMINATION / CONFERMENT
+      </th>
+
+      <th class="border bg-[#e7e7e7]" rowspan="2">
+        PLACE OF EXAMINATION / CONFERMENT
+      </th>
+
+       <th class="border bg-[#e7e7e7]" colspan="2">
+        LICENSE (if applicable)
+      </th>
+    </tr>
+
+
+    <tr>
+    <th class="border text-center bg-[#e7e7e7]">NUMBER</th>
+    <th class="border text-center bg-[#e7e7e7]">VALID UNTIL</th>
+   </tr>
+
+  @php
+    $rows = $eligibilities ?? collect();
+    $maxRows = max(7, $rows->count()); // 7 display rows
+@endphp
+
+@for ($i = 0; $i < $maxRows; $i++)
+  @php $row = $rows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $row->eligibility ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->rating ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->exam_date ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->exam_place ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->license_no ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->validity ?? ' ' }}</td>
+  </tr>
+@endfor
+</table>
+    
+
+    <table class="border border-black font-['Arial_Narrow','sans-serif'] w-full">
+
+      <colgroup>
+        <col style="width: 8%;">
+        <col style="width: 8%;">
+        <col style="width: 20%;">
+        <col style="width: 28%;">
+        <col style="width: 20%;">
+        <col style="width: 10%;">
+      </colgroup>
+
+      <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
+      V.  WORK EXPERIENCE 
+      <p class="font-extralight text-lg">(Include private employment.  Start from your recent work.) Description of duties should be indicated in the attached Work Experience Sheet.</p>
+     </th>
+
+     <tr class="border">
+
+         <th colspan="2" class="border bg-[#e7e7e7]">
+        INCLUSIVE DATES OF ATTENDANCE<p>(dd/mm/yyyy)</p>
+      </th>
+
+      <th rowspan="2" class="bg-[#e7e7e7]">POSITION TITLE<p>(Write in full/Do not abbreviate)</p></th>
+
+       <th rowspan="2" class="border bg-[#e7e7e7]">
+        DEPARTMENT / AGENCY / OFFICE / COMPANY (Write in full/Do not abbreviate)
+      </th>
+
+      <th rowspan="2" class="border bg-[#e7e7e7]">
+        STATUS OF APPOINTMENT
+      </th>
+
+      <th rowspan="2" class="border bg-[#e7e7e7]">
+         GOV'T SERVICE (Y/ N)
+      </th>
+     </tr>
+
+     <tr class=" bg-[#e7e7e7]">
+      <th class="border text-center font-light bg-[#e7e7e7]">FROM</th>
+      <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
+     </tr>
+
+   @php
+    // Fallback to $work when $workExperiences isn't passed, then sort ascending by start date
+    $workRows = $workExperiences ?? ($work ?? collect());
+    $workRows = $workRows->sortBy('from')->values();
+    $maxRows = max(28, $workRows->count());
+@endphp
+
+@for ($i = 0; $i < $maxRows; $i++)
+  @php $workRow = $workRows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $workRow->from ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->to ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->position_title ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->department ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->status ?? " " }}</td>
+    <td class="border align-top text-center">{{ $workRow->govt_service ?? " " }}</td>
+  </tr>
+@endfor
+    <tr>
+      <table class="border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
+        <colgroup>
+          <col style="width: 17%;">
+           <col style="width: 20%;">
+            <col style="width: 16.02%;">
+             <col style="width: 15%;">
+        </colgroup>
+      <tr>
+      <td class="text-center font-bold text-xl border align-middle italic">
+          SIGNATURE
+      </td>
+
+       <td class="border" colspan="2">
+      <div class="h-full w-full flex flex-col items-center justify-center p-2">
+        @if(empty($pdfMode))
+        <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+        @endif
+      </div>
+    </td>
+
+      <td class="border text-center font-bold text-xl align-middle italic">
+        DATE
+      </td>
+
+       <td
+          class="border h-10">
+          <div class="h-full w-full">
+         <textarea
+      name="date2"
+      required
+      rows="1"
+      class="w-full h-full text-lg resize-none
+             focus:outline-none focus:ring-0
+             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
+    ></textarea>
+      </td>
+      </tr>
+    </table>
+
+    </tr>
+    </table>    
+
+     
+      <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
+    CS FORM 212 (Revised 2025), Page 2 of 5
+</div>
 </div>
 
-@if(!empty($pdfMode))
-    <!-- Page 1 Complete -->
+<div style="page-break-before: always;"></div>
+  <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
 
-    <!-- Page 2: Civil Service Eligibility & Work Experience -->
-    <div style="page-break-after: always;">
-        <h2 class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold" style="background-color:#8a8a8a !important; color:white !important;">
-          IV.  CIVIL SERVICE ELIGIBILITY
-        </h2>
+      <colgroup>
+        <col style="width: 29.5%;">
+        <col style="width: 5%;">
+        <col style="width: 5%;">
+        <col style="width: 5%;">
+        <col style="width: 20%;">
+      </colgroup>
+      
+    <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold"colspan="5">
+      VI. VOLUNTARY WORK OR INVOLVEMENT IN CIVIC / NON-GOVERNMENTAL / PEOPLE / VOLUNTARY ORGANIZATION 
+    </th>
 
-        <table class="w-full border border-black" style="border-collapse: collapse;">
-            <tr>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;" rowspan="2">
-                    27. ELIGIBILITY NAME
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;" rowspan="2">
-                    RATING
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;" rowspan="2">
-                    DATE OF EXAMINATION
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;" rowspan="2">
-                    PLACE OF EXAMINATION
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;" colspan="2">
-                    LICENSE
-                </th>
-            </tr>
-            <tr>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">NUMBER</th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">VALID UNTIL</th>
-            </tr>
-            @php
-                $eligibilityRows = $eligibilities ?? collect();
-                $maxRows = max(7, $eligibilityRows->count()); // Show 7 rows minimum
-            @endphp
+    <tr>
+      <th class="border bg-[#e7e7e7]" rowspan="2">
+        29. NAME & ADDRESS OF ORGANIZATION (Write in full)
+      </th>
 
-            @for ($i = 0; $i < $maxRows; $i++)
-                @php $row = $eligibilityRows[$i] ?? null; @endphp
-                <tr>
-                    <td class="border p-2 align-top text-center">{{ $row->eligibility ?? ' ' }}</td>
-                    <td class="border p-2 align-top text-center">{{ $row->rating ?? ' ' }}</td>
-                    <td class="border p-2 align-top text-center">{{ $row->exam_date ?? ' ' }}</td>
-                    <td class="border p-2 align-top text-center">{{ $row->exam_place ?? ' ' }}</td>
-                    <td class="border p-2 align-top text-center">{{ $row->license_no ?? ' ' }}</td>
-                    <td class="border p-2 align-top text-center">{{ $row->validity ?? ' ' }}</td>
-                </tr>
-            @endfor
-        </table>
+      <th class="border bg-[#e7e7e7]" colspan="2">
+        INCLUSIVE DATES <p>(dd/mm/yyyy)</p>
+      </th>
 
-        <h2 class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold mt-4" style="background-color:#8a8a8a !important; color:white !important;">
-          V.  WORK EXPERIENCE
-        </h2>
 
-        <table class="w-full border border-black" style="border-collapse: collapse;">
-            <tr>
-                <th colspan="2" class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">INCLUSIVE DATES</th>
-                <th rowspan="2" class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">POSITION TITLE</th>
-                <th rowspan="2" class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">DEPARTMENT / AGENCY / COMPANY</th>
-                <th rowspan="2" class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">STATUS</th>
-                <th rowspan="2" class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">GOV'T SERVICE</th>
-            </tr>
-            <tr>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">FROM</th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">TO</th>
-            </tr>
+      <th class="border bg-[#e7e7e7]" rowspan="2">
+        NUMBER OF <p>HOURS</p>
+      </th>
 
-            @php
-                $workRows = $work ?? collect();
-                $maxWorkRows = max(10, $workRows->count()); // Show at least 10 work experience rows
-            @endphp
+      <th class="border bg-[#e7e7e7]" rowspan="2">
+        POSITION / NATURE OF WORK 
+      </th>
+    </tr>
 
-            @for ($i = 0; $i < $maxWorkRows; $i++)
-                @php $workRow = $workRows[$i] ?? null; @endphp
-                <tr>
-                    <td class="border p-2 align-top text-center">{{ $workRow->from ?? " " }}</td>
-                    <td class="border p-2 align-top text-center">{{ $workRow->to ?? " " }}</td>
-                    <td class="border p-2 align-top text-center">{{ $workRow->position_title ?? " " }}</td>
-                    <td class="border p-2 align-top text-center">{{ $workRow->department ?? " " }}</td>
-                    <td class="border p-2 align-top text-center">{{ $workRow->status ?? " " }}</td>
-                    <td class="border p-2 align-top text-center">{{ $workRow->govt_service ?? " " }}</td>
-                </tr>
-            @endfor
-        </table>
 
-        <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
-            CS FORM 212 (Revised 2025), Page 2 of 5
+    <tr>
+    <th class="border text-center bg-[#e7e7e7]">FROM</th>
+    <th class="border text-center bg-[#e7e7e7]">TO</th>
+   </tr>
+
+    @php
+    // Fallback to $voluntary when $voluntaryWorks isn't passed, then sort by start date ascending
+    $volRows = $voluntaryWorks ?? ($voluntary ?? collect());
+    $volRows = $volRows->sortBy('from')->values();
+    $maxRows = max(7, $volRows->count());
+@endphp
+
+@for ($i = 0; $i < $maxRows; $i++)
+  @php $row = $volRows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $row->organization ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->from ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->to ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->hours ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $row->position ?? ' ' }}</td>
+  </tr>
+@endfor
+
+    </table>
+    
+
+    <table class="border border-black font-['Arial_Narrow','Arial',sans-serif]">
+      
+      <colgroup>
+        <col style="width: 45.5%;">
+        <col style="width: 8%;">
+        <col style="width: 7.5%;">
+        <col style="width: 8%;">
+        <col style="width: 12%;">
+      </colgroup>
+
+      <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
+      VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+     </th>
+
+     <tr class="border">
+
+      <th rowspan="2" class="bg-[#e7e7e7] text-center">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS <p>(Write in full)</p></th>
+
+      <th colspan="2" class="border bg-[#e7e7e7]">
+        INCLUSIVE DATES OF ATTENDANCE<p>(dd/mm/yyyy)</p>
+      </th>
+
+       <th rowspan="2" class="border bg-[#e7e7e7]">
+        NUMBER OF HOURS
+      </th>
+
+      <th rowspan="2" class="border bg-[#e7e7e7]">
+        Type of L&D
+     <p>(Managerial/ Supervisory/
+        Technical / etc) </p>
+      </th>
+
+      <th rowspan="2" class="border bg-[#e7e7e7]">
+         CONDUCTED/ SPONSORED BY (Write in full)
+      </th>
+     </tr>
+
+     <tr>
+      <th class="border text-center font-light bg-[#e7e7e7]">FROM</th>
+      <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
+     </tr>
+
+      @php
+    // Fallback to $learning when $training isn't passed, then sort by start date ascending
+    $trainingRows = $training ?? ($learning ?? collect());
+    $trainingRows = $trainingRows->sortBy('from')->values();
+    $maxTraining = max(21, $trainingRows->count());
+@endphp
+
+@for ($i = 0; $i < $maxTraining; $i++)
+  @php $trow = $trainingRows[$i] ?? null; @endphp
+  <tr>
+    <td class="border align-top text-center">{{ $trow->title ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->from ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->to ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->hours ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $trow->conducted_by ?? ' ' }}</td>
+  </tr>
+@endfor
+
+    </table>
+
+    <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
+
+      <colgroup>
+        <col style="width: 5.11%;">
+         <col style="width: 6.5%;">
+          <col style="width: 4.39%;">
+      </colgroup>
+      <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="3">
+        VIII.  OTHER INFORMATION
+      </th>
+
+      <tr class=" bg-[#e7e7e7]">
+        <th class="border">
+        SPECIAL SKILLS and HOBBIES
+      </th>
+
+      <th class="border">
+        NON-ACADEMIC DISTINCTIONS / RECOGNITION <p>(Write in full)</p>
+      </th>
+
+      <th class="border" >
+          MEMBERSHIP IN ASSOCIATION / ORGANIZATION <p>(Write in full)</p>
+      </th>
+
+  
+      </tr>
+
+    @php
+    $otherCollection = $other ?? ($otherInfo ?? collect());
+    $skills = $otherCollection->where('category', 'skills')->pluck('description')->values();
+    $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->values();
+    $assoc = $otherCollection->where('category', 'association')->pluck('description')->values();
+    $maxOther = max(7, $skills->count(), $recognition->count(), $assoc->count());
+@endphp
+
+@for ($i = 0; $i < $maxOther; $i++)
+  <tr>
+    <td class="border align-top text-center">{{ $skills[$i] ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $recognition[$i] ?? ' ' }}</td>
+    <td class="border align-top text-center">{{ $assoc[$i] ?? ' ' }}</td>
+  </tr>
+@endfor
+
+    </table>
+
+    <table class="border border-black w-full h-15 font-['Arial_Narrow','sans-serif'] italic">
+        <colgroup>
+          <col style="width: 31.95%;">
+           <col style="width: 15.64%;">
+            <col style="width: 15%;">
+             <col style="width: 10%;">
+        </colgroup>
+      <tr>
+      <td class="text-center font-bold text-xl border">
+          SIGNATURE
+      </td>
+
+       <td class="border" colspan="2">
+      <div class="h-full w-full flex flex-col items-center justify-center p-2">
+        @if(empty($pdfMode))
+        <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+        @endif
+      </div>
+    </td>
+
+
+      <td class="border text-center font-bold text-xl">
+        DATE
+      </td>
+
+        <td colspan="2"
+          class="border">
+          <div class="h-full w-full">
+         <textarea
+      name="date3"
+      required
+      rows="1"
+      class="w-full h-full text-lg resize-none
+             focus:outline-none focus:ring-0
+             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
+    ></textarea>
+      </td>
+      </tr>
+    </table>
+
+    <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
+    CS FORM 212 (Revised 2025), Page 3 of 5
+</div>
+<div style="page-break-before: always;"></div>
+ <table class="border-black w-full text-sm border-2 border-b-0">
+    <tr>
+      <td class="border w-2/3 align-top border-black">
+        <div class="ml-4 mb-3 mt-3">
+          34. Are you related by consanguinity or affinity to the appointing or recommending authority, or to the
+          chief of bureau or office or to the person who has immediate supervision over you in the Office,
+          Bureau or Department where you will be appointed,
+          <p class="ml-10 mt-5">a. within the third degree?</p>
+          <p class="ml-10 mt-3">b. within the fourth degree (for Local Government Unit – Career Employees)?</p>
         </div>
-    </div>
-
-    <!-- Page 3: Voluntary Work & Learning Development -->
-    <div style="page-break-after: always;">
-        <h2 class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold" style="background-color:#8a8a8a !important; color:white !important;">
-          VI. VOLUNTARY WORK OR INVOLVEMENT IN CIVIC / NON-GOVERNMENT / PEOPLE / VOLUNTARY ORGANIZATIONS
-        </h2>
-
-        <table class="w-full border border-black" style="border-collapse: collapse;">
-            <tr>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    NAME & ADDRESS OF ORGANIZATION
-                </th>
-                <th colspan="2" class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    INCLUSIVE DATES
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    HOURS
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    POSITION / NATURE OF WORK
-                </th>
-            </tr>
-            <tr>
-                <th class="border p-1 text-center">&nbsp;</th>
-                <th class="border p-1 text-center bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">FROM</th>
-                <th class="border p-1 text-center bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">TO</th>
-                <th class="border p-1 text-center">&nbsp;</th>
-                <th class="border p-1 text-center">&nbsp;</th>
-            </tr>
-
-            @php
-                $voluntaryRows = $voluntary ?? collect();
-                $maxVoluntaryRows = max(5, $voluntaryRows->count()); // Show at least 5 rows
-            @endphp
-
-            @for ($i = 0; $i < $maxVoluntaryRows; $i++)
-                @php $volRow = $voluntaryRows[$i] ?? null; @endphp
-                <tr>
-                    <td class="border p-2">{{ $volRow->name_address ?? '' }}</td>
-                    <td class="border p-2 text-center">{{ $volRow->from ?? '' }}</td>
-                    <td class="border p-2 text-center">{{ $volRow->to ?? '' }}</td>
-                    <td class="border p-2 text-center">{{ $volRow->hours ?? '' }}</td>
-                    <td class="border p-2">{{ $volRow->position ?? '' }}</td>
-                </tr>
-            @endfor
-        </table>
-
-        <h2 class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold mt-4" style="background-color:#8a8a8a !important; color:white !important;">
-          VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
-        </h2>
-
-        <table class="w-full border border-black" style="border-collapse: collapse;">
-            <tr>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS
-                </th>
-                <th colspan="2" class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    INCLUSIVE DATES
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    HOURS
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    TYPE OF LD
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">
-                    CONDUCTED/SPONSORED BY
-                </th>
-            </tr>
-            <tr>
-                <th class="border p-1 text-center">&nbsp;</th>
-                <th class="border p-1 text-center bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">FROM</th>
-                <th class="border p-1 text-center bg-[#e7e7e7]" style="background-color:#e7e7e7 !important;">TO</th>
-                <th class="border p-1 text-center">&nbsp;</th>
-                <th class="border p-1 text-center">&nbsp;</th>
-                <th class="border p-1 text-center">&nbsp;</th>
-            </tr>
-
-            @php
-                $trainingRows = $training ?? collect();
-                $maxTrainingRows = max(5, $trainingRows->count());
-            @endphp
-
-            @for ($i = 0; $i < $maxTrainingRows; $i++)
-                @php $trainRow = $trainingRows[$i] ?? null; @endphp
-                <tr>
-                    <td class="border p-2">{{ $trainRow->title ?? '' }}</td>
-                    <td class="border p-2 text-center">{{ $trainRow->from ?? '' }}</td>
-                    <td class="border p-2 text-center">{{ $trainRow->to ?? '' }}</td>
-                    <td class="border p-2 text-center">{{ $trainRow->hours ?? '' }}</td>
-                    <td class="border p-2">{{ $trainRow->type ?? '' }}</td>
-                    <td class="border p-2">{{ $trainRow->conducted_by ?? '' }}</td>
-                </tr>
-            @endfor
-        </table>
-
-        <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
-            CS FORM 212 (Revised 2025), Page 3 of 5
+      </td>
+      <td class="border px-2 align-top border-black">
+        <div class="flex h-full gap-20 mt-20">
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="YES" Disabled @checked(($declaration->q34_a ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="NO" Disabled @checked(($declaration->q34_a ?? '') === 'NO')> NO</label>
         </div>
-    </div>
-
-    <!-- Page 4: Other Information -->
-    <div style="page-break-after: always;">
-        <h2 class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold" style="background-color:#8a8a8a !important; color:white !important;">
-          VIII. OTHER INFORMATION
-        </h2>
-
-        <table class="w-full border border-black" style="border-collapse: collapse;">
-            <tr>
-                <th class="border p-2 bg-[#e7e7e7]" style="width:33%; background-color:#e7e7e7 !important;">
-                    SPECIAL SKILLS and HOBBIES
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="width:33%; background-color:#e7e7e7 !important;">
-                    NON-ACADEMIC DISTINCTIONS / RECOGNITION
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="width:34%; background-color:#e7e7e7 !important;">
-                    MEMBERSHIP IN ASSOCIATION/ORGANIZATION
-                </th>
-            </tr>
-
-            @php
-                $otherInfoRows = $otherInfo ?? collect();
-                $maxOtherRows = max(7, $otherInfoRows->count());
-            @endphp
-
-            @for ($i = 0; $i < $maxOtherRows; $i++)
-                @php
-                    $skills = $otherInfoRows->where('type', 'skills')->values()->get($i) ?? null;
-                    $recognitions = $otherInfoRows->where('type', 'recognitions')->values()->get($i) ?? null;
-                    $memberships = $otherInfoRows->where('type', 'memberships')->values()->get($i) ?? null;
-                @endphp
-                <tr>
-                    <td class="border p-2">{{ $skills->details ?? '' }}</td>
-                    <td class="border p-2">{{ $recognitions->details ?? '' }}</td>
-                    <td class="border p-2">{{ $memberships->details ?? '' }}</td>
-                </tr>
-            @endfor
-        </table>
-
-        <h3 class="font-['Arial_Narrow','Arial',sans-serif] text-center font-bold mt-4">
-          REFERENCES
-        </h3>
-
-        <table class="w-full border border-black" style="border-collapse: collapse;">
-            <tr>
-                <th class="border p-2 bg-[#e7e7e7]" style="width:30%; background-color:#e7e7e7 !important;">
-                    NAME
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="width:40%; background-color:#e7e7e7 !important;">
-                    ADDRESS
-                </th>
-                <th class="border p-2 bg-[#e7e7e7]" style="width:30%; background-color:#e7e7e7 !important;">
-                    TEL. NO. / EMAIL
-                </th>
-            </tr>
-
-            @php
-                $referenceRows = $references ?? collect();
-                $maxRefRows = max(3, $referenceRows->count());
-            @endphp
-
-            @for ($i = 0; $i < $maxRefRows; $i++)
-                @php $ref = $referenceRows[$i] ?? null; @endphp
-                <tr>
-                    <td class="border p-2">{{ $ref->name ?? '' }}</td>
-                    <td class="border p-2">{{ $ref->address ?? '' }}</td>
-                    <td class="border p-2">{{ $ref->tel_no ?? '' }}</td>
-                </tr>
-            @endfor
-        </table>
-
-        <h3 class="font-['Arial_Narrow','Arial',sans-serif] text-left font-bold mt-4">
-          34. I declare under oath that I have personally accomplished this Personal Data Sheet which is a true, correct and complete statement pursuant to the provisions of pertinent laws, rules and regulations of the Republic of the Philippines. I authorize the agency head/authorized representative to verify/validate the contents stated herein. I agree that any misrepresentation made in this document and its attachments shall cause the filing of administrative/criminal case/s against me.
-        </h3>
-
-        <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
-            CS FORM 212 (Revised 2025), Page 4 of 5
+        <div class="flex h-full gap-20 mt-2">
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_b" value="YES" Disabled @checked(($declaration->q34_b ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-3"><input type="checkbox" name="q34_b" value="NO" Disabled @checked(($declaration->q34_b ?? '') === 'NO')> NO</label>
         </div>
-    </div>
+        <p class="mt-2">if yes, give details:</p>
+        <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a" Disabled value="{{ $declaration->q34_a_details ?? '' }}">
+        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b" Disabled value="{{ $declaration->q34_b_details ?? '' }}">
+      </td>
+    </tr>
 
-    <!-- Page 5: Remarks -->
-    <div>
-        <h2 class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold" style="background-color:#8a8a8a !important; color:white !important;">
-          REMARKS
-        </h2>
+    <tr>
+      <td class="border w-2/3 align-top border-b-0 border-black">
+        <div class="ml-5 mb-3 mt-3">35. a. Have you ever been found guilty of any administrative offense?</div>
+      </td>
+      <td class="border px-2 align-top border-black">
+        <div class="flex h-full gap-20 mt-2">
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" Disabled value="YES" @checked(($declaration->q35_a ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" Disabled value="NO" @checked(($declaration->q35_a ?? '') === 'NO')> NO</label>
+        </div>
+        <p class="mt-2">if yes, give details:</p>
+        <input type="text" class="mb-2 w-full" name="q35_a_details" data-detail-for="q35_a" Disabled value="{{ $declaration->q35_a_details ?? '' }}">
+      </td>
+    </tr>
+
+
+    <tr>
+      <td class="w-2/3 align-top border-t-0 border-black">
+        <div class="ml-10 mb-3 mt-3">b. Have you been criminally charged before any court?</div>
+      </td>
+      <td class="border px-2 border-black">
+        <div class="flex h-full gap-20 mt-2">
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" Disabled value="YES" @checked(($declaration->q35_b ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" Disabled value="NO" @checked(($declaration->q35_b ?? '') === 'NO')> NO</label>
+        </div>
+        <p class="mt-2 mb-2">if yes, give details:</p>
+        <span class="ml-9">Date Filed:</span> <input class="border-b mb-2 mr-40" type="text" Disabled data-detail-for="q35_b" name="q35_b_details_date" value="{{ $declaration->q35_b_details_date ?? '' }}">
+        <span class="ml-1">Status of Case/s:</span> <input class="border-b mb-2" type="text" Disabled data-detail-for="q35_b" name="q35_b_details_status" value="{{ $declaration->q35_b_details_status ?? '' }}">
+      </td>
+    </tr>
+
+ <tr>
+      <td class="border w-2/3 align-top border-black">
+              <div class="ml-5 mb-3 mt-3">36. Have you ever been convicted of any crime or violation of any law, decree, ordinance or regulation by any court or tribunal?
+        </div>
         
-        @php
-            $remarksRows = $remarks ?? collect();
-            $maxRemarks = max(5, $remarksRows->count());
-        @endphp
-        
-        <div class="border border-black p-4 min-h-[400px]">
-            @foreach ($remarksRows as $remark)
-                <p class="mb-2">{{ $remark->content ?? '' }}</p>
-            @endforeach
-        </div>
-
-        <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif'; margin-top: 1rem;">
-            CS FORM 212 (Revised 2025), Page 5 of 5
-        </div>
+      </td>
+      
+     <td class="border px-2 border-black">
+    <div class="flex h-full gap-20 mt-3">
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q36" value="YES" Disabled @checked(($declaration->q36 ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q36" value="NO" Disabled @checked(($declaration->q36 ?? '') === 'NO')> NO
+      </label>
     </div>
+
+  <p class="mt-2">if yes, give details:</p>
+    <input class="border-b mb-2 w-full" type="text" Disabled name="q36_details" data-detail-for="q36" value="{{ $declaration->q36_details ?? '' }}">
+
+</tr>
+
+
+<tr>
+      <td class="border w-2/3 align-top border-black">
+              <div class="ml-5 mb-3 mt-3">37. Have you ever been separated from the service in any of the following modes: resignation, retirement, dropped from the rolls, dismissal, termination, end of term, finished contract or phased out (abolition) in the public or private sector?
+        </div>
+      </td>
+     <td class="border px-2 border-black">
+    <div class="flex h-full gap-20 mt-3">
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q37" value="YES" Disabled @checked(($declaration->q37 ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q37" value="NO" Disabled @checked(($declaration->q37 ?? '') === 'NO')> NO
+      </label>
+    </div>
+
+  <p class="mt-2">if yes, give details:</p>
+    <input class="border-b mb-2 w-full" type="text" Disabled name="q37_details" data-detail-for="q37" value="{{ $declaration->q37_details ?? '' }}">
+
+</tr>
+
+
+
+<tr>
+      <td class="border w-2/3 align-top border-black">
+              <div class="ml-5 mb-3 mt-3">38. a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?
+        </div>
+        
+      </td>
+      
+     <td class="border px-2 border-black">
+    <div class="flex h-full gap-20 mt-2">
+      <label class="flex items-center gap-2 mt-1">
+        <input type="checkbox" name="q38_a" value="YES" Disabled @checked(($declaration->q38_a ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q38_a" value="NO" Disabled @checked(($declaration->q38_a ?? '') === 'NO')> NO
+      </label>
+    </div>
+
+  <p class="mt-2">if yes, give details:</p>
+    <input class="border-b mb-2 w-full" type="text" Disabled name="q38_a_details" data-detail-for="q38_a" value="{{ $declaration->q38_a_details ?? '' }}">
+
+</tr>
+
+
+ <tr>
+      <td class="border w-2/3 align-top border-t-0 border-black">
+              <div class="ml-10 mb-3 mt-3">b. Have you resigned from the government service during the three (3)-month period before the last election to promote/actively campaign for a national or local candidate?
+    
+        </div>
+        
+      </td>
+      
+     <td class="border  px-2  border-black">
+    <div class="flex h-full gap-20 mt-2">
+      <label class="flex items-center gap-2 mt-1">
+        <input type="checkbox" name="q38_b" value="YES" Disabled @checked(($declaration->q38_b ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q38_b" value="NO" Disabled @checked(($declaration->q38_b ?? '') === 'NO')> NO
+      </label>
+    </div>
+
+  <p class="mt-2 mb-2">if yes, give details:</p>   
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q38_b_details" data-detail-for="q38_b" value="{{ $declaration->q38_b_details ?? '' }}">   
+
+</tr>
+
+
+
+<tr>
+      <td class="border w-2/3 align-top border-t-0 border-black border">
+              <div class="ml-5 mb-3 mt-3">39. Have you acquired the status of an immigrant or permanent resident of another country?
+        </div>
+        
+      </td>
+      
+     <td class="border  px-2 border-black">
+    <div class="flex h-full gap-20 mt-2">
+      <label class="flex items-center gap-2 mt-1">
+        <input type="checkbox" name="q39" value="YES" Disabled @checked(($declaration->q39 ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q39" value="NO" Disabled @checked(($declaration->q39 ?? '') === 'NO')> NO
+      </label>
+    </div>
+
+  <p class="mt-2 mb-2">if yes, give details:</p>   
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q39_details" data-detail-for="q39" value="{{ $declaration->q39_details ?? '' }}">   
+
+</tr>
+
+
+<tr>
+      <td class="border w-2/3 align-top border-t-0 border-black">
+              <div class="ml-5 mb-3 mt-3">40. Pursuant to: (a) Indigenous People's Act (RA 8371); (b) Magna Carta for Disabled Persons (RA 7277, as amended); and (c) Expanded Solo Parents Welfare Act (RA 11861), please answer the following items:
+
+                <p class="ml-6 mt-2 mb-18">a. Are you a member of any indigenous group?</p>
+                <p class="ml-6 mb-18 mt-20">b. Are you a person with disability?</p>
+                <p class="ml-6 flex mt-16">c. Are you a solo parent?</p>
+        </div>
+        
+      </td>
+      
+     <td class="border  px-2 border-black">
+    <div class="flex h-full gap-20 mt-12">
+      <label class="flex items-center gap-2 mt-1">
+        <input type="checkbox" name="q40_a" value="YES" Disabled @checked(($declaration->q40_a ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q40_a" value="NO" Disabled @checked(($declaration->q40_a ?? '') === 'NO')> NO
+      </label>
+    </div>
+
+      <p class="mt-2 mb-2">if yes, give details:</p>   
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q40_a_details" data-detail-for="q40_a" value="{{ $declaration->q40_a_details ?? '' }}">
+
+     <div class="flex h-full gap-20 mt-2">
+      <label class="flex items-center gap-2 mt-1">
+        <input type="checkbox" name="q40_b" value="YES" @checked(($declaration->q40_b ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q40_b" value="NO" Disabled @checked(($declaration->q40_b ?? '') === 'NO')> NO
+      </label>
+    </div>
+
+      <p class="mt-2 mb-2">if yes, give details:</p>   
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q40_b_details" data-detail-for="q40_b" value="{{ $declaration->q40_b_details ?? '' }}">
+
+     <div class="flex h-full gap-20 mt-2">
+      <label class="flex items-center gap-2 mt-1">
+        <input type="checkbox" name="q40_c" value="YES" Disabled @checked(($declaration->q40_c ?? '') === 'YES')> YES
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="q40_c" value="NO" Disabled @checked(($declaration->q40_c ?? '') === 'NO')> NO
+      </label>
+    </div>
+  <p class="mt-2 mb-2">if yes, give details:</p>   
+  <input class="border-b mb-2 w-full" type="text" name="q40_c_details" Disabled data-detail-for="q40_c" value="{{ $declaration->q40_c_details ?? '' }}">
+</td>
+</tr>
+
+    </table> 
+
+    <table class="w-full h-full border-l-2 border-b-0 border-black font-['Arial_Narrow','Arial',sans-serif]">
+      <tr>
+        <td class="border-l-3 border border-t-2 border-r-2 border-b-3 border-black" colspan="3">
+          <span class="ml-2">41. REFERENCES </span><span class="font-semibold">(Person not related by consanguinity or affinity to applicant / appointee)</span>
+        </td>
+        <td class="flex-1 w-1/4 align-top text-center border-l-0 border-r-2 border-t-2 border-black" rowspan="11">
+  <div class="mt-12 flex flex-col items-center">
+
+    <!-- PASSPORT PHOTO -->
+    <label class="cursor-pointer">
+      <div class="border-2 border-black w-[3.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
+        <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
+        <div id="photoPlaceholder">
+          Passport-sized unfiltered<br>
+          picture taken within<br>
+          the last 6 months<br>
+          4.5 cm × 3.5 cm
+        </div>
+      </div>
+      @if(empty($pdfMode))
+      <input type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhoto(event)" required>
+      @endif
+    </label>
+
+    <div class="mt-2 text-xs">PHOTO</div>
+
+    <!-- THUMB MARK -->
+    <label class="cursor-pointer mt-6">
+      <div class="mt-20 border-2 border-black w-[4.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
+        <img id="thumbPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
+        <div id="thumbPlaceholder" class="mt-auto border-black border-t border-l-0 border-b-0 border-r-0 w-full">
+          Right Thumbmark
+        </div>
+      </div>
+      @if(empty($pdfMode))
+      <input type="file" name="thumbmark" accept="image/*" class="hidden" onchange="previewThumb(event)" required>
+      @endif
+    </label>
+  </div>
+</td>
+      </tr>
+      <tr class="border border-r-0 border-black">
+        <th class="border font-light w-24 border-l-3 border-black">NAME</th>
+        <th class="border font-light border-black">OFFICE / RESIDENTIAL ADDRESS </th>
+        <th class="border font-light w-52 border-r-2 border-black">CONTACT NO. AND / OR EMAIL</th>
+      </tr>
+      @php
+        // Reindex to zero-based keys so array-style access works for all saved references
+        $refRows = ($references ?? collect())->values();
+        $maxRef = max(7, $refRows->count());
+      @endphp
+      @for ($i = 0; $i < $maxRef; $i++)
+      @php $ref = $refRows[$i] ?? null; @endphp
+      <tr class="border border-r-0 border-l-3 border-black align-top">
+        <td class="border border-black align-top p-0 w-60 text-center" style="height:25px;">
+          {{ $ref->name ?? '' }}
+        </td>
+        <td class="border border-black align-top p-0 text-center" style="height:25px;">
+          {{ $ref->address ?? '' }}
+        </td>
+        <td class="border border-r-3 align-top p-0 border-r-2 border-black text-center" style="height:25px;">
+          {{ $ref->contact ?? '' }}
+        </td>
+      </tr>
+      @endfor
+      <tr class="border justify-center">
+        <td colspan="3" class="text-justify px-2 h-20 font-semibold border-t-2 border-black border-b-2 border-r-2">
+          42. I declare under oath that I have personally accomplished this Personal Data Sheet which is a true, correct, and complete statement pursuant to the provisions of pertinent laws, rules, and regulations of the Republic 
+          <span class="px-4">of the Philippines. I authorize the agency head/authorized representative to verify/validate the contents stated herein. I  agree that any misrepresentation made in this document and its attachments shall cause the filing of administrative/criminal case/s against me.</span> 
+        </td>
+      </tr>
+      <tr>
+        <td class="pr-5 p-0 align-top w-[40%] border-l border-black border-r-0 flex-1">
+        <table class="border-collapse text-xs border-2 ml-2 mt-2 h-[5.6cm] w-full">
+  <!-- HEADER -->
+  <tr>
+    <td class="border px-2 py-1 font-semibold h-5 border-black" colspan="2">
+      Government Issued ID (i.e. Passport, GSIS, SSS, PRC, Driver's License, etc.)<br>
+      <span class="italic font-normal">
+        PLEASE INDICATE ID Number and Date of Issuance
+      </span>
+    </td>
+  </tr>
+
+  <!-- ROW 1 -->
+  <tr>
+    <td class="border px-2 py-1 h-5 align-middle border-black">
+      Government Issued ID:
+    </td>
+    <td class="border px-2 py-1 w-2/3 border-black">
+      {{ $idInfo->gov_id ?? '' }}
+    </td>
+  </tr>
+
+  <!-- ROW 2 -->
+  <tr>
+    <td class="border px-2 py-1 h-5 align-middle border-black">
+      ID/License/Passport No.:
+    </td>
+    <td class="border px-2 py-1 border-black">
+      {{ $idInfo->passport_licence_id?? '' }}
+    </td>
+  </tr>
+
+  <!-- ROW 3 -->
+  <tr>
+    <td class="border px-2 py-1 h-5 align-middle border-black">
+      Date/Place of Issuance:
+    </td>
+    <td class="border px-2 py-1 border-black">
+      {{ $idInfo->date_place_issuance ?? '' }}
+    </td>
+  </tr>
+
+</table>
+        </td>
+        <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2">
+          <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
+            <tr>
+              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600">
+                (wet signature / e-signature / digital certificate)
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-black text-center py-1">Signature (Sign inside the box)</td>
+            </tr>
+           <tr>
+  <td>
+    <div class="relative flex justify-center py-2">
+      <div class="flex items-center space-x-1 relative">
+        <input
+          type="text"
+          name="date4_month"
+          maxlength="2"
+          placeholder="MM"
+          inputmode="numeric"
+          class="text-center text-base bg-transparent border-none focus:outline-none"
+        />
+        <span class="text-base select-none">/</span>
+        <input
+          type="text"
+          name="date4_day"
+          maxlength="2"
+          placeholder="DD"
+          inputmode="numeric"
+          class="text-center text-base bg-transparent border-none focus:outline-none"
+        />
+        <span class="text-base select-none">/</span>
+        <input
+          type="text"
+          name="date4_year"
+          maxlength="2"
+          placeholder="YY"
+          inputmode="numeric"
+          class="text-center text-xl bg-transparent border-none focus:outline-none"
+        />
+      </div>
+    </div>
+  </td>
+</tr>
+            <tr>
+              <td class="border border-black  text-center py-1">Date Accomplished</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    <table class="border-3 border-t-0 border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
+      <tr>
+        <td class="p-2 text-center align-middle font-semibold text-sm">
+          SUBSCRIBED AND SWORN to before me this _____________________________ , affiant exhibiting his/her validly issued government ID as indicated above.
+        </td>
+      </tr>
+      <tr>
+        <td class="p-2 align-top text-center">
+          <table class="w-1/3 mx-auto h-full border-collapse text-xs border-3">
+            <tr>
+  <td class="border-black h-16 text-center align-middle italic text-red-600 relative">
+
+    <!-- Placeholder / Text -->
+    <div id="signaturePlaceholder">
+      (wet signature / e-signature / digital certificate except for notary public)
+    </div>
+
+    <!-- File Input -->
+    @if(empty($pdfMode))
+    <input
+      type="file"
+      name="signature_file"
+      accept=".jpg,.jpeg,.png,.pdf,.docx"
+      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      onchange="handleSignaturePreview(event)"
+      required
+    />
+    @endif
+
+    <!-- Optional Preview -->
+    <div id="signaturePreview" class="mt-1 text-xs text-gray-700"></div>
+
+  </td>
+</tr>
+            <tr><td class="border-black border text-center py-2 font-semibold">Person Administering Oath</td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+   <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
+    CS FORM 212 (Revised 2025), Page 4 of 5
+</div>
+<div style="page-break-before: always;"></div>
+<table>
+  <th class="flex text-left font-['Arial_Narrow','Arial',sans-serif] italic font-semibold">
+    Attachment to CS Form No. 212
+  </th>
+</table>
+
+<table class="border-black w-full font-['Arial_Narrow','Arial',sans-serif] border-2">
+
+<tr>
+  <th class="text-base font-semibold italic bg-[#8a8a8a] text-white border border-black border-b-2">
+    WORK EXPERIENCE SHEET
+  </th>
+</tr>
+
+<tbody id="remarks-rows">
+
+<tr>
+<td class="border-t-2 h-20 p-3 text-base italic border-b-2 border-black">
+<span class="p-1 font-semibold">Instructions:</span>
+1. Include only the work experiences relevant to the position being applied to.
+<p class="p-2 ml-20">
+2. The duration should include start and finish dates, if known, month in abbreviated form, if known, and year in full. For the current position, use the word Present, e.g., 1998-Present. Work experience should be listed from most recent first.  
+</p>
+</td>
+</tr>
+
+@php
+  $remarkRows = ($remarks ?? collect())->values();
+  $maxRemark = max(1, $remarkRows->count());
+@endphp
+
+@for ($i = 0; $i < $maxRemark; $i++)
+@php $remark = $remarkRows[$i]->remarks ?? ''; @endphp
+<tr>
+<td class="border-2 h-20 border-black relative">
+<textarea
+id="remarks-prototype"
+name="remarks[]"
+class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
+style="min-height:350px; white-space:pre-wrap;"
+placeholder="Sample: If applying to Supervising Administrative Officer
+
+•\tDuration:  February 11, 2011 – present
+•\tPosition:  Human Resource Management Officer III
+•\tName of Office/Unit: Finance and Administrative Service
+•\tImmediate Supervisor: Maria Estrada
+•\t Name of Agency/Organization and Location: Department of Human Resources, Metro Manila
+
+•\tList of Accomplishments and Contributions (if any)
+ - Developed recruitment plan
+ - Designed training program for retirees under EO 366
+ 
+•\tSummary of Actual Duties
+  - Responsible for the management of the recruitment and selection process and the coordination of training activities of the Department; provides assistance in the management of the Division’s programs and activities and performs other related functions.
+"
+>{{ $remark }}</textarea>
+</td>
+</tr>
+@endfor
+
+</tbody>
+</table>
+
+<!-- SIGNATURE -->
+<div class="w-full flex justify-end mt-[3cm] pr-6">
+<div class="w-[350px] text-center">
+  <div class="border-b-2 border-black"></div>
+  <div class="mt-1 text-sm">(Signature over Printed Name)</div>
+</div>
+</div>
+
+<!-- DATE -->
+<div class="w-full flex justify-end mt-[1cm] pr-6 font-['Arial_Narrow','Arial',sans-serif]">
+<div class="w-[350px] text-center relative">
+
+<div class="border-b-2 border-black w-full absolute bottom-6 left-0"></div>
+
+<div class="flex justify-center space-x-1 relative">
+@if(empty($pdfMode))
+<input type="file" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base" style="display: none;">
 @endif
+<span class="mt-2">/</span>
+@if(empty($pdfMode))
+<input type="file" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none" style="display: none;">
+@endif
+<span class="mt-2">/</span>
+@if(empty($pdfMode))
+<input type="file" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none" style="display: none;">
+@endif
+<input type="text" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base">
+<span class="mt-2">/</span>
+<input type="text" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none">
+<span class="mt-2">/</span>
+<input type="text" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none">
+</div>
 
+<div class="text-sm">DATE</div>
+</div>
+</div>
+
+<div class="mt-5 flex justify-end mr-2 text-sm font-['Arial_Narrow','Arial',sans-serif]">
+CS FORM 212 (Revised 2025), Page 5 of 5
+</div>
 @if(!empty($pdfMode))
 </body>
 </html>

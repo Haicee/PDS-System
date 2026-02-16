@@ -156,7 +156,7 @@
              <col style="width: 15%;">
         </colgroup>
       <tr>
-      <td class="text-center font-bold text-lg border align-middle">
+      <td class="text-center font-bold text-xl border align-middle italic">
           SIGNATURE
       </td>
 
@@ -168,7 +168,7 @@
       </div>
     </td>
 
-      <td class="border text-center font-bold text-lg align-middle">
+      <td class="border text-center font-bold text-xl align-middle italic">
         DATE
       </td>
 

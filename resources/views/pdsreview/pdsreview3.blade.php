@@ -320,7 +320,7 @@
 
     </table>
 
-    <table class="border border-black w-full h-15">
+    <table class="border border-black w-full h-15 font-['Arial_Narrow','sans-serif'] italic">
         <colgroup>
           <col style="width: 30.3%;">
            <col style="width: 20%;">
@@ -328,7 +328,7 @@
              <col style="width: 10%;">
         </colgroup>
       <tr>
-      <td class="text-center font-bold text-lg border">
+      <td class="text-center font-bold text-xl border">
           SIGNATURE
       </td>
 
@@ -341,7 +341,7 @@
     </td>
 
 
-      <td class="border text-center font-bold text-lg">
+      <td class="border text-center font-bold text-xl">
         DATE
       </td>
 
@@ -365,7 +365,7 @@
     CS FORM 212 (Revised 2025), Page 3 of 5
     </div>
     @if(empty($pdfMode))
-    <div class="flex justify-between mt-4">
+    <div class="flex justify-between mt-4 font-['Arial_Narrow','sans-serif']">
         <a href="{{ route('pdsreview.pdsreview2') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
             <a href="{{ route('pdsreview.pdsreview4') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
     </div>
