@@ -235,7 +235,7 @@
   </p>
 
   <!-- MAIN TABLE -->
-  <table class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base">
+  <table class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base w-[100%]" >
 
     <!-- FIXED GRID -->
     <colgroup>

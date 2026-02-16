@@ -23,103 +23,7 @@
             {{-- Table --}}
             <div
                 class="bg-white shadow-sm sm:rounded-2xl border border-slate-100 flex flex-col flex-1 min-h-0"
-                x-data="{
-                    search: '',
-                    activeTab: 'all',
-                    modalOpen: false,
-                    selected: null,
-                    confirmOpen: false,
-                    confirmAction: null,
-
-                    normalized(v) {
-                        return (v ?? '').toString().trim().toLowerCase();
-                    },
-
-                    submissions: @js($submissions ?? []).map(submission => {
-                        const statusKey = (submission.status ?? '')
-                            .toString()
-                            .trim()
-                            .toLowerCase();
-
-                        return {
-                            ...submission,
-                            status_key: ['approved', 'pending', 'rejected'].includes(statusKey)
-                                ? statusKey
-                                : 'pending',
-                        };
-                    }),
-
-                    tabCount(tab) {
-                        if (tab === 'all') return this.submissions.length;
-                        return this.submissions.filter(s => s.status_key === tab).length;
-                    },
-
-                    filtered() {
-                        const q = this.normalized(this.search);
-                        const tab = this.normalized(this.activeTab);
-
-                        return this.submissions.filter(s => {
-                            if (tab !== 'all' && s.status_key !== tab) return false;
-                            if (!q) return true;
-
-                            return (
-                                this.normalized(s.name).includes(q) ||
-                                this.normalized(s.email).includes(q) ||
-                                this.normalized(s.department).includes(q)
-                            );
-                        });
-                    },
-
-                    open(submission) {
-                        this.selected = submission;
-                        this.modalOpen = true;
-                    },
-
-                    requestConfirm(newStatus) {
-                        this.confirmAction = newStatus;
-                        this.confirmOpen = true;
-                    },
-
-                    confirmStatus() {
-                        if (!this.confirmAction) return;
-                        this.setStatus(this.confirmAction);
-                        this.confirmAction = null;
-                        this.confirmOpen = false;
-                    },
-
-                    cancelConfirm() {
-                        this.confirmAction = null;
-                        this.confirmOpen = false;
-                    },
-
-                    setStatus(newStatus) {
-                        if (!this.selected) return;
-                        const statusKey = this.normalized(newStatus);
-                        const statusLabel = statusKey === 'approved'
-                            ? 'Approved'
-                            : statusKey === 'rejected'
-                                ? 'Rejected'
-                                : 'Pending';
-
-                        const updated = { ...this.selected, status_key: statusKey, status: statusLabel };
-                        this.selected = updated;
-
-                        this.submissions = this.submissions.map(s => s.key === updated.key
-                            ? { ...s, status_key: statusKey, status: statusLabel }
-                            : s);
-                    },
-
-                    downloadPds() {
-                        if (!this.selected?.key) return;
-                        const key = encodeURIComponent(this.selected.key);
-                        window.location = `/pds-form/${key}/download`;
-                    },
-
-                    close() {
-                        this.modalOpen = false;
-                        this.selected = null;
-                    }
-                }"
+                x-data='pdsReview(@json($submissions ?? []))'
             >
 
                 {{-- Tabs + Search --}}
@@ -197,7 +101,7 @@
                                     class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
                                         <th class="px-6 py-3">Employee</th>
-                                        <th class="px-6 py-3">Department</th>
+                                        <th class="px-6 py-3">Unit</th>
                                         <th class="px-6 py-3">Email</th>
                                         <th class="px-6 py-3">Submitted</th>
                                         <th class="px-6 py-3">Status</th>
@@ -240,7 +144,7 @@
                                                 </div>
                                             </td>
 
-                                            <td class="px-6 py-4" x-text="submission.department"></td>
+                                            <td class="px-6 py-4" x-text="submission.unit"></td>
                                             <td class="px-6 py-4 text-slate-500" x-text="submission.email"></td>
                                             <td class="px-6 py-4" x-text="submission.submitted_at ?? '—'"></td>
 
@@ -311,3 +215,121 @@
     </div>
 
 </x-app-layout>
+
+@push('scripts')
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('pdsReview', (initialSubmissions = []) => ({
+            search: '',
+            activeTab: 'all',
+            modalOpen: false,
+            selected: null,
+            confirmOpen: false,
+            confirmAction: null,
+
+            submissions: (initialSubmissions || []).map((s) => {
+                const statusKey = (s.status ?? '').toString().trim().toLowerCase();
+                return {
+                    ...s,
+                    status_key: ['approved', 'pending', 'rejected'].includes(statusKey)
+                        ? statusKey
+                        : 'pending',
+                };
+            }),
+
+            normalized(v) {
+                return (v ?? '').toString().trim().toLowerCase();
+            },
+
+            tabCount(tab) {
+                if (tab === 'all') return this.submissions.length;
+                return this.submissions.filter((s) => s.status_key === tab).length;
+            },
+
+            filtered() {
+                const q = this.normalized(this.search);
+                const tab = this.normalized(this.activeTab);
+
+                return this.submissions.filter((s) => {
+                    if (tab !== 'all' && s.status_key !== tab) return false;
+                    if (!q) return true;
+
+                    return (
+                        this.normalized(s.name).includes(q) ||
+                        this.normalized(s.email).includes(q) ||
+                        this.normalized(s.unit).includes(q)
+                    );
+                });
+            },
+
+            open(submission) {
+                this.selected = submission;
+                this.modalOpen = true;
+            },
+
+            requestConfirm(newStatus) {
+                this.confirmAction = newStatus;
+                this.confirmOpen = true;
+            },
+
+            confirmStatus() {
+                if (!this.confirmAction) return;
+                this.setStatus(this.confirmAction);
+                this.confirmAction = null;
+                this.confirmOpen = false;
+            },
+
+            cancelConfirm() {
+                this.confirmAction = null;
+                this.confirmOpen = false;
+            },
+
+            async setStatus(newStatus) {
+                if (!this.selected) return;
+                const statusKey = this.normalized(newStatus);
+                const statusLabel = statusKey === 'approved'
+                    ? 'Approved'
+                    : statusKey === 'rejected'
+                        ? 'Rejected'
+                        : 'Pending';
+
+                try {
+                    const response = await fetch(`/pds-form/${this.selected.id}/status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({ status: statusLabel }),
+                    });
+
+                    if (!response.ok) throw new Error('Failed to update status');
+
+                    const updated = { ...this.selected, status_key: statusKey, status: statusLabel };
+                    this.selected = updated;
+
+                    this.submissions = this.submissions.map((s) =>
+                        s.id === updated.id
+                            ? { ...s, status_key: statusKey, status: statusLabel }
+                            : s
+                    );
+                } catch (error) {
+                    console.error('Error updating status:', error);
+                    alert('Failed to update status. Please try again.');
+                }
+            },
+
+            downloadPds() {
+                if (!this.selected?.key) return;
+                const key = encodeURIComponent(this.selected.key);
+                window.location = `/pds-form/${key}/download`;
+            },
+
+            close() {
+                this.modalOpen = false;
+                this.selected = null;
+            },
+        }));
+    });
+</script>
+@endpush

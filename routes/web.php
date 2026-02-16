@@ -276,10 +276,13 @@ if (! function_exists('pdsSubmissions')) {
 
 
 //PDS Review route
-Route::get('/pds-form', function () {
-    $submissions = pdsSubmissions();
-    return view('pds-form', compact('submissions'));
-})->middleware(['auth:admin', 'verified'])->name('pds.form');
+Route::get('/pds-form', [App\Http\Controllers\PdsReviewController::class, 'index'])
+    ->middleware(['auth:admin', 'verified'])
+    ->name('pds.form');
+
+Route::post('/pds-form/{id}/status', [App\Http\Controllers\PdsReviewController::class, 'updateStatus'])
+    ->middleware(['auth:admin', 'verified'])
+    ->name('pds.updateStatus');
 
 //Export/Download logic
 if (! function_exists('buildPdsSubmissionsXlsx')) {

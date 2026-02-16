@@ -3,8 +3,8 @@
         x-data="{
             search: '',
             filterStatus: '',
-            sortKey: 'name',
-            sortDir: 'asc',
+            sortKey: 'created_at',
+            sortDir: 'desc',
             admins: @js($admins),
             loggedInRole: @js($loggedInRole),
             deleteConfirmOpen: false,
@@ -262,11 +262,11 @@
                         </select>
 
                         <select class="rounded-full border border-slate-200/90 w-32 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
-                            <option value="name">Sort: Name</option>
+                            <option value="created_at">Sort: Created</option>
+                            <option value="name">Name</option>
                             <option value="email">Email</option>
                             <option value="role">Role</option>
                             <option value="status">Status</option>
-                            <option value="created_at">Created</option>
                         </select>
 
                         <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"

@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\PdsSubmission;
+use App\Models\User;
 
 class PdsSubmissionController extends Controller
 {
@@ -346,6 +348,20 @@ class PdsSubmissionController extends Controller
             $remarks = collect($req->input('remarks', []))->filter(fn ($v) => strlen(trim((string) $v)) > 0);
             if ($remarks->isNotEmpty()) {
                 DB::table('pds_form5_remarks')->insert($remarks->map(fn ($v) => ['user_id' => $userId, 'remarks' => $v])->all());
+            }
+
+            $user = User::find($userId);
+            if ($user) {
+                PdsSubmission::updateOrCreate(
+                    ['user_id' => $userId],
+                    [
+                        'name' => $user->name,
+                        'unit' => $user->unit,
+                        'email' => $user->email,
+                        'type' => $user->type,
+                        'submitted' => now(),
+                    ]
+                );
             }
         });
 
