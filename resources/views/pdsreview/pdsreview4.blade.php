@@ -1,4 +1,12 @@
+@if(!empty($pdfMode))
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"></head>
+<body>
+@endif
+@if(empty($pdfMode))
 <x-app-layout>
+@endif
 <form method="POST" action="{{ route('pds.saveStep', 4) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
@@ -505,7 +513,9 @@
           4.5 cm × 3.5 cm
         </div>
       </div>
+      @if(empty($pdfMode))
       <input type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhoto(event)" required>
+      @endif
     </label>
 
     <div class="mt-2 text-xs">PHOTO</div>
@@ -518,7 +528,9 @@
           Right Thumbmark
         </div>
       </div>
+      @if(empty($pdfMode))
       <input type="file" name="thumbmark" accept="image/*" class="hidden" onchange="previewThumb(event)" required>
+      @endif
     </label>
   </div>
 </td>
@@ -667,6 +679,7 @@
     </div>
 
     <!-- File Input -->
+    @if(empty($pdfMode))
     <input
       type="file"
       name="signature_file"
@@ -675,6 +688,7 @@
       onchange="handleSignaturePreview(event)"
       required
     />
+    @endif
 
     <!-- Optional Preview -->
     <div id="signaturePreview" class="mt-1 text-xs text-gray-700"></div>
@@ -689,10 +703,18 @@
      <div class="flex justify-end mr-2 border-b-0 font-['Arial_Narrow','sans-serif'] text-sm">
     CS FORM 212 (Revised 2025), Page 4 of 5
     </div>
+      @if(empty($pdfMode))
       <div class="flex justify-between mt-4">
-    <a href="{{ route('pdsreview.pdsreview3') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
-            <a href="{{ route('pdsreview.pdsreview5') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
-  </div>
+        <a href="{{ route('pdsreview.pdsreview3') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
+        <a href="{{ route('pdsreview.pdsreview5') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
+      </div>
+      @endif
   </div>
 </form>
+@if(empty($pdfMode))
 </x-app-layout>
+@endif
+@if(!empty($pdfMode))
+</body>
+</html>
+@endif
