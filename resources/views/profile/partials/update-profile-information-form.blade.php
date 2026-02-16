@@ -51,7 +51,7 @@
                 <x-input-label for="type" :value="__('Type')" />
                 <select id="type" name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
                     <option value="Permanent Employee" {{ old('type', $user->type) === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
-                    <option value="Job On Site" {{ old('type', $user->type) === 'Job On Site' ? 'selected' : '' }}>Job On Site</option>
+                    <option value="Job Order" {{ old('type', $user->type) === 'Job Order' ? 'selected' : '' }}>Job Order</option>
                 </select>
                 <x-input-error class="mt-2" :messages="$errors->get('type')" />
             </div>

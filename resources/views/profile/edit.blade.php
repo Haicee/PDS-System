@@ -1,4 +1,12 @@
 <x-app-layout>
+    @php
+        $isAdmin = auth('admin')->check();
+    @endphp
+
+    @if ($isAdmin)
+        <script>window.location.replace(@json(route('admin.profile.edit')));</script>
+        
+    @else
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Profile') }}
@@ -21,4 +29,5 @@
 
         </div>
     </div>
+    @endif
 </x-app-layout>

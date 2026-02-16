@@ -44,18 +44,49 @@ class LoginRequest extends FormRequest
         $credentials = $this->only('email', 'password');
         $remember = $this->boolean('remember');
 
-        // Try admin first
+        // Try admin first and ensure role is allowed
         if (Auth::guard('admin')->attempt($credentials, $remember)) {
-            Auth::shouldUse('admin');
-            RateLimiter::clear($this->throttleKey());
-            return;
+            $admin = Auth::guard('admin')->user();
+            $allowedAdminRoles = ['main admin', 'admin user'];
+
+            // Check if account is active
+            if (strtolower($admin->status ?? '') !== 'active') {
+                Auth::guard('admin')->logout();
+                RateLimiter::hit($this->throttleKey());
+                throw ValidationException::withMessages([
+                    'email' => 'Your account is inactive. Please contact the administrator.',
+                ]);
+            }
+
+            if (in_array($admin->role, $allowedAdminRoles, true)) {
+                Auth::shouldUse('admin');
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+
+            Auth::guard('admin')->logout();
         }
 
-        // Then fallback to normal users
+        // Then fallback to normal users and ensure role is employee
         if (Auth::guard('web')->attempt($credentials, $remember)) {
-            Auth::shouldUse('web');
-            RateLimiter::clear($this->throttleKey());
-            return;
+            $user = Auth::guard('web')->user();
+            
+            // Check if account is active
+            if (strtolower($user->status ?? '') !== 'active') {
+                Auth::guard('web')->logout();
+                RateLimiter::hit($this->throttleKey());
+                throw ValidationException::withMessages([
+                    'email' => 'Your account is inactive. Please contact the administrator.',
+                ]);
+            }
+            
+            if ($user?->role === 'employee') {
+                Auth::shouldUse('web');
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+
+            Auth::guard('web')->logout();
         }
 
         RateLimiter::hit($this->throttleKey());

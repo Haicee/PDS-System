@@ -12,21 +12,21 @@
 
                 <!-- Navigation Links  -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" class="text-[17px] font-semibold">
                         {{ __('Dashboard') }}
                     </x-nav-link>
                 </div>
                 
                 <!-- PDS form screen -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('pds.form')" :active="request()->routeIs('pds.form')">
+                    <x-nav-link :href="route('pds.form')" :active="request()->routeIs('pds.form')" class="text-[17px] font-semibold">
                         {{ __('PDS Review') }}
                     </x-nav-link>
                 </div>
 
                 <!-- Manage User screen -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('manage-user')" :active="request()->routeIs('manage-user')">
+                    <x-nav-link :href="route('manage-user')" :active="request()->routeIs('manage-user')" class="text-[17px] font-semibold">
                         {{ __('Manage Employees') }}
                     </x-nav-link>
                 </div>

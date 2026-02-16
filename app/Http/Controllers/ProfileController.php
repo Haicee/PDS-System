@@ -47,7 +47,7 @@ class ProfileController extends Controller
             'department' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'digits:11'],
             'email' => ['required', 'string', 'email', 'max:255'],
-            'type' => ['required', 'in:Permanent Employee,Job On Site'],
+            'type' => ['required', 'in:Permanent Employee,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
         ]);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 
 class ManageUserController extends Controller
@@ -37,7 +38,7 @@ class ManageUserController extends Controller
             'unit' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'phone' => ['required', 'digits:11'],
-            'type' => ['required', 'in:Permanent Employee,Job On Site'],
+            'type' => ['required', 'in:Permanent Employee,Job Order'],
             'status' => ['required', 'in:Active,Inactive'],
             'location_assigned' => ['required', 'string', 'max:255'],
         ]);
@@ -53,6 +54,10 @@ class ManageUserController extends Controller
 
     public function destroy(User $user)
     {
+        RegistrationUser::whereRaw('LOWER(full_name) = ?', [mb_strtolower($user->name)])
+            ->orWhere('email', $user->email)
+            ->delete();
+
         $user->delete();
 
         return response()->json([

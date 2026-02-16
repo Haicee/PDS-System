@@ -53,7 +53,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-search-icon lucide-user-round-search"><circle cx="10" cy="8" r="5"/><path d="M2 21a8 8 0 0 1 10.434-7.62"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.9-1.9"/></svg>  
                             <select id="type" name="type" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>
                                 <option value="Permanent Employee" {{ old('type', 'Permanent Employee') === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
-                                <option value="Job On Site" {{ old('type') === 'Job On Site' ? 'selected' : '' }}>Job On Site</option>
+                                <option value="Job Order" {{ old('type') === 'Job Order' ? 'selected' : '' }}>Job Order</option>
                             </select>
                         </div>
                         <x-input-error :messages="$errors->get('type')" class="mt-2" />

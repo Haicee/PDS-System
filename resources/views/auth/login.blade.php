@@ -59,7 +59,6 @@
                     <p class="font-medium text-slate-800">Don't have an account yet?</p>
                     <p class="mt-1 text-slate-600">
                         It only takes a minute to set up your profile.
-                        <br>
                         <a href="{{ route('register') }}" class="font-semibold text-emerald-700 hover:text-emerald-600">Sign up here →</a>
                     </p>
                 </div>

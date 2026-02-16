@@ -17,6 +17,8 @@ use App\Models\AdminUser;
 use App\Models\RegistrationUser;
 use App\Http\Controllers\PdsController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AdminProfileController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -30,13 +32,13 @@ Route::get('/employee', [EmployeeController::class, 'dashboard'])
 // Dashboard Route
 Route::get('/dashboard', function () {
     $permanentCount = User::where('type', 'Permanent Employee')->count();
-    $jobOnSiteCount = User::where('type', 'Job On Site')->count();
+    $jobOrderCount = User::where('type', 'Job Order')->count();
 
     $stats = [
         // Permanent Employees card
         'totalEmployees' => $permanentCount,
-        // Job On Site card
-        'verifiedEmployees' => $jobOnSiteCount,
+        // Job Order card
+        'verifiedEmployees' => $jobOrderCount,
         'recentHires' => 6,
         'recentSubmissions' => [
             [
@@ -518,155 +520,6 @@ Route::get('/pds-form/{key}/download', function (string $key) {
 
 
 
-
-
-
-
-
-
-//Manage User Data sample
-if (! function_exists('manageUserEmployees')) {
-    function manageUserEmployees(): array
-    {
-        return [
-            [
-                'name' => 'Darlene Robertson',
-                'avatar' => 'https://i.pravatar.cc/96?img=47',
-                'department' => 'NSAP',
-                'email' => 'alma.lawson@example.com',
-                'phone' => '09514785214',
-                'type' => 'Permanent',
-                'status' => 'Active',
-                'location' => 'BFAR Regional HQ – Lagao, GenSan',
-            ],
-            [
-                'name' => 'Annette Black',
-                'avatar' => 'https://i.pravatar.cc/96?img=32',
-                'department' => 'PFO',
-                'email' => 'bill.sanders@example.com',
-                'phone' => '09514785214',
-                'type' => 'Job On Call',
-                'status' => 'Inactive',
-                'location' => 'General Santos Fish Port Complex',
-            ],
-            [
-                'name' => 'Ronald Richards',
-                'avatar' => 'https://i.pravatar.cc/96?img=12',
-                'department' => 'NSAP',
-                'email' => 'weaver@example.com',
-                'phone' => '09514785214',
-                'type' => 'Permanent',
-                'status' => 'Active',
-                'location' => 'City Hall Annex – San Isidro, GenSan',
-            ],
-            [
-                'name' => 'Ralph Edwards',
-                'avatar' => 'https://i.pravatar.cc/96?img=5',
-                'department' => 'PFO',
-                'email' => 'simmons@example.com',
-                'phone' => '09514785214',
-                'type' => 'Job On Call',
-                'status' => 'Inactive',
-                'location' => 'Tambler Fisheries Support Office',
-            ],
-            [
-                'name' => 'Devon Lane',
-                'avatar' => 'https://i.pravatar.cc/96?img=65',
-                'department' => 'HR',
-                'email' => 'devon.lane@example.com',
-                'phone' => '09514785214',
-                'type' => 'Permanent',
-                'status' => 'Active',
-                'location' => 'Tinagacan Satellite Desk, GenSan',
-            ],
-            [
-                'name' => 'Darlene Robertson',
-                'avatar' => 'https://i.pravatar.cc/96?img=47',
-                'department' => 'NSAP',
-                'email' => 'alma.lawson@example.com',
-                'phone' => '09514785214',
-                'type' => 'Permanent',
-                'status' => 'Active',
-                'location' => 'BFAR Regional HQ – Lagao, GenSan',
-            ],
-            [
-                'name' => 'Annette Black',
-                'avatar' => 'https://i.pravatar.cc/96?img=32',
-                'department' => 'PFO',
-                'email' => 'bill.sanders@example.com',
-                'phone' => '09514785214',
-                'type' => 'Job On Call',
-                'status' => 'Inactive',
-                'location' => 'General Santos Fish Port Complex',
-            ],
-            [
-                'name' => 'Ronald Richards',
-                'avatar' => 'https://i.pravatar.cc/96?img=12',
-                'department' => 'NSAP',
-                'email' => 'weaver@example.com',
-                'phone' => '09514785214',
-                'type' => 'Permanent',
-                'status' => 'Active',
-                'location' => 'City Hall Annex – San Isidro, GenSan',
-            ],
-            [
-                'name' => 'Ralph Edwards',
-                'avatar' => 'https://i.pravatar.cc/96?img=5',
-                'department' => 'PFO',
-                'email' => 'simmons@example.com',
-                'phone' => '09123785214',
-                'type' => 'Job On Call',
-                'status' => 'Inactive',
-                'location' => 'Tambler Fisheries Support Office',
-            ],
-            [
-                'name' => 'Devon Lane',
-                'avatar' => 'https://i.pravatar.cc/96?img=65',
-                'department' => 'HR',
-                'email' => 'devon.lane@example.com',
-                'phone' => '09514785214',
-                'type' => 'Permanent',
-                'status' => 'Active',
-                'location' => 'Tinagacan Satellite Desk, GenSan',
-            ],
-        ];
-    }
-}
-
-// Admin Users sample data
-if (! function_exists('manageAdminUsers')) {
-    function manageAdminUsers(): array
-    {
-        return [
-            [
-                'name' => 'Choco Mi',
-                'avatar' => 'https://i.pravatar.cc/96?img=10',
-                'email' => 'choco@example.com',
-                'role' => 'Main Admin',
-                'status' => 'Active',
-                'created_at' => '2024-01-10',
-            ],
-            [
-                'name' => 'Althea Ramos',
-                'avatar' => 'https://i.pravatar.cc/96?img=48',
-                'email' => 'althea.ramos@example.com',
-                'role' => 'Admin User',
-                'status' => 'Active',
-                'created_at' => '2024-03-22',
-            ],
-            [
-                'name' => 'Noel Diaz',
-                'avatar' => 'https://i.pravatar.cc/96?img=41',
-                'email' => 'noel.diaz@example.com',
-                'role' => 'Admin User',
-                'status' => 'Inactive',
-                'created_at' => '2023-12-05',
-            ],
-        ];
-    }
-}
-
-
 Route::get('/manage-user', [ManageUserController::class, 'index'])
     ->middleware(['auth:admin'])
     ->name('manage-user');
@@ -821,33 +674,34 @@ Route::get('/manage-user/export', function () {
     ]);
 })->middleware(['auth:admin'])->name('manage-user.export');
 
-// Admin Users page (placeholder)
-Route::get('/admin-users', function () {
-    $admins = manageAdminUsers();
-    return view('admin-users', compact('admins'));
-})->middleware(['auth:admin'])->name('admin.users');
+// Admin Users
+Route::get('/admin-users', [AdminUserController::class, 'index'])
+    ->middleware(['auth:admin'])
+    ->name('admin.users');
 
+Route::get('/admin-users/{adminUser}', [AdminUserController::class, 'show'])
+    ->middleware(['auth:admin'])
+    ->name('admin.users.show');
+
+Route::patch('/admin-users/{adminUser}', [AdminUserController::class, 'update'])
+    ->middleware(['auth:admin'])
+    ->name('admin.users.update');
+
+Route::delete('/admin-users/{adminUser}', [AdminUserController::class, 'destroy'])
+    ->middleware(['auth:admin'])
+    ->name('admin.users.destroy');
 
 // Admin user creation (frontend modal submission)
-Route::post('/admin-users', function (Request $request) {
-    $validated = $request->validate([
-        'name' => ['required', 'string', 'max:255', 'unique:admin_users,name'],
-        'email' => ['required', 'email', 'max:255', 'unique:admin_users,email'],
-        'password' => ['required', 'string', 'min:8', 'confirmed'],
-    ]);
+Route::post('/admin-users', [AdminUserController::class, 'store'])
+    ->middleware(['auth:admin'])
+    ->name('admin-users.store');
 
-    $admin = AdminUser::create([
-        'name' => $validated['name'],
-        'email' => $validated['email'],
-        'password' => Hash::make($validated['password']),
-        'role' => 'admin',
-    ]);
-
-    return response()->json([
-        'message' => 'Admin created successfully.',
-        'admin' => $admin->only(['id', 'name', 'email', 'role', 'created_at']),
-    ], 201);
-})->middleware(['auth:admin'])->name('admin-users.store');
+// Admin profile (name/email/password only)
+Route::middleware(['auth:admin'])->group(function () {
+    Route::get('/admin/profile', [AdminProfileController::class, 'edit'])->name('admin.profile.edit');
+    Route::patch('/admin/profile', [AdminProfileController::class, 'updateProfile'])->name('admin.profile.update');
+    Route::put('/admin/profile/password', [AdminProfileController::class, 'updatePassword'])->name('admin.profile.password');
+});
 
 
 // Employee creation (Add Employee modal)

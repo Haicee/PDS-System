@@ -57,43 +57,6 @@
                     this.saving = false;
                 });
             },
-            confirmingDelete: false,
-            deleting: false,
-            deleteError: '',
-            deleteUser() {
-                this.confirmingDelete = true;
-            },
-            cancelDelete() {
-                this.confirmingDelete = false;
-            },
-            confirmDelete() {
-                if (this.deleting) return;
-                this.deleting = true;
-                this.deleteError = '';
-
-                fetch('/manage-user/' + this.working.id, {
-                    method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
-                    }
-                })
-                .then(async (res) => {
-                    const data = await res.json().catch(() => null);
-                    if (!res.ok) {
-                        throw new Error(data?.message || 'Failed to delete user.');
-                    }
-                    window.dispatchEvent(new CustomEvent('employee-deleted', { detail: { key: this.key, id: this.working.id } }));
-                    this.$dispatch('close');
-                })
-                .catch(err => {
-                    this.deleteError = err.message || 'Failed to delete user.';
-                })
-                .finally(() => {
-                    this.deleting = false;
-                    this.confirmingDelete = false;
-                });
-            },
             statusClass() { return this.working.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'; },
             typeClass() { return this.working.type === 'Permanent Employee' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'; },
         }">
@@ -143,7 +106,7 @@
                     <span class="font-semibold text-slate-500">Type</span>
                     <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.type">
                         <option value="Permanent Employee">Permanent Employee</option>
-                        <option value="Job On Site">Job On Site</option>
+                        <option value="Job Order">Job Order</option>
                     </select>
                 </label>
 
@@ -167,15 +130,9 @@
             <p class="text-sm text-rose-600" x-text="saveError"></p>
         </template>
 
-        <template x-if="deleteError">
-            <p class="text-sm text-rose-600" x-text="deleteError"></p>
-        </template>
-
-        <div class="flex items-center justify-between gap-3 pt-2" x-show="!confirmingDelete">
+        <div class="flex items-center justify-between gap-3 pt-2">
             <div class="flex items-center gap-6">
                 <button type="button" class="text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Undo</button>
-                <button type="button" class="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-400"
-                    x-on:click="deleteUser()">Delete</button>
             </div>
             <div class="flex gap-3">
                 <x-secondary-button x-on:click="$dispatch('close')">Cancel</x-secondary-button>
@@ -183,20 +140,6 @@
                     <span x-show="!saving">Save changes</span>
                     <span x-show="saving">Saving...</span>
                 </x-primary-button>
-            </div>
-        </div>
-
-        <div x-show="confirmingDelete" x-transition class="rounded-xl border border-rose-200 bg-rose-50 p-4 space-y-3">
-            <p class="text-sm font-semibold text-rose-700">Are you sure you want to delete this employee?</p>
-            <p class="text-xs text-rose-600">This action cannot be undone. The user record will be permanently removed.</p>
-            <div class="flex items-center justify-end gap-3">
-                <button type="button" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                    x-on:click="cancelDelete()">Cancel</button>
-                <button type="button" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-rose-500 disabled:opacity-60"
-                    x-bind:disabled="deleting" x-on:click="confirmDelete()">
-                    <span x-show="!deleting">Yes, Delete</span>
-                    <span x-show="deleting">Deleting...</span>
-                </button>
             </div>
         </div>
     </div>

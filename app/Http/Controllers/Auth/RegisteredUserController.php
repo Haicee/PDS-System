@@ -37,7 +37,7 @@ class RegisteredUserController extends Controller
             'phone' => ['required', 'digits:11'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'type' => ['required', 'in:Permanent Employee,Job On Site'],
+            'type' => ['required', 'in:Permanent Employee,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
         ]);
         

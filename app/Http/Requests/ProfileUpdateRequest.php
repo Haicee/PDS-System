@@ -28,7 +28,7 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
-            'type' => ['required', 'in:Permanent Employee,Job On Site'],
+            'type' => ['required', 'in:Permanent Employee,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
         ];
     }

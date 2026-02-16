@@ -1,7 +1,7 @@
 <x-app-layout>
 
     <div class="py-10">
-        <div class="mx-auto sm:px-6 lg:px-20 space-y-8">
+        <div class="mx-auto sm:px-6 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-180px)]">
 
             {{-- Header --}}
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -22,7 +22,7 @@
 
             {{-- Table --}}
             <div
-                class="bg-white shadow-sm sm:rounded-2xl border border-slate-100"
+                class="bg-white shadow-sm sm:rounded-2xl border border-slate-100 flex flex-col flex-1 min-h-0"
                 x-data="{
                     search: '',
                     activeTab: 'all',
@@ -189,81 +189,85 @@
                 </div>
 
                 {{-- Table --}}
-                <div class="overflow-x-auto">
-                    <table class="w-full divide-y divide-slate-100">
-                        <thead
-                            class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
-                            <tr>
-                                <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Department</th>
-                                <th class="px-6 py-3">Email</th>
-                                <th class="px-6 py-3">Submitted</th>
-                                <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3 text-center">Action</th>
-                            </tr>
-                        </thead>
+                <div class="flex-1 overflow-hidden">
+                    <div class="overflow-x-auto h-full">
+                        <div class="max-h-full min-h-full overflow-y-auto rounded-b-2xl bg-white">
+                            <table class="w-full divide-y divide-slate-100">
+                                <thead
+                                    class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
+                                    <tr>
+                                        <th class="px-6 py-3">Employee</th>
+                                        <th class="px-6 py-3">Department</th>
+                                        <th class="px-6 py-3">Email</th>
+                                        <th class="px-6 py-3">Submitted</th>
+                                        <th class="px-6 py-3">Status</th>
+                                        <th class="px-6 py-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
 
-                        <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                                <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
 
-                            <template x-if="filtered().length === 0">
-                                <tr>
-                                    <td colspan="6"
-                                        class="px-6 py-8 text-center text-slate-500">
-                                        No submissions yet.
-                                    </td>
-                                </tr>
-                            </template>
+                                    <template x-if="filtered().length === 0">
+                                        <tr>
+                                            <td colspan="6"
+                                                class="px-6 py-8 text-center text-slate-500">
+                                                No submissions yet.
+                                            </td>
+                                        </tr>
+                                    </template>
 
-                            <template x-for="(submission, idx) in filtered()" :key="idx">
-                                <tr
-                                    class="hover:bg-slate-50"
-                                    x-data="{
-                                        statusClass() {
-                                            if (submission.status_key === 'approved')
-                                                return 'text-emerald-600 bg-emerald-50';
-                                            if (submission.status_key === 'rejected')
-                                                return 'text-rose-600 bg-rose-50';
-                                            return 'text-amber-600 bg-amber-50';
-                                        }
-                                    }"
-                                    x-cloak
-                                >
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-3">
-                                            <img :src="submission.avatar" :alt="submission.name + ' avatar'" class="h-10 w-10 rounded-full object-cover shadow-sm" />
-                                            <div>
-                                                <p class="font-semibold text-slate-900" x-text="submission.name"></p>
-                                                <span class="text-slate-500" x-text="submission.type ?? '—'"></span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <td class="px-6 py-4" x-text="submission.department"></td>
-                                    <td class="px-6 py-4 text-slate-500" x-text="submission.email"></td>
-                                    <td class="px-6 py-4" x-text="submission.submitted_at ?? '—'"></td>
-
-                                    <td class="px-6 py-4">
-                                        <span
-                                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
-                                            :class="statusClass()"
-                                            x-text="submission.status">
-                                        </span>
-                                    </td>
-
-                                    <td class="px-6 py-4 text-center">
-                                        <button
-                                            type="button"
-                                            class="inline-flex items-center rounded-full border border-indigo-200 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
-                                            @click.prevent="open(submission)"
+                                    <template x-for="(submission, idx) in filtered()" :key="idx">
+                                        <tr
+                                            class="hover:bg-slate-50"
+                                            x-data="{
+                                                statusClass() {
+                                                    if (submission.status_key === 'approved')
+                                                        return 'text-emerald-600 bg-emerald-50';
+                                                    if (submission.status_key === 'rejected')
+                                                        return 'text-rose-600 bg-rose-50';
+                                                    return 'text-amber-600 bg-amber-50';
+                                                }
+                                            }"
+                                            x-cloak
                                         >
-                                            View
-                                        </button>
-                                    </td>
-                                </tr>
-                            </template>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <img :src="submission.avatar" :alt="submission.name + ' avatar'" class="h-10 w-10 rounded-full object-cover shadow-sm" />
+                                                    <div>
+                                                        <p class="font-semibold text-slate-900" x-text="submission.name"></p>
+                                                        <span class="text-slate-500" x-text="submission.type ?? '—'"></span>
+                                                    </div>
+                                                </div>
+                                            </td>
 
-                        </tbody>
-                    </table>
+                                            <td class="px-6 py-4" x-text="submission.department"></td>
+                                            <td class="px-6 py-4 text-slate-500" x-text="submission.email"></td>
+                                            <td class="px-6 py-4" x-text="submission.submitted_at ?? '—'"></td>
+
+                                            <td class="px-6 py-4">
+                                                <span
+                                                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                                                    :class="statusClass()"
+                                                    x-text="submission.status">
+                                                </span>
+                                            </td>
+
+                                            <td class="px-6 py-4 text-center">
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex items-center rounded-full border border-indigo-200 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                                                    @click.prevent="open(submission)"
+                                                >
+                                                    View
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Modal Component inside scope for selected/modalOpen --}}

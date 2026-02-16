@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('type', ['Permanent Employee', 'Job On Site'])->default('Permanent Employee');
+            $table->enum('type', ['Permanent Employee', 'Job Order'])->default('Permanent Employee');
             $table->enum('status', ['Active', 'Inactive'])->default('Active');
             $table->string('location_assigned')->nullable();
             $table->rememberToken();
