@@ -41,187 +41,6 @@
     textarea:focus { outline: none; box-shadow: none; }
   </style>
   <script>
-    function previewPhoto(event) {
-      const input = event.target;
-      const file = input.files && input.files[0];
-      const img = document.getElementById('photoPreview');
-      const placeholder = document.getElementById('photoPlaceholder');
-      if (!img || !placeholder) return;
-      if (!file) {
-        img.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        img.src = e.target.result;
-        img.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-      };
-      reader.readAsDataURL(file);
-    }
-
-    // Auto-grow textareas used in the references table and ID/date fields
-    function autoSize(el) {
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.ref-field, .grow-field').forEach(el => {
-        autoSize(el);
-        el.addEventListener('input', () => autoSize(el));
-      });
-
-      // NA locking for [] groups (e.g., references) — first NA/N/A/NONE disables fields BELOW it
-      const isNA = (val) => {
-        const v = (val || '').trim().toUpperCase();
-        return v === 'NA' || v === 'N/A' || v === 'NONE';
-      };
-
-      const names = new Set();
-      document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
-        const name = el.getAttribute('name');
-        if (name) names.add(name);
-      });
-
-      names.forEach(name => {
-        const selectorName = name.replace(/["'\\]/g, '\\$&');
-        const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
-        if (!fields.length) return;
-
-        const refresh = () => {
-          const firstNAIndex = fields.findIndex(f => isNA(f.value));
-          fields.forEach((f, idx) => {
-            const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
-            f.disabled = shouldDisable;
-            f.classList.toggle('bg-gray-200', shouldDisable);
-            f.classList.toggle('text-gray-500', shouldDisable);
-            f.classList.toggle('cursor-not-allowed', shouldDisable);
-          });
-        };
-
-        fields.forEach(f => f.addEventListener('input', refresh));
-        refresh();
-      });
-
-      // Next button gating: require all visible fields (treat NA/N/A/NONE as filled)
-      const nextBtn = document.getElementById('pds4-next');
-      const visibleFields = () => Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'))
-        .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
-
-      const isFilled = (el) => {
-        if (el.type === 'file') return true; // exempt file inputs on this page
-        if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
-        const val = (el.value || '').trim();
-        if (isNA(val)) return true;
-        return val !== '';
-      };
-
-      // Conditional blocks: if YES checked, details required; if NO checked, details optional; require a choice
-      const conditionalGroups = [];
-      const seenNames = new Set();
-      document.querySelectorAll('input[type="checkbox"][name]').forEach(box => {
-        const name = box.getAttribute('name');
-        if (!name || seenNames.has(name)) return;
-        const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
-        if (boxes.length < 2) return;
-        seenNames.add(name);
-
-        const scopedDetails = Array.from(document.querySelectorAll(`input[type="text"][data-detail-for="${name}"], textarea[data-detail-for="${name}"]`));
-        const details = scopedDetails.length ? scopedDetails : (() => {
-          const td = box.closest('td');
-          return td ? Array.from(td.querySelectorAll('input[type="text"], textarea')).filter(el => !boxes.includes(el)) : [];
-        })();
-
-        conditionalGroups.push({ name, boxes, details });
-
-        // Make YES/NO mutually exclusive per group
-        boxes.forEach(activeBox => {
-          activeBox.addEventListener('change', () => {
-            if (activeBox.checked) {
-              boxes.forEach(b => { if (b !== activeBox) b.checked = false; });
-            }
-            validateRequired();
-          });
-        });
-      });
-
-      const validateRequired = () => {
-        let hasMissing = false;
-
-        // Evaluate conditional groups
-        for (const group of conditionalGroups) {
-          const [yesBox, noBox] = group.boxes;
-          const yesChecked = yesBox && yesBox.checked;
-          const noChecked = noBox && noBox.checked;
-
-          // Toggle detail inputs based on YES/NO
-          group.details.forEach(el => {
-            const disable = noChecked || (!yesChecked && !noChecked);
-            el.disabled = disable;
-            el.classList.toggle('bg-gray-200', disable);
-            el.classList.toggle('text-gray-500', disable);
-            el.classList.toggle('cursor-not-allowed', disable);
-          });
-
-          if (!yesChecked && !noChecked) {
-            hasMissing = true;
-            break;
-          }
-
-          if (yesChecked) {
-            const detailMissing = group.details.some(el => {
-              if (el.disabled || el.readOnly || el.offsetParent === null) return false;
-              return !isFilled(el);
-            });
-            if (detailMissing) {
-              hasMissing = true;
-              break;
-            }
-          }
-        }
-
-        if (!hasMissing) {
-          // Check remaining fields not part of conditional groups
-          const conditionalElements = new Set();
-          conditionalGroups.forEach(g => {
-            g.boxes.forEach(b => conditionalElements.add(b));
-            g.details.forEach(d => conditionalElements.add(d));
-          });
-
-          hasMissing = visibleFields()
-            .filter(el => !conditionalElements.has(el))
-            .some(el => !isFilled(el));
-        }
-
-        if (!nextBtn) return;
-        if (hasMissing) {
-          nextBtn.setAttribute('aria-disabled', 'true');
-          nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        } else {
-          nextBtn.removeAttribute('aria-disabled');
-          nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        }
-      };
-
-      document.addEventListener('input', validateRequired, true);
-      document.addEventListener('change', validateRequired, true);
-      validateRequired();
-
-      if (nextBtn) {
-        nextBtn.addEventListener('click', (e) => {
-          if (nextBtn.getAttribute('aria-disabled') === 'true') {
-            e.preventDefault();
-            e.stopPropagation();
-            validateRequired();
-          }
-        });
-      }
-    });
-  </script>
-  <script>
     const sessionData = @json(session('pds', []));
     const flat = {};
     const walk = (obj, prefix = '') => {
@@ -284,16 +103,16 @@
       </td>
       <td class="border px-2 align-top border-black">
         <div class="flex h-full gap-20 mt-20">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="YES" @checked(($declaration->q34_a ?? '') === 'YES')> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="NO" @checked(($declaration->q34_a ?? '') === 'NO')> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="YES" Disabled @checked(($declaration->q34_a ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_a" value="NO" Disabled @checked(($declaration->q34_a ?? '') === 'NO')> NO</label>
         </div>
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q34_b" value="YES" @checked(($declaration->q34_b ?? '') === 'YES')> YES</label>
-          <label class="flex items-center gap-3"><input type="checkbox" name="q34_b" value="NO" @checked(($declaration->q34_b ?? '') === 'NO')> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q34_b" value="YES" Disabled @checked(($declaration->q34_b ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-3"><input type="checkbox" name="q34_b" value="NO" Disabled @checked(($declaration->q34_b ?? '') === 'NO')> NO</label>
         </div>
         <p class="mt-2">if yes, give details:</p>
-        <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a" value="{{ $declaration->q34_a_details ?? '' }}">
-        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b" value="{{ $declaration->q34_b_details ?? '' }}">
+        <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a" Disabled value="{{ $declaration->q34_a_details ?? '' }}">
+        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b" Disabled value="{{ $declaration->q34_b_details ?? '' }}">
       </td>
     </tr>
 
@@ -303,11 +122,11 @@
       </td>
       <td class="border px-2 align-top border-black">
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="YES" @checked(($declaration->q35_a ?? '') === 'YES')> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" value="NO" @checked(($declaration->q35_a ?? '') === 'NO')> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" Disabled value="YES" @checked(($declaration->q35_a ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_a" Disabled value="NO" @checked(($declaration->q35_a ?? '') === 'NO')> NO</label>
         </div>
         <p class="mt-2">if yes, give details:</p>
-        <input type="text" class="mb-2 w-full" name="q35_a_details" data-detail-for="q35_a" value="{{ $declaration->q35_a_details ?? '' }}">
+        <input type="text" class="mb-2 w-full" name="q35_a_details" data-detail-for="q35_a" Disabled value="{{ $declaration->q35_a_details ?? '' }}">
       </td>
     </tr>
 
@@ -318,12 +137,12 @@
       </td>
       <td class="border px-2 border-black">
         <div class="flex h-full gap-20 mt-2">
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="YES" @checked(($declaration->q35_b ?? '') === 'YES')> YES</label>
-          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" value="NO" @checked(($declaration->q35_b ?? '') === 'NO')> NO</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" Disabled value="YES" @checked(($declaration->q35_b ?? '') === 'YES')> YES</label>
+          <label class="flex items-center gap-2"><input type="checkbox" name="q35_b" Disabled value="NO" @checked(($declaration->q35_b ?? '') === 'NO')> NO</label>
         </div>
         <p class="mt-2 mb-2">if yes, give details:</p>
-        <span class="ml-9">Date Filed:</span> <input class="border-b mb-2 mr-40" type="text" data-detail-for="q35_b" name="q35_b_details_date" value="{{ $declaration->q35_b_details_date ?? '' }}">
-        <span class="ml-1">Status of Case/s:</span> <input class="border-b mb-2" type="text" data-detail-for="q35_b" name="q35_b_details_status" value="{{ $declaration->q35_b_details_status ?? '' }}">
+        <span class="ml-9">Date Filed:</span> <input class="border-b mb-2 mr-40" type="text" Disabled data-detail-for="q35_b" name="q35_b_details_date" value="{{ $declaration->q35_b_details_date ?? '' }}">
+        <span class="ml-1">Status of Case/s:</span> <input class="border-b mb-2" type="text" Disabled data-detail-for="q35_b" name="q35_b_details_status" value="{{ $declaration->q35_b_details_status ?? '' }}">
       </td>
     </tr>
 
@@ -337,15 +156,15 @@
      <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-3">
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q36" value="YES" @checked(($declaration->q36 ?? '') === 'YES')> YES
+        <input type="checkbox" name="q36" value="YES" Disabled @checked(($declaration->q36 ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q36" value="NO" @checked(($declaration->q36 ?? '') === 'NO')> NO
+        <input type="checkbox" name="q36" value="NO" Disabled @checked(($declaration->q36 ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" name="q36_details" data-detail-for="q36" value="{{ $declaration->q36_details ?? '' }}">
+    <input class="border-b mb-2 w-full" type="text" Disabled name="q36_details" data-detail-for="q36" value="{{ $declaration->q36_details ?? '' }}">
 
 </tr>
 
@@ -358,15 +177,15 @@
      <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-3">
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q37" value="YES" @checked(($declaration->q37 ?? '') === 'YES')> YES
+        <input type="checkbox" name="q37" value="YES" Disabled @checked(($declaration->q37 ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q37" value="NO" @checked(($declaration->q37 ?? '') === 'NO')> NO
+        <input type="checkbox" name="q37" value="NO" Disabled @checked(($declaration->q37 ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" name="q37_details" data-detail-for="q37" value="{{ $declaration->q37_details ?? '' }}">
+    <input class="border-b mb-2 w-full" type="text" Disabled name="q37_details" data-detail-for="q37" value="{{ $declaration->q37_details ?? '' }}">
 
 </tr>
 
@@ -382,15 +201,15 @@
      <td class="border px-2 border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q38_a" value="YES" @checked(($declaration->q38_a ?? '') === 'YES')> YES
+        <input type="checkbox" name="q38_a" value="YES" Disabled @checked(($declaration->q38_a ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q38_a" value="NO" @checked(($declaration->q38_a ?? '') === 'NO')> NO
+        <input type="checkbox" name="q38_a" value="NO" Disabled @checked(($declaration->q38_a ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2">if yes, give details:</p>
-    <input class="border-b mb-2 w-full" type="text" name="q38_a_details" data-detail-for="q38_a" value="{{ $declaration->q38_a_details ?? '' }}">
+    <input class="border-b mb-2 w-full" type="text" Disabled name="q38_a_details" data-detail-for="q38_a" value="{{ $declaration->q38_a_details ?? '' }}">
 
 </tr>
 
@@ -406,15 +225,15 @@
      <td class="border  px-2  border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q38_b" value="YES" @checked(($declaration->q38_b ?? '') === 'YES')> YES
+        <input type="checkbox" name="q38_b" value="YES" Disabled @checked(($declaration->q38_b ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q38_b" value="NO" @checked(($declaration->q38_b ?? '') === 'NO')> NO
+        <input type="checkbox" name="q38_b" value="NO" Disabled @checked(($declaration->q38_b ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" name="q38_b_details" data-detail-for="q38_b" value="{{ $declaration->q38_b_details ?? '' }}">   
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q38_b_details" data-detail-for="q38_b" value="{{ $declaration->q38_b_details ?? '' }}">   
 
 </tr>
 
@@ -430,15 +249,15 @@
      <td class="border  px-2 border-black">
     <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q39" value="YES" @checked(($declaration->q39 ?? '') === 'YES')> YES
+        <input type="checkbox" name="q39" value="YES" Disabled @checked(($declaration->q39 ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q39" value="NO" @checked(($declaration->q39 ?? '') === 'NO')> NO
+        <input type="checkbox" name="q39" value="NO" Disabled @checked(($declaration->q39 ?? '') === 'NO')> NO
       </label>
     </div>
 
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" name="q39_details" data-detail-for="q39" value="{{ $declaration->q39_details ?? '' }}">   
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q39_details" data-detail-for="q39" value="{{ $declaration->q39_details ?? '' }}">   
 
 </tr>
 
@@ -457,38 +276,38 @@
      <td class="border  px-2 border-black">
     <div class="flex h-full gap-20 mt-12">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_a" value="YES" @checked(($declaration->q40_a ?? '') === 'YES')> YES
+        <input type="checkbox" name="q40_a" value="YES" Disabled @checked(($declaration->q40_a ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_a" value="NO" @checked(($declaration->q40_a ?? '') === 'NO')> NO
+        <input type="checkbox" name="q40_a" value="NO" Disabled @checked(($declaration->q40_a ?? '') === 'NO')> NO
       </label>
     </div>
 
       <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" name="q40_a_details" data-detail-for="q40_a" value="{{ $declaration->q40_a_details ?? '' }}">
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q40_a_details" data-detail-for="q40_a" value="{{ $declaration->q40_a_details ?? '' }}">
 
      <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
         <input type="checkbox" name="q40_b" value="YES" @checked(($declaration->q40_b ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_b" value="NO" @checked(($declaration->q40_b ?? '') === 'NO')> NO
+        <input type="checkbox" name="q40_b" value="NO" Disabled @checked(($declaration->q40_b ?? '') === 'NO')> NO
       </label>
     </div>
 
       <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" name="q40_b_details" data-detail-for="q40_b" value="{{ $declaration->q40_b_details ?? '' }}">
+  <input class="border-b mb-2 w-full" type="text" Disabled name="q40_b_details" data-detail-for="q40_b" value="{{ $declaration->q40_b_details ?? '' }}">
 
      <div class="flex h-full gap-20 mt-2">
       <label class="flex items-center gap-2 mt-1">
-        <input type="checkbox" name="q40_c" value="YES" @checked(($declaration->q40_c ?? '') === 'YES')> YES
+        <input type="checkbox" name="q40_c" value="YES" Disabled @checked(($declaration->q40_c ?? '') === 'YES')> YES
       </label>
       <label class="flex items-center gap-2">
-        <input type="checkbox" name="q40_c" value="NO" @checked(($declaration->q40_c ?? '') === 'NO')> NO
+        <input type="checkbox" name="q40_c" value="NO" Disabled @checked(($declaration->q40_c ?? '') === 'NO')> NO
       </label>
     </div>
   <p class="mt-2 mb-2">if yes, give details:</p>   
-  <input class="border-b mb-2 w-full" type="text" name="q40_c_details" data-detail-for="q40_c" value="{{ $declaration->q40_c_details ?? '' }}">
+  <input class="border-b mb-2 w-full" type="text" name="q40_c_details" Disabled data-detail-for="q40_c" value="{{ $declaration->q40_c_details ?? '' }}">
 </td>
 </tr>
 

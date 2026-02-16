@@ -296,7 +296,7 @@
 
     </table>
 
-    <table class="border border-black w-full h-15">
+    <table class="border border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
         <colgroup>
           <col style="width: 30.3%;">
            <col style="width: 20%;">
@@ -304,9 +304,9 @@
              <col style="width: 10%;">
         </colgroup>
       <tr>
-      <td class="text-center font-bold text-lg border">
-          SIGNATURE
-      </td>
+      <td class="border h-2 text-center text-xl font-bold italic align-middle">
+      SIGNATURE
+    </td>
 
        <td class="border" colspan="2">
       <div class="h-full w-full flex flex-col items-center justify-center p-2">
@@ -315,9 +315,9 @@
     </td>
 
 
-      <td class="border text-center font-bold text-lg">
-        DATE
-      </td>
+      <td class="border text-center text-xl font-bold italic align-middle" colspan="2">
+      DATE
+    </td>
 
         <td colspan="2"
           class="border">
@@ -340,7 +340,7 @@
     </div>
     <div class="flex justify-between mt-4">
         <a id="pds3-prev" href="{{ route('pds.form2') }}" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Previous Page</a>
-        <button type="submit" id="pds3-next" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Submit</button>
+        <button type="submit" id="pds3-next" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</button>
     </div>
     </div>
 </form>

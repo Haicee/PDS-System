@@ -270,7 +270,7 @@
      </tr>
     @endfor
     <tr>
-      <table class="border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
+      <table class="border-black w-full h-15 font-['Arial_Narrow','sans-serif'] italic">
         <colgroup>
           <col style="width: 17%;">
            <col style="width: 20%;">
@@ -278,9 +278,9 @@
              <col style="width: 15%;">
         </colgroup>
       <tr>
-      <td class="text-center font-bold text-lg border align-middle">
-          SIGNATURE
-      </td>
+          <td class="border h-2 text-center text-xl font-bold italic align-middle">
+      SIGNATURE
+    </td>
 
        <td class="border" colspan="2">
       <div class="h-full w-full flex flex-col items-center justify-center p-2">
@@ -288,9 +288,9 @@
       </div>
     </td>
 
-      <td class="border text-center font-bold text-lg align-middle">
-        DATE
-      </td>
+      <td class="border text-center text-xl font-bold italic align-middle" colspan="2">
+      DATE
+    </td>
 
        <td
           class="border h-10">
@@ -316,13 +316,10 @@
     CS FORM 212 (Revised 2025), Page 2 of 5
     </div>
 
-    <div class="flex justify-end mt-4">
-        <div class="flex gap-2">
+        <div class="flex justify-between mt-4">
             <a href="{{ route('pds.form1') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
             <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</button>
         </div>
-    </div>
-    </div>
 </form>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
