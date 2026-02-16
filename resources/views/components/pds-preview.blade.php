@@ -50,8 +50,8 @@
                         <p class="font-medium" x-text="selected?.email ?? '—'"></p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-slate-400 font-semibold">Department</p>
-                        <p class="font-medium" x-text="selected?.department ?? '—'"></p>
+                        <p class="text-xs uppercase text-slate-400 font-semibold">Unit</p>
+                        <p class="font-medium" x-text="selected?.unit ?? '—'"></p>
                     </div>
                     <div>
                         <p class="text-xs uppercase text-slate-400 font-semibold">Status</p>
@@ -100,8 +100,14 @@
                 <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                     <p class="text-sm font-semibold text-slate-700">Preview</p>
                 </div>
-                <div class="p-4 overflow-auto flex-1">
-                    <img src="{{ asset('images/preview-sample.png') }}" alt="PDS Preview" class="w-full rounded-lg border border-slate-200 shadow-sm">
+                <div class="flex-1 overflow-hidden">
+                    <iframe
+                        class="w-full h-full min-h-[500px] bg-white"
+                        x-show="selected?.user_id"
+                        :src="selected?.user_id ? `/pds-preview/${selected.user_id}?ts=${Date.now()}` : ''"
+                        frameborder="0"
+                        allowfullscreen
+                    ></iframe>
                 </div>
             </div>
         </div>

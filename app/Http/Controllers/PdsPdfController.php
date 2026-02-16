@@ -44,6 +44,14 @@ class PdsPdfController extends Controller
         return $this->renderPdfView($userId);
     }
 
+    // Admin preview for a specific user (HTML rendered in modal iframe)
+    public function previewForAdmin(int $user)
+    {
+        $data = $this->buildPdfData($user);
+
+        return view('pds_form.pdf', $data + ['pdfMode' => true]);
+    }
+
     private function buildPdfData($userId)
     {
         $personal = DB::table('pds_personal_infos')->where('user_id', $userId)->first();

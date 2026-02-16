@@ -284,6 +284,10 @@ Route::post('/pds-form/{id}/status', [App\Http\Controllers\PdsReviewController::
     ->middleware(['auth:admin', 'verified'])
     ->name('pds.updateStatus');
 
+Route::get('/pds-preview/{user}', [App\Http\Controllers\PdsPdfController::class, 'previewForAdmin'])
+    ->middleware(['auth:admin', 'verified'])
+    ->name('pds.preview.admin');
+
 //Export/Download logic
 if (! function_exists('buildPdsSubmissionsXlsx')) {
     function buildPdsSubmissionsXlsx(array $columns, array $rows, array $colWidths): string
