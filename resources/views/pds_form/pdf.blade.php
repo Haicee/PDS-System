@@ -13,6 +13,24 @@
         body { font-family: 'Arial', sans-serif; font-size: 8px; margin: 0 auto; max-width: 100%; width: 100%; }
         html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         table { width: 100%; table-layout: fixed; border-collapse: collapse; background: #fff !important; }
+        .border-3 { border: 3px solid #000; }
+        .border-2 { border: 2px solid #000; }
+        .pds-responsive { overflow-x: auto; }
+        .pds-sheet { min-width: 980px; }
+        @media (max-width: 768px) {
+          .pds-sheet { min-width: 760px; }
+          td, th { padding: 4px; }
+          .max-w-6xl { padding: 0.75rem; }
+        }
+        @media (max-width: 640px) {
+          .pds-sheet { min-width: 680px; }
+          td, th { padding: 3px; }
+        }
+        textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
+        textarea:focus { outline: none; box-shadow: none; }
+        input[type="text"], textarea { width: 100%; background: transparent; border: none; border-bottom: 1px solid #000; outline: none; resize: none; overflow: hidden; padding: 2px 0; line-height: 1.2; font-family: 'Arial Narrow','Arial',sans-serif; font-size: inherit; }
+        textarea:focus { outline: none; box-shadow: none; }
+        input:focus { outline: none; box-shadow: none; }
         td, th { padding: 5px; word-wrap: break-word; overflow: visible; line-height: 1.1; vertical-align: middle; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
         tr { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
         td:not(.bg-\[#e7e7e7\]), th:not(.bg-\[#e7e7e7\]) { min-height: 22px; height: 22px; }
@@ -30,7 +48,6 @@
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px;}
         @if (!empty($pdfMode))
-        /* Minimal utility shims for Dompdf rendering */
         .flex { display: flex; }
         .items-center { align-items: center; }
         .items-start { align-items: flex-start; }
@@ -110,13 +127,31 @@
         .w-300 { width: 300px; }
         .w-200 { width: 200px; }
         /* Misc */
+        .pdf-table-container {
+              page-break-after: always; /* each table starts on a new page */
+              width: 210mm;
+              height: 297mm;
+              overflow: hidden;
+              display: flex;
+              justify-content: center;
+              align-items: flex-start;
+          }
+
+          .pdf-scale-wrapper {
+              transform-origin: top left;
+              width: 100%;
+          }
+
+          table {
+              width: 100%;
+              border-collapse: collapse;
+          }
         .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; }
         @endif
     </style>
 </head>
 <body>
 @endif
-
 <div class="p-0 font-serif text-sm" @if(!empty($pdfMode)) style="width:100%;max-width:100%;" @endif>
   <!-- HEADER -->
   <header class="mb-2 flex items-start justify-between gap-4 w-full">
@@ -554,403 +589,150 @@
   </table>
 
 
-   <table class="w-full border-2 border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
-
-    <!-- FIXED GRID -->
+  {{-- II. FAMILY BACKGROUND --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:14px;" border="1">
     <colgroup>
       <col style="width:20%">
       <col style="width:10%">
       <col style="width:12%">
-      <col style="width: 16%">
+      <col style="width:16%">
+      <col style="width:20%">
+      <col style="width:22%">
     </colgroup>
 
     <!-- SECTION HEADER -->
     <tr>
-      <td colspan="6" class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-b-2">
-        II. FAMILY BACKGROUND
-      </td>
+        <td colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; font-weight:bold; padding:6px;">
+            II. FAMILY BACKGROUND
+        </td>
     </tr>
 
-
-     <tr>
-      <td class="bg-[#e7e7e7] px-2 align-middle">
-        22. SPOUSE'S SURNAME
-      </td>
-      <td colspan="3"
-          class="border">
-          <div>{{ $spouse->surname ?? '—' }}</div>
-      </td>
-
-      <td class="border text-center bg-[#e7e7e7] ">
-        23. NAME of CHILDREN  (Write full name and list all)
-      </td>
-
-      <td class="border text-center bg-[#e7e7e7]">
-        DATE OF BIRTH (dd/mm/yyyy) 
-      </td>
-
+    <!-- SPOUSE + CHILD HEADER -->
+    <tr style="background:#e7e7e7;">
+        <td style="padding:4px; vertical-align:middle;">22. SPOUSE'S SURNAME</td>
+        <td colspan="3" style="border:1px solid black;">
+            {{ $spouse->surname ?? '—' }}
+        </td>
+        <td style="border:1px solid black; text-align:center;">23. NAME OF CHILDREN</td>
+        <td style="border:1px solid black; text-align:center;">DATE OF BIRTH (dd/mm/yyyy)</td>
     </tr>
 
-    
+    @php $childIndex = 0; @endphp
 
-
-    <!-- FIRST NAME + EXTENSION -->
+    <!-- Spouse First Name + Extension -->
     <tr>
-      <td class="bg-[#e7e7e7] px-8 align-middle">
-        FIRST NAME
-      </td>
-       <td colspan="2"
-          class="border">
-          <div>
- {{ $spouse->firstname ?? '—' }}
-          </div>
-      </td>
-
-      <td class="bg-[#e7e7e7] align-top">
-        <span class="italic text-xs px-2">NAME EXTENSION (JR., SR)</span>
-        <div class="ml-2">
-            {{ $spouse->name_extension ?? '—' }}
-        </div>
-      </td>
-      
-      <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:8px;">FIRST NAME</td>
+        <td colspan="2" style="border:1px solid black;">{{ $spouse->firstname ?? '—' }}</td>
+        <td style="background:#e7e7e7; font-style:italic; font-size:12px;">NAME EXTENSION (JR., SR)<br>{{ $spouse->name_extension ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
 
-    <!-- MIDDLE NAME -->
+    <!-- Spouse Middle Name -->
     <tr>
-      <td class="bg-[#e7e7e7]  px-8"> 
-        MIDDLE NAME
-      </td>
-      <td colspan="3"
-          class="border h-10">
-          <div>
-         {{ $spouse->middlename ?? '—' }}
-      </div>
-      </td>
-
-      <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $spouse->middlename ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
 
-      <tr>
-      <td class="bg-[#e7e7e7] px-2 border border-t-2">OCCUPATION</td>
-       
-      <td colspan="3"
-          class="border h-10">
-          <div>
-        {{ $spouse->occupation ?? '—' }}
-      </td>
-
-    <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
-    </tr>
-
-      <tr>
-      <td class="bg-[#e7e7e7]  px-2 border">EMPLOYER/BUSINESS NAME</td>
-      
-      <td colspan="3"
-          class="border h-10">
-          <div>
-          {{ $spouse->employer ?? '—' }}
-      </td>
-
-
-        <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
-    </tr>
-
-      <tr>
-      <td class="bg-[#e7e7e7]  px-2 border">BUSINESS ADDRESS</td>
-      
-      <td colspan="3"
-          class="border h-10">
-          <div>
-          {{ $spouse->business_address ?? '—' }}
-      </td>
-
-
-     <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
-    </tr>
-
-      <tr>
-      <td class="bg-[#e7e7e7]  px-2 border">TELEPHONE NO.</td>
-      
-       <td colspan="3"
-          class="border h-10">
-          <div>
-          {{ $spouse->telephone_no ?? '—' }}
-      </td>
-
-
-        <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
-    </tr>
-
-
+    <!-- Spouse Occupation -->
     <tr>
-      <td class="bg-[#e7e7e7]  px-2 align-middle">
-        24. FATHER'S SURNAME
-      </td>
-      
-
-       <td colspan="3"
-          class="border h-10">
-          <div>
-        {{ $father->surname ?? '—' }}
-      </td>
-
-
-        <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-         {{ $childDobs[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:4px;">OCCUPATION</td>
+        <td colspan="3" style="border:1px solid black;">{{ $spouse->occupation ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
 
-    <!-- FIRST NAME + EXTENSION -->
+    <!-- Spouse Employer -->
     <tr>
-      <td class="bg-[#e7e7e7] px-8 align-middle">
-        FIRST NAME
-      </td>
-
-       <td colspan="2"
-          class="border">
-          <div>
-        {{ $father->firstname ?? '—' }}
-      </div>
-      </td>
-      </td>
-
-      <td class="bg-[#e7e7e7] align-top">
-        <span class="italic text-xs px-2">NAME EXTENSION (JR., SR)</span>
-       <div class="ml-2">
-        {{ $father->name_extension ?? '—' }}
-      </div>
-      </td>
-
-       <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? '' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? '' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:4px;">EMPLOYER/BUSINESS NAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $spouse->employer ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
 
-    <!-- MIDDLE NAME -->
+    <!-- Spouse Business Address -->
     <tr>
-      <td class="bg-[#e7e7e7]  px-8"> 
-        MIDDLE NAME
-      </td>
-
-      <td colspan="3"
-          class="border h-10">
-          <div>
-        {{ $father->middlename ?? '—' }}
-      </div>
-      </td>
-
-    <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:4px;">BUSINESS ADDRESS</td>
+        <td colspan="3" style="border:1px solid black;">{{ $spouse->business_address ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
 
-
-
+    <!-- Spouse Telephone -->
     <tr>
-      <td class="bg-[#e7e7e7] px-2 align-middle border-t-2">
-        25. MOTHER'S MAIDEN NAME
-      </td>
-
-      <td colspan="3"
-          class="border-t-2 border h-10">
-       <div>
-        {{ $mother->maiden_name ?? '—' }}
-      </div>
-      </td>
-
-       <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:4px;">TELEPHONE NO.</td>
+        <td colspan="3" style="border:1px solid black;">{{ $spouse->telephone_no ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
 
-    <!-- MIDDLE NAME -->
+    <!-- Father -->
     <tr>
-      <td class="bg-[#e7e7e7] align-middle  px-8"> 
-        SURNAME
-      </td>
-      
-      <td colspan="3"
-          class="border h-10">
-          <div>
-        {{ $mother->surname ?? '—' }}
-      </div>
-      </td>
-
-
-      <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
-    </tr>
-
-
-    <tr>
-      <td class="bg-[#e7e7e7]  px-8 align-middle">
-       FIRST NAME
-      </td>
-      
-      <td colspan="3"
-          class="border h-10">
-          <div>
-        {{ $mother->firstname ?? '—' }}
-      </div>
-      </td>
-
-       <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:4px;">24. FATHER'S SURNAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $father->surname ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
 
     <tr>
-      <td class="bg-[#e7e7e7] px-8 align-middle">
-        MIDDLE NAME
-      </td>
-      
-      <td colspan="3"
-          class="border h-10">
-           <div>
-        {{ $mother->middlename ?? '—' }}
-      </div>
-      </td>
-
-      
-        <td class="border">
-       <div class="h-full w-full px-2 text-center">
-         {{ $childNames[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-
-      <td class="border">
-       <div  class="h-full w-full px-2 text-center">
-         {{ $childDobs[$childIndex] ?? ' ' }}
-       </div>
-      </td>
-      @php $childIndex++; @endphp
+        <td style="background:#e7e7e7; padding-left:8px;">FIRST NAME</td>
+        <td colspan="2" style="border:1px solid black;">{{ $father->firstname ?? '—' }}</td>
+        <td style="background:#e7e7e7; font-style:italic; font-size:12px;">NAME EXTENSION (JR., SR)<br>{{ $father->name_extension ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
     </tr>
-  </table>
 
+    <tr>
+        <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $father->middlename ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;"></td>
+        @php $childIndex++; @endphp
+    </tr>
 
+    <!-- Mother -->
+    <tr>
+        <td style="background:#e7e7e7; padding-left:4px;">25. MOTHER'S MAIDEN NAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $mother->maiden_name ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
+    </tr>
+
+    <tr>
+        <td style="background:#e7e7e7; padding-left:8px;">SURNAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $mother->surname ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
+    </tr>
+
+    <tr>
+        <td style="background:#e7e7e7; padding-left:8px;">FIRST NAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $mother->firstname ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
+    </tr>
+
+    <tr>
+        <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
+        <td colspan="3" style="border:1px solid black;">{{ $mother->middlename ?? '—' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        @php $childIndex++; @endphp
+    </tr>
+</table>
 <table class="w-full border-2 border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base border-t-0">
 
   @php
@@ -1314,385 +1096,389 @@
 <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 1 of 5
 </div>
-
-<div style="page-break-before: always;">
-<table>
-  <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
-      IV.  CIVIL SERVICE ELIGIBILITY
-    </th>
-
-    <tr>
-      <th class="border bg-[#e7e7e7]" rowspan="2" style="width: 30%";>
-        27. CES/CSEE/CAREER SERVICE/RA 1080 (BOARD/ BAR)/UNDER SPECIAL LAWS/CATEGORY II/ IV ELIGIBILITY and ELIGIBILITIES FOR UNIFORMED PERSONNEL
-      </th>
-
-      <th class="border bg-[#e7e7e7]" rowspan="2">
-        RATING <p>(If Applicable) </p>
-      </th>
-
-      <th class="border bg-[#e7e7e7]" rowspan="2">
-        DATE OF EXAMINATION / CONFERMENT
-      </th>
-
-      <th class="border bg-[#e7e7e7]" rowspan="2">
-        PLACE OF EXAMINATION / CONFERMENT
-      </th>
-
-       <th class="border bg-[#e7e7e7]" colspan="2">
-        LICENSE (if applicable)
-      </th>
-    </tr>
-
-
-    <tr>
-    <th class="border text-center bg-[#e7e7e7]">NUMBER</th>
-    <th class="border text-center bg-[#e7e7e7]">VALID UNTIL</th>
-   </tr>
-
-  @php
-    $rows = $eligibilities ?? collect();
-    $maxRows = max(7, $rows->count()); // 7 display rows
-@endphp
-
-@for ($i = 0; $i < $maxRows; $i++)
-  @php $row = $rows[$i] ?? null; @endphp
-  <tr>
-    <td class="border align-top text-center">{{ $row->eligibility ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->rating ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->exam_date ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->exam_place ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->license_no ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->validity ?? ' ' }}</td>
-  </tr>
-@endfor
-</table>
-    
-
-    <table class="border border-black font-['Arial_Narrow','sans-serif'] w-full">
-
-      <colgroup>
-        <col style="width: 8%;">
-        <col style="width: 8%;">
-        <col style="width: 20%;">
-        <col style="width: 28%;">
-        <col style="width: 20%;">
-        <col style="width: 10%;">
-      </colgroup>
-
-      <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
-      V.  WORK EXPERIENCE 
-      <p class="font-extralight text-lg">(Include private employment.  Start from your recent work.) Description of duties should be indicated in the attached Work Experience Sheet.</p>
-     </th>
-
-     <tr class="border">
-
-         <th colspan="2" class="border bg-[#e7e7e7]">
-        INCLUSIVE DATES OF ATTENDANCE<p>(dd/mm/yyyy)</p>
-      </th>
-
-      <th rowspan="2" class="bg-[#e7e7e7]">POSITION TITLE<p>(Write in full/Do not abbreviate)</p></th>
-
-       <th rowspan="2" class="border bg-[#e7e7e7]">
-        DEPARTMENT / AGENCY / OFFICE / COMPANY (Write in full/Do not abbreviate)
-      </th>
-
-      <th rowspan="2" class="border bg-[#e7e7e7]">
-        STATUS OF APPOINTMENT
-      </th>
-
-      <th rowspan="2" class="border bg-[#e7e7e7]">
-         GOV'T SERVICE (Y/ N)
-      </th>
-     </tr>
-
-     <tr class=" bg-[#e7e7e7]">
-      <th class="border text-center font-light bg-[#e7e7e7]">FROM</th>
-      <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
-     </tr>
-
-   @php
-    // Fallback to $work when $workExperiences isn't passed, then sort ascending by start date
-    $workRows = $workExperiences ?? ($work ?? collect());
-    $workRows = $workRows->sortBy('from')->values();
-    $maxRows = max(28, $workRows->count());
-@endphp
-
-@for ($i = 0; $i < $maxRows; $i++)
-  @php $workRow = $workRows[$i] ?? null; @endphp
-  <tr>
-    <td class="border align-top text-center">{{ $workRow->from ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->to ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->position_title ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->department ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->status ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->govt_service ?? " " }}</td>
-  </tr>
-@endfor
-    <tr>
-      <table class="border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
-        <colgroup>
-          <col style="width: 17%;">
-           <col style="width: 20%;">
-            <col style="width: 16.02%;">
-             <col style="width: 15%;">
-        </colgroup>
-      <tr>
-      <td class="text-center font-bold text-xl border align-middle italic">
-          SIGNATURE
-      </td>
-
-       <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        @if(empty($pdfMode))
-        <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
-        @endif
-      </div>
-    </td>
-
-      <td class="border text-center font-bold text-xl align-middle italic">
-        DATE
-      </td>
-
-       <td
-          class="border h-10">
-          <div class="h-full w-full">
-         <textarea
-      name="date2"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
-      </td>
-      </tr>
     </table>
-
+  </div>
+</div>
+<div style="page-break-before: always;"></div>
+{{-- IV. CIVIL SERVICE ELIGIBILITY --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;" border="1">
+    <tr>
+        <th colspan="6"
+            style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px;
+                   text-align:left; padding:6px; border:2px solid black;
+                   -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+            IV. CIVIL SERVICE ELIGIBILITY
+        </th>
     </tr>
-    </table>    
 
-     
+    <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+        <th rowspan="2" style="width:30%; border:1px solid black;">
+            27. CES/CSEE/CAREER SERVICE/RA 1080 (BOARD/BAR)/UNDER SPECIAL LAWS/CATEGORY II/IV ELIGIBILITY and ELIGIBILITIES FOR UNIFORMED PERSONNEL
+        </th>
+        <th rowspan="2" style="border:1px solid black;">RATING <p>(If Applicable)</p></th>
+        <th rowspan="2" style="border:1px solid black;">DATE OF EXAMINATION / CONFERMENT</th>
+        <th rowspan="2" style="border:1px solid black;">PLACE OF EXAMINATION / CONFERMENT</th>
+        <th colspan="2" style="border:1px solid black;">LICENSE (if applicable)</th>
+    </tr>
+
+    <tr style="background:#e7e7e7; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+        <th style="border:1px solid black;">NUMBER</th>
+        <th style="border:1px solid black;">VALID UNTIL</th>
+    </tr>
+
+    @php
+        $rows = $eligibilities ?? collect();
+        $maxRows = max(7, $rows->count());
+    @endphp
+
+    @for ($i = 0; $i < $maxRows; $i++)
+        @php $row = $rows[$i] ?? null; @endphp
+        <tr>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $row->eligibility ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $row->rating ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $row->exam_date ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $row->exam_place ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $row->license_no ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $row->validity ?? ' ' }}</td>
+        </tr>
+    @endfor
+</table>
+
+{{-- V. WORK EXPERIENCE --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;" border="1">
+    <colgroup>
+        <col style="width:8%;">
+        <col style="width:8%;">
+        <col style="width:20%;">
+        <col style="width:28%;">
+        <col style="width:20%;">
+        <col style="width:10%;">
+    </colgroup>
+
+    <tr>
+        <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px;
+                               text-align:left; padding:6px; border:2px solid black;
+                               -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+            V. WORK EXPERIENCE
+            <p style="font-weight:100; font-size:14px;">
+                (Include private employment. Start from your recent work. Description of duties should be indicated in the attached Work Experience Sheet.)
+            </p>
+        </th>
+    </tr>
+
+    <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+        <th colspan="2" style="border:1px solid black;">INCLUSIVE DATES OF ATTENDANCE<p>(dd/mm/yyyy)</p></th>
+        <th rowspan="2" style="border:1px solid black;">POSITION TITLE<p>(Write in full/Do not abbreviate)</p></th>
+        <th rowspan="2" style="border:1px solid black;">DEPARTMENT / AGENCY / OFFICE / COMPANY (Write in full/Do not abbreviate)</th>
+        <th rowspan="2" style="border:1px solid black;">STATUS OF APPOINTMENT</th>
+        <th rowspan="2" style="border:1px solid black;">GOV'T SERVICE (Y/N)</th>
+    </tr>
+
+    <tr style="background:#e7e7e7; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+        <th style="border:1px solid black;">FROM</th>
+        <th style="border:1px solid black;">TO</th>
+    </tr>
+
+    @php
+        $workRows = $workExperiences ?? ($work ?? collect());
+        $workRows = $workRows->sortBy('from')->values();
+        $maxWorkRows = max(28, $workRows->count());
+    @endphp
+
+    @for ($i = 0; $i < $maxWorkRows; $i++)
+        @php $workRow = $workRows[$i] ?? null; @endphp
+        <tr>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $workRow->from ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $workRow->to ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $workRow->position_title ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $workRow->department ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $workRow->status ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $workRow->govt_service ?? ' ' }}</td>
+        </tr>
+    @endfor
+</table>
+
+{{-- SIGNATURE & DATE --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-style:italic;" border="1">
+    <colgroup>
+        <col style="width:17%;">
+        <col style="width:20%;">
+        <col style="width:16.02%;">
+        <col style="width:15%;">
+    </colgroup>
+    <tr>
+        <td style="text-align:center; font-weight:bold; font-size:18px; border:1px solid black; vertical-align:middle; font-style:italic;">
+            SIGNATURE
+        </td>
+
+        <td colspan="2" style="border:1px solid black;">
+            <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:2px;">
+                @if(empty($pdfMode))
+                <input type="file" name="signature_attachment_3" accept="image/*,.pdf" class="text-sm">
+                @endif
+            </div>
+        </td>
+
+        <td style="border:1px solid black; text-align:center; font-weight:bold; font-size:18px; vertical-align:middle; font-style:italic;">
+            DATE
+        </td>
+
+        <td style="border:1px solid black; height:40px;">
+            <div style="height:100%; width:100%;">
+                @if(empty($pdfMode))
+                <input type="text" name="date2" class="w-full h-full text-lg text-center border-none" placeholder="MM/DD/YYYY">
+                @else
+                <span>{{ $declaration->date_signed ?? 'MM/DD/YYYY' }}</span>
+                @endif
+            </div>
+        </td>
+    </tr>
+</table>  
       <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 2 of 5
 </div>
 </div>
 
 <div style="page-break-before: always;"></div>
-  <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
+  <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;" border="1">
 
-      <colgroup>
-        <col style="width: 29.5%;">
-        <col style="width: 5%;">
-        <col style="width: 5%;">
-        <col style="width: 5%;">
-        <col style="width: 20%;">
-      </colgroup>
-      
-    <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold"colspan="5">
-      VI. VOLUNTARY WORK OR INVOLVEMENT IN CIVIC / NON-GOVERNMENTAL / PEOPLE / VOLUNTARY ORGANIZATION 
+  <colgroup>
+    <col style="width:29.5%;">
+    <col style="width:5%;">
+    <col style="width:5%;">
+    <col style="width:5%;">
+    <col style="width:20%;">
+  </colgroup>
+
+  <tr>
+    <th colspan="5"
+        style="background:#8a8a8a; color:#fff;
+               font-style:italic; font-size:18px;
+               text-align:left; padding:6px;
+               border:2px solid black;
+               -webkit-print-color-adjust:exact;
+               print-color-adjust:exact;">
+      VI. VOLUNTARY WORK OR INVOLVEMENT IN CIVIC / NON-GOVERNMENTAL / PEOPLE / VOLUNTARY ORGANIZATION
+    </th>
+  </tr>
+
+  <tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      29. NAME & ADDRESS OF ORGANIZATION (Write in full)
     </th>
 
-    <tr>
-      <th class="border bg-[#e7e7e7]" rowspan="2">
-        29. NAME & ADDRESS OF ORGANIZATION (Write in full)
-      </th>
+    <th colspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      INCLUSIVE DATES <p>(dd/mm/yyyy)</p>
+    </th>
 
-      <th class="border bg-[#e7e7e7]" colspan="2">
-        INCLUSIVE DATES <p>(dd/mm/yyyy)</p>
-      </th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      NUMBER OF HOURS
+    </th>
 
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      POSITION / NATURE OF WORK
+    </th>
+  </tr>
 
-      <th class="border bg-[#e7e7e7]" rowspan="2">
-        NUMBER OF <p>HOURS</p>
-      </th>
+  <tr>
+    <th style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">FROM</th>
+    <th style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">TO</th>
+  </tr>
 
-      <th class="border bg-[#e7e7e7]" rowspan="2">
-        POSITION / NATURE OF WORK 
-      </th>
-    </tr>
-
-
-    <tr>
-    <th class="border text-center bg-[#e7e7e7]">FROM</th>
-    <th class="border text-center bg-[#e7e7e7]">TO</th>
-   </tr>
-
-    @php
-    // Fallback to $voluntary when $voluntaryWorks isn't passed, then sort by start date ascending
+  @php
     $volRows = $voluntaryWorks ?? ($voluntary ?? collect());
     $volRows = $volRows->sortBy('from')->values();
     $maxRows = max(7, $volRows->count());
-@endphp
+  @endphp
 
-@for ($i = 0; $i < $maxRows; $i++)
-  @php $row = $volRows[$i] ?? null; @endphp
-  <tr>
-    <td class="border align-top text-center">{{ $row->organization ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->from ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->to ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->hours ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->position ?? ' ' }}</td>
-  </tr>
-@endfor
+  @for ($i = 0; $i < $maxRows; $i++)
+    @php $row = $volRows[$i] ?? null; @endphp
+    <tr>
+      <td style="border:1px solid black; text-align:center;">{{ $row->organization ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $row->from ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $row->to ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $row->hours ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $row->position ?? ' ' }}</td>
+    </tr>
+  @endfor
 
-    </table>
+</table>
+
     
 
-    <table class="border border-black font-['Arial_Narrow','Arial',sans-serif]">
-      
-      <colgroup>
-        <col style="width: 45.5%;">
-        <col style="width: 8%;">
-        <col style="width: 7.5%;">
-        <col style="width: 8%;">
-        <col style="width: 12%;">
-      </colgroup>
+   <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;" border="1">
 
-      <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
-      VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
-     </th>
+  <colgroup>
+    <col style="width:45.5%;">
+    <col style="width:8%;">
+    <col style="width:7.5%;">
+    <col style="width:8%;">
+    <col style="width:12%;">
+  </colgroup>
 
-     <tr class="border">
+  <tr>
+    <th colspan="6"
+        style="background:#8a8a8a; color:#fff;
+               font-style:italic; font-size:18px;
+               text-align:left; padding:6px;
+               border:2px solid black;
+               -webkit-print-color-adjust:exact;
+               print-color-adjust:exact;">
+      VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+    </th>
+  </tr>
 
-      <th rowspan="2" class="bg-[#e7e7e7] text-center">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS <p>(Write in full)</p></th>
+  <tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS
+    </th>
 
-      <th colspan="2" class="border bg-[#e7e7e7]">
-        INCLUSIVE DATES OF ATTENDANCE<p>(dd/mm/yyyy)</p>
-      </th>
+    <th colspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      INCLUSIVE DATES OF ATTENDANCE
+    </th>
 
-       <th rowspan="2" class="border bg-[#e7e7e7]">
-        NUMBER OF HOURS
-      </th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      NUMBER OF HOURS
+    </th>
 
-      <th rowspan="2" class="border bg-[#e7e7e7]">
-        Type of L&D
-     <p>(Managerial/ Supervisory/
-        Technical / etc) </p>
-      </th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      Type of L&D
+    </th>
 
-      <th rowspan="2" class="border bg-[#e7e7e7]">
-         CONDUCTED/ SPONSORED BY (Write in full)
-      </th>
-     </tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      CONDUCTED/SPONSORED BY
+    </th>
+  </tr>
 
-     <tr>
-      <th class="border text-center font-light bg-[#e7e7e7]">FROM</th>
-      <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
-     </tr>
+  <tr>
+    <th style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">FROM</th>
+    <th style="background:#e7e7e7; border:1px solid black;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;">TO</th>
+  </tr>
 
-      @php
-    // Fallback to $learning when $training isn't passed, then sort by start date ascending
+  @php
     $trainingRows = $training ?? ($learning ?? collect());
     $trainingRows = $trainingRows->sortBy('from')->values();
     $maxTraining = max(21, $trainingRows->count());
-@endphp
+  @endphp
 
-@for ($i = 0; $i < $maxTraining; $i++)
-  @php $trow = $trainingRows[$i] ?? null; @endphp
-  <tr>
-    <td class="border align-top text-center">{{ $trow->title ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->from ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->to ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->hours ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->conducted_by ?? ' ' }}</td>
-  </tr>
-@endfor
+  @for ($i = 0; $i < $maxTraining; $i++)
+    @php $trow = $trainingRows[$i] ?? null; @endphp
+    <tr>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->from ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->to ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->hours ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
+    </tr>
+  @endfor
 
-    </table>
+</table>
+{{-- VIII. OTHER INFORMATION --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;" border="1">
 
-    <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
+    <colgroup>
+        <col style="width:5.11%;">
+        <col style="width:6.5%;">
+        <col style="width:4.39%;">
+    </colgroup>
 
-      <colgroup>
-        <col style="width: 5.11%;">
-         <col style="width: 6.5%;">
-          <col style="width: 4.39%;">
-      </colgroup>
-      <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="3">
-        VIII.  OTHER INFORMATION
-      </th>
+    <tr>
+        <th colspan="3"
+            style="background:#8a8a8a; color:#fff;
+                   font-style:italic; font-size:18px;
+                   text-align:left; padding:6px;
+                   border:2px solid black;
+                   -webkit-print-color-adjust:exact;
+                   print-color-adjust:exact;">
+            VIII. OTHER INFORMATION
+        </th>
+    </tr>
 
-      <tr class=" bg-[#e7e7e7]">
-        <th class="border">
-        SPECIAL SKILLS and HOBBIES
-      </th>
-
-      <th class="border">
-        NON-ACADEMIC DISTINCTIONS / RECOGNITION <p>(Write in full)</p>
-      </th>
-
-      <th class="border" >
-          MEMBERSHIP IN ASSOCIATION / ORGANIZATION <p>(Write in full)</p>
-      </th>
-
-  
-      </tr>
+    <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+        <th style="border:1px solid black;">SPECIAL SKILLS and HOBBIES</th>
+        <th style="border:1px solid black;">NON-ACADEMIC DISTINCTIONS / RECOGNITION <p>(Write in full)</p></th>
+        <th style="border:1px solid black;">MEMBERSHIP IN ASSOCIATION / ORGANIZATION <p>(Write in full)</p></th>
+    </tr>
 
     @php
-    $otherCollection = $other ?? ($otherInfo ?? collect());
-    $skills = $otherCollection->where('category', 'skills')->pluck('description')->values();
-    $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->values();
-    $assoc = $otherCollection->where('category', 'association')->pluck('description')->values();
-    $maxOther = max(7, $skills->count(), $recognition->count(), $assoc->count());
-@endphp
+        $otherCollection = $other ?? ($otherInfo ?? collect());
+        $skills = $otherCollection->where('category', 'skills')->pluck('description')->values();
+        $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->values();
+        $assoc = $otherCollection->where('category', 'association')->pluck('description')->values();
+        $maxOther = max(7, $skills->count(), $recognition->count(), $assoc->count());
+    @endphp
 
-@for ($i = 0; $i < $maxOther; $i++)
-  <tr>
-    <td class="border align-top text-center">{{ $skills[$i] ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $recognition[$i] ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $assoc[$i] ?? ' ' }}</td>
-  </tr>
-@endfor
+    @for ($i = 0; $i < $maxOther; $i++)
+    <tr>
+        <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $skills[$i] ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $recognition[$i] ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $assoc[$i] ?? ' ' }}</td>
+    </tr>
+    @endfor
 
-    </table>
+</table>
 
-    <table class="border border-black w-full h-15 font-['Arial_Narrow','sans-serif'] italic">
-        <colgroup>
-          <col style="width: 31.95%;">
-           <col style="width: 15.64%;">
-            <col style="width: 15%;">
-             <col style="width: 10%;">
-        </colgroup>
-      <tr>
-      <td class="text-center font-bold text-xl border">
-          SIGNATURE
-      </td>
+{{-- SIGNATURE & DATE --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-style:italic;" border="1">
 
-       <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        @if(empty($pdfMode))
-        <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
-        @endif
-      </div>
-    </td>
+    <colgroup>
+        <col style="width:31.95%;">
+        <col style="width:15.64%;">
+        <col style="width:15%;">
+        <col style="width:10%;">
+        <col style="width:auto;">
+    </colgroup>
 
+    <tr>
+        <td style="text-align:center; font-weight:bold; font-size:18px; border:1px solid black;">
+            SIGNATURE
+        </td>
 
-      <td class="border text-center font-bold text-xl">
-        DATE
-      </td>
+        <td colspan="2" style="border:1px solid black;">
+            <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:2px;">
+                @if(empty($pdfMode))
+                <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+                @endif
+            </div>
+        </td>
 
-        <td colspan="2"
-          class="border">
-          <div class="h-full w-full">
-         <textarea
-      name="date3"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
-      </td>
-      </tr>
-    </table>
+        <td style="border:1px solid black; text-align:center; font-weight:bold; font-size:18px;">
+            DATE
+        </td>
 
+        <td colspan="2" style="border:1px solid black;">
+            <div style="height:100%; width:100%;">
+                @if(empty($pdfMode))
+                <input type="text" name="date3" class="w-full h-full text-lg text-center border-none" placeholder="MM/DD/YYYY">
+                @else
+                <span>{{ $declaration->date_signed ?? 'MM/DD/YYYY' }}</span>
+                @endif
+            </div>
+        </td>
+    </tr>
+</table>
     <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 3 of 5
 </div>
 <div style="page-break-before: always;"></div>
- <table class="border-black w-full text-sm border-2 border-b-0">
+  <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
+  <div class="pds-sheet">
+
+  <table class="border-black w-full text-sm border-2 border-b-0">
     <tr>
       <td class="border w-2/3 align-top border-black">
         <div class="ml-4 mb-3 mt-3">
@@ -1915,48 +1701,110 @@
 
     </table> 
 
-    <table class="w-full h-full border-l-2 border-b-0 border-black font-['Arial_Narrow','Arial',sans-serif]">
+    <table class="border-2 w-full h-full border-l-2 border-b-0 border-black font-['Arial_Narrow','Arial',sans-serif]">
       <tr>
         <td class="border-l-3 border border-t-2 border-r-2 border-b-3 border-black" colspan="3">
           <span class="ml-2">41. REFERENCES </span><span class="font-semibold">(Person not related by consanguinity or affinity to applicant / appointee)</span>
         </td>
-        <td class="flex-1 w-1/4 align-top text-center border-l-0 border-r-2 border-t-2 border-black" rowspan="11">
-  <div class="mt-12 flex flex-col items-center">
+        <td rowspan="11"
+    style="
+        width:25%;
+        vertical-align:top;
+        text-align:center;
+        border-right:2px solid black;
+        border-top:2px solid black;
+    ">
 
-    <!-- PASSPORT PHOTO -->
-    <label class="cursor-pointer">
-      <div class="border-2 border-black w-[3.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
-        <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
-        <div id="photoPlaceholder">
-          Passport-sized unfiltered<br>
-          picture taken within<br>
-          the last 6 months<br>
-          4.5 cm × 3.5 cm
+    <div style="margin-top:20mm;">
+
+        <!-- PASSPORT PHOTO -->
+        <div style="margin-bottom:3mm;">
+
+            <div style="
+                width:35mm;
+                height:45mm;
+                border:2px solid black;
+                margin:0 auto;
+                position:relative;
+                overflow:hidden;
+                font-size:10px;
+                font-style:italic;
+                text-align:center;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+            ">
+
+                <img id="photoPreview"
+                     style="
+                        position:absolute;
+                        top:0;
+                        left:0;
+                        width:100%;
+                        height:100%;
+                        object-fit:cover;
+                        display:none;
+                     ">
+
+                <div>
+                    Passport-sized unfiltered<br>
+                    picture taken within<br>
+                    the last 6 months<br>
+                    4.5 cm × 3.5 cm
+                </div>
+
+            </div>
+
+            <div style="font-size:10px; margin-top:2mm;">
+                PHOTO
+            </div>
+
         </div>
-      </div>
-      @if(empty($pdfMode))
-      <input type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhoto(event)" required>
-      @endif
-    </label>
 
-    <div class="mt-2 text-xs">PHOTO</div>
 
-    <!-- THUMB MARK -->
-    <label class="cursor-pointer mt-6">
-      <div class="mt-20 border-2 border-black w-[4.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
-        <img id="thumbPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
-        <div id="thumbPlaceholder" class="mt-auto border-black border-t border-l-0 border-b-0 border-r-0 w-full">
-          Right Thumbmark
+        <!-- THUMB MARK -->
+        <div style="margin-top:10mm;">
+
+            <div style="
+                width:45mm;
+                height:45mm;
+                border:2px solid black;
+                margin:0 auto;
+                position:relative;
+                overflow:hidden;
+            ">
+
+                <img id="thumbPreview"
+                     style="
+                        position:absolute;
+                        top:0;
+                        left:0;
+                        width:100%;
+                        height:100%;
+                        object-fit:cover;
+                        display:none;
+                     ">
+
+                <div style="
+                    position:absolute;
+                    bottom:0;
+                    left:0;
+                    width:100%;
+                    border-top:1px solid black;
+                    text-align:center;
+                    font-size:10px;
+                    font-style:italic;
+                    padding:2mm 0;
+                    background:white;
+                ">
+                    Right Thumbmark
+                </div>
+            </div>
         </div>
-      </div>
-      @if(empty($pdfMode))
-      <input type="file" name="thumbmark" accept="image/*" class="hidden" onchange="previewThumb(event)" required>
-      @endif
-    </label>
-  </div>
+    </div>
 </td>
       </tr>
-      <tr class="border border-r-0 border-black">
+      <tr class="border-2 border-r-0 border-black">
         <th class="border font-light w-24 border-l-3 border-black">NAME</th>
         <th class="border font-light border-black">OFFICE / RESIDENTIAL ADDRESS </th>
         <th class="border font-light w-52 border-r-2 border-black">CONTACT NO. AND / OR EMAIL</th>
@@ -1981,63 +1829,73 @@
       </tr>
       @endfor
       <tr class="border justify-center">
-        <td colspan="3" class="text-justify px-2 h-20 font-semibold border-t-2 border-black border-b-2 border-r-2">
+        <td colspan="3" class="text-justify px-2 h-20 font-semibold border-2">
           42. I declare under oath that I have personally accomplished this Personal Data Sheet which is a true, correct, and complete statement pursuant to the provisions of pertinent laws, rules, and regulations of the Republic 
           <span class="px-4">of the Philippines. I authorize the agency head/authorized representative to verify/validate the contents stated herein. I  agree that any misrepresentation made in this document and its attachments shall cause the filing of administrative/criminal case/s against me.</span> 
         </td>
       </tr>
       <tr>
         <td class="pr-5 p-0 align-top w-[40%] border-l border-black border-r-0 flex-1">
-        <table class="border-collapse text-xs border-2 ml-2 mt-2 h-[5.6cm] w-full">
-  <!-- HEADER -->
-  <tr>
-    <td class="border px-2 py-1 font-semibold h-5 border-black" colspan="2">
-      Government Issued ID (i.e. Passport, GSIS, SSS, PRC, Driver's License, etc.)<br>
-      <span class="italic font-normal">
-        PLEASE INDICATE ID Number and Date of Issuance
-      </span>
-    </td>
-  </tr>
+       <table style="
+    width:100%;
+    border-collapse:collapse;
+    height:6.4cm;
+    table-layout:fixed;
+    font-size:12px;
+    margin-bottom:4px;
+" class="border-2 border-black ml-2 mt-2">
 
-  <!-- ROW 1 -->
-  <tr>
-    <td class="border px-2 py-1 h-5 align-middle border-black">
-      Government Issued ID:
-    </td>
-    <td class="border px-2 py-1 w-2/3 border-black">
-      {{ $idInfo->gov_id ?? '' }}
-    </td>
-  </tr>
+    <!-- HEADER -->
+    <tr style="height:1.4cm;">
+        <td colspan="2"
+            style="border:1px solid black; padding:6px; font-weight:bold;">
+            Government Issued ID (i.e. Passport, GSIS, SSS, PRC, Driver's License, etc.)<br>
+            <span style="font-style:italic; font-weight:normal;">
+                PLEASE INDICATE ID Number and Date of Issuance
+            </span>
+        </td>
+    </tr>
 
-  <!-- ROW 2 -->
-  <tr>
-    <td class="border px-2 py-1 h-5 align-middle border-black">
-      ID/License/Passport No.:
-    </td>
-    <td class="border px-2 py-1 border-black">
-      {{ $idInfo->passport_licence_id?? '' }}
-    </td>
-  </tr>
+    <!-- ROW 1 -->
+    <tr style="height:1.4cm;">
+        <td style="border:1px solid black; padding:6px; vertical-align:middle; width:40%;">
+            Government Issued ID:
+        </td>
+        <td style="border:1px solid black; padding:6px;">
+            {{ $idInfo->gov_id ?? '' }}
+        </td>
+    </tr>
 
-  <!-- ROW 3 -->
-  <tr>
-    <td class="border px-2 py-1 h-5 align-middle border-black">
-      Date/Place of Issuance:
-    </td>
-    <td class="border px-2 py-1 border-black">
-      {{ $idInfo->date_place_issuance ?? '' }}
-    </td>
-  </tr>
+    <!-- ROW 2 -->
+    <tr style="height:1.4cm;">
+        <td style="border:1px solid black; padding:6px; vertical-align:middle;">
+            ID/License/Passport No.:
+        </td>
+        <td style="border:1px solid black; padding:6px;">
+            {{ $idInfo->passport_licence_id ?? '' }}
+        </td>
+    </tr>
+
+    <!-- ROW 3 -->
+    <tr style="height:1.4cm;">
+        <td style="border:1px solid black; padding:6px; vertical-align:middle;">
+            Date/Place of Issuance:
+        </td>
+        <td style="border:1px solid black; padding:6px;">
+            {{ $idInfo->date_place_issuance ?? '' }}
+        </td>
+    </tr>
 
 </table>
+
         </td>
-        <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2">
-          <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
-            <tr>
-              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600">
-                (wet signature / e-signature / digital certificate)
-              </td>
-            </tr>
+        <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2" >
+          <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2" style="margin-top:12px; margin-left:7px;">
+          <td class="border-black text-center align-middle italic text-red-600">
+    <div style="height:3.06cm; display:flex; align-items:center; justify-content:center;">
+        (wet signature / e-signature / digital certificate)
+    </div>
+</td>
             <tr>
               <td class="border border-black text-center py-1">Signature (Sign inside the box)</td>
             </tr>
@@ -2121,9 +1979,10 @@
         </td>
       </tr>
     </table>
-   <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
+     <div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 4 of 5
 </div>
+  </div>
 <div style="page-break-before: always;"></div>
 <table>
   <th class="flex text-left font-['Arial_Narrow','Arial',sans-serif] italic font-semibold">
@@ -2188,47 +2047,45 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 </tbody>
 </table>
 
-<!-- SIGNATURE -->
-<div class="w-full flex justify-end mt-[3cm] pr-6">
-<div class="w-[350px] text-center">
-  <div class="border-b-2 border-black"></div>
-  <div class="mt-1 text-sm">(Signature over Printed Name)</div>
-</div>
-</div>
-
-<!-- DATE -->
-<div class="w-full flex justify-end mt-[1cm] pr-6 font-['Arial_Narrow','Arial',sans-serif]">
-<div class="w-[350px] text-center relative">
-
-<div class="border-b-2 border-black w-full absolute bottom-6 left-0"></div>
-
-<div class="flex justify-center space-x-1 relative">
-@if(empty($pdfMode))
-<input type="file" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base" style="display: none;">
-@endif
-<span class="mt-2">/</span>
-@if(empty($pdfMode))
-<input type="file" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none" style="display: none;">
-@endif
-<span class="mt-2">/</span>
-@if(empty($pdfMode))
-<input type="file" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none" style="display: none;">
-@endif
-<input type="text" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base">
-<span class="mt-2">/</span>
-<input type="text" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none">
-<span class="mt-2">/</span>
-<input type="text" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none">
+<!-- SIGNATURE / DATE (aligned right like pdsreview5) -->
+<div class="w-full flex justify-end" style="margin-top:100px; padding-right:8px;">
+  <div class="text-center" style="width:460px; margin-left:auto;">
+    <div class="border-b-2 border-black" style="height:20px; width:100%;"></div>
+    <div class="mt-2 text-sm">(Signature over Printed Name)</div>
+  </div>
 </div>
 
-<div class="text-sm">DATE</div>
-</div>
+<div class="w-full flex justify-end" style="margin-top:50px; padding-right:8px; font-family:'Arial Narrow','Arial',sans-serif;">
+  <div class="text-center relative" style="width:460px; margin-left:auto;">
+    <div class="border-b-2 border-black w-full absolute mt-10" style="bottom:26px; left:0; width:100%;"></div>
+    <div class="text-sm" style="margin-top:8px; margin-bottom:40px">DATE</div>
+  </div>
 </div>
 
-<div class="mt-5 flex justify-end mr-2 text-sm font-['Arial_Narrow','Arial',sans-serif]">
-CS FORM 212 (Revised 2025), Page 5 of 5
+
+<div class="w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif';">
+    CS FORM 212 (Revised 2025), Page 5 of 5
 </div>
 @if(!empty($pdfMode))
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const targetWidthPx = (210 / 25.4) * 96;  // A4 width in px
+    const targetHeightPx = (297 / 25.4) * 96; // A4 height in px
+
+    // Scale only top-level tables (ignore nested tables)
+    document.querySelectorAll('table').forEach((table) => {
+      if (table.closest('table') !== null) return; // skip nested tables
+
+      const contentWidth = table.scrollWidth;
+      const contentHeight = table.scrollHeight;
+      const scale = Math.min(1, targetWidthPx / contentWidth, targetHeightPx / contentHeight);
+
+      table.style.transformOrigin = 'top left';
+      table.style.transform = `scale(${scale})`;
+    });
+  });
+</script>
 </body>
 </html>
 @endif
+

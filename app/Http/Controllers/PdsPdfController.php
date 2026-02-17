@@ -115,7 +115,7 @@ class PdsPdfController extends Controller
 
         $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
 
-        $pdfBinary = $this->makeShot($html)->pdf();
+        $pdfBinary =  $this->makeShot($html)->pdf();
 
         return response()->streamDownload(
             function () use ($pdfBinary) {
