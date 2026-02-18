@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ManageUserController extends Controller
 {
@@ -54,11 +55,36 @@ class ManageUserController extends Controller
 
     public function destroy(User $user)
     {
-        RegistrationUser::whereRaw('LOWER(full_name) = ?', [mb_strtolower($user->name)])
-            ->orWhere('email', $user->email)
-            ->delete();
+        DB::transaction(function () use ($user) {
+            $tables = [
+                'pds_addresses',
+                'pds_contact_infos',
+                'pds_declarations',
+                'pds_education_records',
+                'pds_eligibilities',
+                'pds_family_members',
+                'pds_form5_remarks',
+                'pds_id_infos',
+                'pds_other_info',
+                'pds_personal_infos',
+                'pds_references',
+                'pds_signature_files',
+                'pds_submissions',
+                'pds_training_programs',
+                'pds_voluntary_work',
+                'pds_work_experiences',
+            ];
 
-        $user->delete();
+            foreach ($tables as $table) {
+                DB::table($table)->where('user_id', $user->id)->delete();
+            }
+
+            RegistrationUser::whereRaw('LOWER(full_name) = ?', [mb_strtolower($user->name)])
+                ->orWhere('email', $user->email)
+                ->delete();
+
+            $user->delete();
+        });
 
         return response()->json([
             'message' => 'User deleted',
