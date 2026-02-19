@@ -62,8 +62,8 @@
         }">
             <div class="flex items-center gap-4">
                 <div class="relative h-20 w-20">
-                    <img :src="working.avatar" :
-                        alt="working.name + ' avatar'" 
+                    <img :src="working.avatar"
+                        :alt="working.name + ' avatar'" 
                         class="h-20 w-20 rounded-full object-cover shadow">
                     <label class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 text-xs font-semibold text-white transition hover:opacity-100 cursor-pointer">
                         Change

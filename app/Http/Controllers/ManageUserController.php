@@ -6,14 +6,22 @@ use App\Models\User;
 use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ManageUserController extends Controller
 {
     public function index(Request $request)
     {
         $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned')
+            ->with('profile')
             ->get()
             ->map(function (User $user) {
+                $rawPath = $user->profile?->profile;
+                $sanitizedPath = $rawPath ? ltrim(str_replace('storage/', '', $rawPath), '/') : null;
+                $avatar = ($sanitizedPath && Storage::disk('public')->exists($sanitizedPath))
+                    ? Storage::disk('public')->url($sanitizedPath)
+                    : asset('images/avatar.jpg');
+
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -24,7 +32,7 @@ class ManageUserController extends Controller
                     'type' => $user->type,
                     'status' => $user->status,
                     'location' => $user->location_assigned,
-                    'avatar' => asset('images/avatar.jpg'),
+                    'avatar' => $avatar,
                 ];
             })
             ->values();

@@ -9,6 +9,7 @@ use App\Http\Controllers\PdsSubmissionController;
 use App\Http\Controllers\PdsStepController;
 use App\Http\Controllers\PdsPdfController;
 use App\Models\User;
+use App\Models\PdsSubmission;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ManageUserController;
 use Illuminate\Support\Facades\Hash;
@@ -34,124 +35,49 @@ Route::get('/dashboard', function () {
     $permanentCount = User::where('type', 'Permanent Employee')->count();
     $jobOrderCount = User::where('type', 'Job Order')->count();
 
+    $pendingCount = PdsSubmission::where('status', 'Pending')->count();
+    $approvedCount = PdsSubmission::where('status', 'Approved')->count();
+    $rejectedCount = PdsSubmission::where('status', 'Rejected')->count();
+
+    $recentSubmissions = PdsSubmission::with('user')
+        ->orderBy('submitted', 'desc')
+        ->limit(10)
+        ->get()
+        ->map(function ($submission) {
+            $user = $submission->user;
+            $gender = $user->gender ?? 'Male';
+            $avatar = $gender === 'Female'
+                ? 'https://i.pravatar.cc/96?img=47'
+                : 'https://i.pravatar.cc/96?img=12';
+
+            return [
+                'id' => $submission->id,
+                'user_id' => $submission->user_id,
+                'name' => $submission->name ?? $user->name ?? '—',
+                'avatar' => $avatar,
+                'unit' => $submission->unit ?? $user->unit ?? '—',
+                'type' => $submission->type ?? $user->type ?? '—',
+                'email' => $submission->email ?? $user->email ?? '—',
+                'phone' => $user->phone ?? '—',
+                'location' => $user->location_assigned ?? '—',
+                'status' => $submission->status ? ucfirst($submission->status) : 'Pending',
+                'status_key' => $submission->status ? strtolower($submission->status) : 'pending',
+                'submitted_at' => $submission->submitted
+                    ? $submission->submitted->format('M d, Y • g:i A')
+                    : '—',
+            ];
+        });
+
     $stats = [
         // Permanent Employees card
         'totalEmployees' => $permanentCount,
         // Job Order card
         'verifiedEmployees' => $jobOrderCount,
+        'pendingPds' => $pendingCount,
+        'approvedPds' => $approvedCount,
+        'rejectedPds' => $rejectedCount,
         'recentHires' => 6,
-        'recentSubmissions' => [
-            [
-                'name' => 'Darlene Robertson',
-                'avatar' => 'https://i.pravatar.cc/96?img=47',
-                'role' => 'NSAP',
-                'department' => 'NSAP',
-                'type' => 'Permanent',
-                'email' => 'alma.lawson@example.com',
-                'phone' => '09514785214',
-                'location' => 'Lagao District, General Santos City',
-                'submitted_at' => 'Jan 20, 2026 • 8:15 AM',
-            ],
-            [
-                'name' => 'Annette Black',
-                'avatar' => 'https://i.pravatar.cc/96?img=32',
-                'role' => 'NSAP',
-                'department' => 'NSAP',
-                'type' => 'Job On Call',
-                'email' => 'bill.sanders@example.com',
-                'phone' => '09514785214',
-                'location' => 'Purok Malakas, General Santos City',
-                'submitted_at' => 'Jan 19, 2026 • 4:42 PM',
-            ],
-            [
-                'name' => 'Ronald Richards',
-                'avatar' => 'https://i.pravatar.cc/96?img=12',
-                'role' => 'NSAP',
-                'department' => 'NSAP',
-                'type' => 'Permanent',
-                'email' => 'weaver@example.com',
-                'phone' => '09514785214',
-                'location' => 'Barangay City Heights, General Santos City',
-                'submitted_at' => 'Jan 18, 2026 • 9:05 AM',
-            ],
-            [
-                'name' => 'Ralph Edwards',
-                'avatar' => 'https://i.pravatar.cc/96?img=5',
-                'role' => 'ODP',
-                'department' => 'ODP',
-                'type' => 'Job On Call',
-                'email' => 'simmons@example.com',
-                'phone' => '09514785214',
-                'location' => 'Barangay Fatima, General Santos City',
-                'submitted_at' => 'Jan 17, 2026 • 5:30 PM',
-            ],
-            [
-                'name' => 'Devon Lane',
-                'avatar' => 'https://i.pravatar.cc/96?img=65',
-                'role' => 'ODP',
-                'department' => 'ODP',
-                'type' => 'Permanent',
-                'email' => 'devon.lane@example.com',
-                'phone' => '09514785214',
-                'location' => 'Barangay Tambler, General Santos City',
-                'submitted_at' => 'Jan 16, 2026 • 10:12 AM',
-            ],
-            [
-                'name' => 'Darlene Robertson',
-                'avatar' => 'https://i.pravatar.cc/96?img=47',
-                'role' => 'NSAP',
-                'department' => 'NSAP',
-                'type' => 'Permanent',
-                'email' => 'alma.lawson@example.com',
-                'phone' => '09514785214',
-                'location' => 'Barangay San Isidro, General Santos City',
-                'submitted_at' => 'Jan 20, 2026 • 8:15 AM',
-            ],
-            [
-                'name' => 'Annette Black',
-                'avatar' => 'https://i.pravatar.cc/96?img=32',
-                'role' => 'NSAP',
-                'department' => 'ODP',
-                'type' => 'Job On Call',
-                'email' => 'bill.sanders@example.com',
-                'phone' => '09514785214',
-                'location' => 'Barangay Apopong, General Santos City',
-                'submitted_at' => 'Jan 19, 2026 • 4:42 PM',
-            ],
-            [
-                'name' => 'Ronald Richards',
-                'avatar' => 'https://i.pravatar.cc/96?img=12',
-                'role' => 'NSAP',
-                'department' => 'NSAP',
-                'type' => 'Permanent',
-                'email' => 'weaver@example.com',
-                'phone' => '09125418214',
-                'location' => 'Barangay Bula, General Santos City',
-                'submitted_at' => 'Jan 18, 2026 • 9:05 AM',
-            ],
-            [
-                'name' => 'Ralph Edwards',
-                'avatar' => 'https://i.pravatar.cc/96?img=5',
-                'role' => 'OPD',
-                'department' => 'OPD',
-                'type' => 'Job On Call',
-                'email' => 'simmons@example.com',
-                'phone' => '09125418214',
-                'location' => 'Barangay Calumpang, General Santos City',
-                'submitted_at' => 'Jan 17, 2026 • 5:30 PM',
-            ],
-            [
-                'name' => 'Devon Lane',
-                'avatar' => 'https://i.pravatar.cc/96?img=65',
-                'role' => 'OPD',
-                'department' => 'OPD',
-                'type' => 'Permanent',
-                'email' => 'devon.lane@example.com',
-                'phone' => '09125418214',
-                'location' => 'Barangay Lagao, General Santos City',
-                'submitted_at' => 'Jan 16, 2026 • 10:12 AM',
-            ],
-        ],
+        'recentSubmissions' => $recentSubmissions,
     ];
 
     return view('dashboard', compact('stats'));
@@ -287,6 +213,10 @@ Route::post('/pds-form/{id}/status', [App\Http\Controllers\PdsReviewController::
 Route::get('/pds-preview/{user}', [App\Http\Controllers\PdsPdfController::class, 'previewForAdmin'])
     ->middleware(['auth:admin', 'verified'])
     ->name('pds.preview.admin');
+
+Route::get('/pds-preview/{user}/download', [App\Http\Controllers\PdsPdfController::class, 'downloadForAdmin'])
+    ->middleware(['auth:admin', 'verified'])
+    ->name('pds.preview.admin.download');
 
 //Export/Download logic
 if (! function_exists('buildPdsSubmissionsXlsx')) {

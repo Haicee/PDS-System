@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\RegistrationUser;
+use App\Models\UserProfile;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -39,6 +40,7 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'type' => ['required', 'in:Permanent Employee,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
+            'profile_photo' => ['required', 'image', 'max:3072'],
         ]);
         
     $role = str_starts_with($request->email, 'admin1@gmail.com') ? 'admin' : 'employee';
@@ -65,6 +67,15 @@ class RegisteredUserController extends Controller
             'status' => $status,
             'location_assigned' => $request->location_assigned,
             'role' => $role,
+        ]);
+
+        // Store latest captured/uploaded photo
+        $path = $request->file('profile_photo')->store('profiles', 'public');
+
+        UserProfile::create([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'profile' => $path,
         ]);
 
         event(new Registered($user));

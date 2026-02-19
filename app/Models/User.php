@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -53,7 +54,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    
+
     public function hasSubmittedPds(): bool
     {
     // Only employees can have PDS submissions
@@ -65,6 +66,11 @@ class User extends Authenticatable
         ->where('user_id', $this->id)
         ->exists();
 }
+
+    public function profile(): HasOne
+    {
+        return $this->hasOne(UserProfile::class, 'user_id');
+    }
 }
 
 
