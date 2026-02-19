@@ -140,6 +140,7 @@ id="remarks-prototype"
 name="remarks[]"
 class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
 style="min-height:350px; white-space:pre-wrap;"
+disabled
 placeholder="Sample: If applying to Supervising Administrative Officer
 
 •\tDuration:  February 11, 2011 – present
@@ -181,11 +182,9 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 @if(empty($pdfMode))
 <input type="file" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base" style="display: none;">
 @endif
-<span class="mt-2">/</span>
 @if(empty($pdfMode))
 <input type="file" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none" style="display: none;">
 @endif
-<span class="mt-2">/</span>
 @if(empty($pdfMode))
 <input type="file" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none" style="display: none;">
 @endif

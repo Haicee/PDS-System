@@ -136,19 +136,18 @@ class PdsPdfController extends Controller
         $npmPath = env('BROWSERSHOT_NPM_PATH', 'C:\\Program Files\\nodejs\\npm.cmd');
 
         $shot = Browsershot::html($html)
-            ->format('A4')
-            ->margins(10, 10, 10, 10)
-            ->scale(0.48) // reduced scale to fit content better
-            ->emulateMedia('print')
-            ->showBackground()
-            ->setOption('printBackground', true)
-            ->waitUntilNetworkIdle(false)
-            ->timeout(240) // increased timeout for multiple pages
-            ->setDelay(1000) // increased delay to ensure all content loads
-            ->hideHeaderAndFooter()
-            ->setOption('preferCSSPageSize', true)
-            ->setOption('args', ['--disable-dev-shm-usage', '--no-sandbox'])
-            ->paperSize(8.27, 11.7); // A4 size in inches
+        ->paperSize(8.5, 13, 'in') // FORCE inches
+        ->margins(5, 10, 5, 10)
+        ->scale(.58)
+        ->emulateMedia('print')
+        ->showBackground()
+        ->setOption('printBackground', true)
+        ->waitUntilNetworkIdle()
+        ->timeout(240)
+        ->setDelay(1000)
+        ->hideHeaderAndFooter()
+        ->setOption('args', ['--disable-dev-shm-usage', '--no-sandbox']);
+
 
         if (is_file($nodePath)) {
             $shot->setNodeBinary($nodePath);

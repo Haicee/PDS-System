@@ -309,6 +309,54 @@
         }
     });
 
+    // Client-side cache to persist form4 entries across navigation
+    const CACHE_KEY = 'pds_form4_cache';
+
+    const loadCache = () => {
+        let data = {};
+        try { data = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch (e) { data = {}; }
+        Object.entries(data).forEach(([name, stored]) => {
+            const selector = `[name="${cssName(name)}"]`;
+            const els = Array.from(document.querySelectorAll(selector));
+            els.forEach(el => {
+                if (el.type === 'checkbox') {
+                    const arr = Array.isArray(stored) ? stored.map(String) : [String(stored)];
+                    el.checked = arr.includes(String(el.value));
+                } else if (el.type === 'radio') {
+                    el.checked = String(stored) === String(el.value);
+                } else {
+                    el.value = stored;
+                    if (el.tagName === 'TEXTAREA') el.dispatchEvent(new Event('input'));
+                }
+            });
+        });
+    };
+
+    const saveCache = () => {
+        const fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'))
+          .filter(el => el.type !== 'file');
+        const data = {};
+        fields.forEach(el => {
+            const name = el.name;
+            if (!name) return;
+            if (el.type === 'checkbox') {
+                if (!data[name]) data[name] = [];
+                if (el.checked) data[name].push(el.value);
+            } else if (el.type === 'radio') {
+                if (el.checked) data[name] = el.value;
+            } else {
+                data[name] = el.value;
+            }
+        });
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    };
+
+    document.addEventListener('input', saveCache, true);
+    document.addEventListener('change', saveCache, true);
+
+    // Load cache after session hydration so recent edits win
+    loadCache();
+
     const autoGrow = (el) => {
         el.style.height = 'auto';
         el.style.height = `${el.scrollHeight}px`;
