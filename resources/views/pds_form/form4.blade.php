@@ -420,9 +420,44 @@
               boxes.forEach(b => { if (b !== activeBox) b.checked = false; });
             }
             validateRequired();
+            refreshSequential();
           });
         });
       });
+
+      const groupMap = new Map(conditionalGroups.map(g => [g.name, g]));
+      const sequentialOrder = [
+        'q34_a','q34_b','q35_a','q35_b','q36','q37','q38_a','q38_b','q39','q40_a','q40_b','q40_c'
+      ];
+
+      const setGroupEnabled = (name, enabled) => {
+        const group = groupMap.get(name);
+        if (!group) return;
+        group.boxes.forEach(b => {
+          b.disabled = !enabled;
+          b.parentElement?.classList.toggle('opacity-60', !enabled);
+        });
+        group.details.forEach(el => {
+          el.disabled = !enabled;
+          el.classList.toggle('bg-gray-200', !enabled);
+          el.classList.toggle('text-gray-500', !enabled);
+          el.classList.toggle('cursor-not-allowed', !enabled);
+        });
+      };
+
+      const isGroupAnswered = (group) => group?.boxes?.some(b => b.checked);
+
+      const refreshSequential = () => {
+        let allow = true;
+        sequentialOrder.forEach(name => {
+          const group = groupMap.get(name);
+          if (!group) return;
+          setGroupEnabled(name, allow);
+          if (allow && !isGroupAnswered(group)) {
+            allow = false;
+          }
+        });
+      };
 
       const firstRowSets = [referenceFirstRow];
 
@@ -655,12 +690,15 @@
       loadCache();
       updateSignaturePreview4();
 
+      refreshSequential();
+
       fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
         .then(r => r.ok ? r.json() : null)
         .then(json => {
           if (!json || !json.data) return;
           loadCache(json.data);
           updateSignaturePreview4();
+          refreshSequential();
         })
         .catch(() => {});
 
@@ -940,7 +978,7 @@
           Right Thumbmark
         </div>
       </div>
-      <input type="file" name="thumbmark" accept="image/*" class="hidden" onchange="previewThumb(event)" required>
+      <input type="file" name="thumbmark" accept="image/*" class="hidden" onchange="previewThumb(event)">
     </label>
   </div>
 </td>
@@ -1105,7 +1143,6 @@
         accept="image/*"
         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         onchange="handleSignatureUpload4(this.files[0])"
-        @if(empty($signaturePath)) required @endif
       />
 
       <img

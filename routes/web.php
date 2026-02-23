@@ -748,7 +748,7 @@ Route::middleware(['auth','role:employee'])->group(function () {
     Route::view('/employee/pds/form2', 'pds_form.form2')->name('pds.form2');
     Route::view('/employee/pds/form3', 'pds_form.form3')->name('pds.form3');
     Route::view('/employee/pds/form4', 'pds_form.form4')->name('pds.form4');
-    Route::view('/employee/pds/form5', 'pds_form.form5')->name('pds.form5');
+    Route::get('/employee/pds/form5', [PdsStepController::class, 'form5'])->name('pds.form5');
 });
 
 
