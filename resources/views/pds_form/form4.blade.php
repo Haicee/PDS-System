@@ -634,36 +634,46 @@
           if (!el.name || el.disabled) return;
           if (["button","submit","reset","file"].includes(el.type)) return;
 
+          // Skip very large/base64 fields (e.g., signature data URLs) to avoid quota errors
+          const rawValue = el.value || '';
+          const isLargeDataUrl = typeof rawValue === 'string' && rawValue.length > 2000 && rawValue.startsWith('data:');
+          const skipCacheFields = ['signature_data', 'signature_path', 'signature', 'signature_file'];
+          if (skipCacheFields.includes(el.name) || isLargeDataUrl) {
+            return;
+          }
+
           const isArrayField = el.name.endsWith('[]');
 
           if (el.type === 'checkbox') {
             if (singleSelectCheckboxNames.has(el.name)) {
               if (el.checked) {
-                data[el.name] = el.value;
+                data[el.name] = rawValue;
               } else if (!data[el.name]) {
                 data[el.name] = '';
               }
             } else {
               if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
-              if (el.checked) data[el.name].push(el.value);
+              if (el.checked) data[el.name].push(rawValue);
             }
           }
           else if (el.type === 'radio') {
-            if (el.checked) data[el.name] = el.value;
+            if (el.checked) data[el.name] = rawValue;
           }
           else {
             if (isArrayField) {
               if (!data[el.name]) data[el.name] = [];
-              data[el.name].push(el.value);
+              data[el.name].push(rawValue);
             } else {
-              data[el.name] = el.value;
+              data[el.name] = rawValue;
             }
           }
         });
 
         try {
           localStorage.setItem(storageKey, JSON.stringify(data));
-        } catch (e) {}
+        } catch (err) {
+          console.warn('localStorage quota exceeded, skipping cache save', err);
+        }
       };
 
       const autoSaveToServer = (() => {

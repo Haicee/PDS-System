@@ -297,36 +297,46 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!el.name || el.disabled) return;
       if (["button","submit","reset","file"].includes(el.type)) return;
 
+      // Skip very large/base64 fields (e.g., signature data URLs) to avoid quota errors
+      const rawValue = el.value || '';
+      const isLargeDataUrl = typeof rawValue === 'string' && rawValue.length > 2000 && rawValue.startsWith('data:');
+      const skipCacheFields = ['signature_data', 'signature_path', 'signature', 'signature_file'];
+      if (skipCacheFields.includes(el.name) || isLargeDataUrl) {
+        return;
+      }
+
       const isArrayField = el.name.endsWith('[]');
 
       if (el.type === 'checkbox') {
         if (singleSelectCheckboxNames.has(el.name)) {
           if (el.checked) {
-            data[el.name] = el.value;
+            data[el.name] = rawValue;
           } else if (!data[el.name]) {
             data[el.name] = '';
           }
         } else {
           if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
-          if (el.checked) data[el.name].push(el.value);
+          if (el.checked) data[el.name].push(rawValue);
         }
       }
       else if (el.type === 'radio') {
-        if (el.checked) data[el.name] = el.value;
+        if (el.checked) data[el.name] = rawValue;
       }
       else {
         if (isArrayField) {
           if (!data[el.name]) data[el.name] = [];
-          data[el.name].push(el.value);
+          data[el.name].push(rawValue);
         } else {
-          data[el.name] = el.value;
+          data[el.name] = rawValue;
         }
       }
     });
 
     try {
       localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch (e) {}
+    } catch (err) {
+      console.warn('localStorage quota exceeded, skipping cache save', err);
+    }
   };
 
   const autoSaveToServer = (() => {
@@ -537,13 +547,17 @@ Add Row
 
 <div class="mt-3 flex justify-end">
 <button id="submit-pds-btn"
-type="submit"
-disabled
-class="px-5 py-2 bg-green-600 text-white rounded opacity-50 cursor-not-allowed pointer-events-none">
-Submit PDS
+  type="button"
+  disabled
+  data-submitpds-trigger
+  data-submitpds-form="pds-form5"
+  aria-disabled="true"
+  class="px-5 py-2 bg-green-600 text-white rounded opacity-50 cursor-not-allowed pointer-events-none">
+  Submit PDS
 </button>
 </div>
 
 </div>
 </form>
+<x-submitpds />
 </x-app-layout>

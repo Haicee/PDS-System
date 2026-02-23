@@ -47,7 +47,10 @@ class PdsStepController extends Controller
     public function autoSave(Request $request)
     {
         $userId = Auth::id();
+        \Log::info('Auto-save attempt', ['user_id' => $userId, 'has_data' => !empty($request->all())]);
+        
         if (!$userId) {
+            \Log::error('Auto-save failed: No user authenticated');
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -65,7 +68,9 @@ class PdsStepController extends Controller
         $draft->data = array_replace_recursive($existingData, $data);
         $draft->save();
 
-        return response()->json(['status' => 'ok']);
+        \Log::info('Auto-save successful', ['user_id' => $userId, 'data_keys' => array_keys($data)]);
+
+        return response()->json(['status' => 'ok', 'saved_keys' => array_keys($data)]);
     }
 
     public function draft()

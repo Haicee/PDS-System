@@ -2434,7 +2434,11 @@
         document.addEventListener('DOMContentLoaded', () => {
 
   const form = document.querySelector('#pds-form1');
-  if (!form) return;
+  if (!form) {
+    console.error('Form element #pds-form1 not found!');
+    return;
+  }
+  console.log('Form element found:', form);
 
   const storageKey = 'pds_form_step1_' + ({{ auth()->id() ?? 0 }});
   const singleSelectCheckboxNames = new Set(['sex[]','civilstatus[]','citizenship[]']);
@@ -2551,34 +2555,46 @@
       if (!el.name || el.disabled) return;
       if (["button","submit","reset","file"].includes(el.type)) return;
 
+      // Skip very large/base64 fields (e.g., signature data URLs) to avoid quota errors
+      const rawValue = el.value || '';
+      const isLargeDataUrl = typeof rawValue === 'string' && rawValue.length > 2000 && rawValue.startsWith('data:');
+      const skipCacheFields = ['signature_data', 'signature_path', 'signature', 'signature_file'];
+      if (skipCacheFields.includes(el.name) || isLargeDataUrl) {
+        return;
+      }
+
       const isArrayField = el.name.endsWith('[]');
 
       if (el.type === 'checkbox') {
         if (singleSelectCheckboxNames.has(el.name)) {
           if (el.checked) {
-            data[el.name] = el.value;
+            data[el.name] = rawValue;
           } else if (!data[el.name]) {
             data[el.name] = '';
           }
         } else {
           if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
-          if (el.checked) data[el.name].push(el.value);
+          if (el.checked) data[el.name].push(rawValue);
         }
       }
       else if (el.type === 'radio') {
-        if (el.checked) data[el.name] = el.value;
+        if (el.checked) data[el.name] = rawValue;
       }
       else {
         if (isArrayField) {
           if (!data[el.name]) data[el.name] = [];
-          data[el.name].push(el.value);
+          data[el.name].push(rawValue);
         } else {
-          data[el.name] = el.value;
+          data[el.name] = rawValue;
         }
       }
     });
 
-    localStorage.setItem(storageKey, JSON.stringify(data));
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    } catch (err) {
+      console.warn('localStorage quota exceeded, skipping cache save', err);
+    }
   };
 
   // --- Signature upload with auto background removal (single source for all forms) ---
@@ -2625,24 +2641,44 @@
       clearTimeout(timer);
       timer = setTimeout(() => {
         const formData = new FormData(form);
+        console.log('Auto-saving to server...');
         fetch('{{ route('pds.autosave') }}', {
           method: 'POST',
           headers: {
             'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
           },
           body: formData
-        }).catch(() => {});
+        })
+        .then(response => {
+          if (!response.ok) {
+            console.error('Auto-save failed:', response.status, response.statusText);
+            throw new Error('Auto-save failed');
+          }
+          console.log('Auto-save successful');
+          return response.json();
+        })
+        .then(data => {
+          console.log('Auto-save response:', data);
+        })
+        .catch(error => {
+          console.error('Auto-save error:', error);
+        });
       }, 800);
     };
   })();
 
   const persist = () => {
+    console.log('Persist function called');
     saveCache();
     autoSaveToServer();
   };
 
   loadCache();
   updateSignaturePreviewFromInputs();
+
+  // Debug: Check if form element exists
+  console.log('Form element:', form);
+  console.log('Form event listener attached');
 
   // Enforce single select behavior for specific checkbox groups
   document.querySelectorAll('input[type="checkbox"]').forEach(box => {
@@ -2666,8 +2702,14 @@
     })
     .catch(() => {});
 
-  form.addEventListener('input', persist);
-  form.addEventListener('change', persist);
+  form.addEventListener('input', (e) => {
+    console.log('Form input event triggered on:', e.target.name, e.target.type);
+    persist();
+  });
+  form.addEventListener('change', (e) => {
+    console.log('Form change event triggered on:', e.target.name, e.target.type);
+    persist();
+  });
 
 });
 </script>
