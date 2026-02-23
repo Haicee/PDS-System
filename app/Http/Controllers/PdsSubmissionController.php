@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use App\Models\PdsSubmission;
 use App\Models\User;
 
@@ -45,7 +46,31 @@ class PdsSubmissionController extends Controller
             abort(422, "$label requires at least one entry or an 'NA'.");
         };
 
-        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa) {
+        $newPhotoPath = null;
+        if ($req->hasFile('photo')) {
+            $newPhotoPath = $req->file('photo')->store('passport_photo', 'public');
+        } elseif ($req->filled('photo_data')) {
+            // Fallback: data URL from camera capture saved in session
+            $dataUrl = $req->input('photo_data');
+            if (str_starts_with($dataUrl, 'data:image')) {
+                [$meta, $content] = explode(',', $dataUrl, 2);
+                $ext = 'jpg';
+                if (preg_match('/data:image\/(.+);base64/', $meta, $m)) {
+                    $ext = $m[1];
+                }
+                $binary = base64_decode($content, true);
+                if ($binary !== false) {
+                    $filename = 'passport_photo/' . uniqid('passport_', true) . '.' . $ext;
+                    Storage::disk('public')->put($filename, $binary);
+                    $newPhotoPath = $filename;
+                }
+            }
+        }
+
+        $oldPhotoPath = null;
+        $existingSignatureRow = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+
+        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $newPhotoPath, &$oldPhotoPath, $existingSignatureRow) {
             DB::table('pds_personal_infos')->updateOrInsert(
                 ['user_id' => $userId],
                 [
@@ -173,6 +198,22 @@ class PdsSubmissionController extends Controller
                 $name = strtoupper(trim((string) $row['firstname']));
                 return $name !== '' && $name !== 'NA';
             });
+
+        if ($oldPhotoPath && $newPhotoPath && $oldPhotoPath !== $newPhotoPath) {
+            $oldFilename = basename($oldPhotoPath);
+            $oldSanitized = $oldFilename ? 'passport_photo/' . $oldFilename : null;
+            if ($oldSanitized && Storage::disk('public')->exists($oldSanitized)) {
+                Storage::disk('public')->delete($oldSanitized);
+            }
+        }
+
+        if ($oldPhotoPath && $newPhotoPath && $oldPhotoPath !== $newPhotoPath) {
+            $oldFilename = basename($oldPhotoPath);
+            $oldSanitized = $oldFilename ? 'passport_photo/' . $oldFilename : null;
+            if ($oldSanitized && Storage::disk('public')->exists($oldSanitized)) {
+                Storage::disk('public')->delete($oldSanitized);
+            }
+        }
 
             if ($hasRealChild) {
                 $children = $children->filter(function ($row) {
@@ -331,9 +372,15 @@ class PdsSubmissionController extends Controller
                     'address' => $req->input("reference_address.$i"),
                     'contact' => $req->input("reference_contact.$i"),
                 ];
-            })->filter($rowHasData);
+            })->filter(function ($row) use ($rowHasData) {
+                $name = strtoupper(trim((string) ($row['name'] ?? '')));
+                if ($name === 'NA' || $name === 'N/A') {
+                    return false;
+                }
+                return $rowHasData($row);
+            });
+
             if ($refs->isNotEmpty()) {
-                $validateNa([$req->input('reference_name', [])], 'References');
                 // Use upsert to avoid PK collisions
                 DB::table('pds_references')->upsert($refs->all(), ['id'], ['name','address','contact','user_id']);
                 // ensure only current user's refs remain
@@ -349,6 +396,18 @@ class PdsSubmissionController extends Controller
             if ($remarks->isNotEmpty()) {
                 DB::table('pds_form5_remarks')->insert($remarks->map(fn ($v) => ['user_id' => $userId, 'remarks' => $v])->all());
             }
+
+            $photoPathToPersist = $newPhotoPath ?? ($existingSignatureRow->photo_file_path ?? null);
+            $oldPhotoPath = $existingSignatureRow->photo_file_path ?? null;
+
+            DB::table('pds_signature_files')->updateOrInsert(
+                ['user_id' => $userId],
+                [
+                    'photo_file_path' => $photoPathToPersist,
+                    'signature_file_path' => $existingSignatureRow->signature_file_path ?? 'NA',
+                    'thumbmark_file_path' => $existingSignatureRow->thumbmark_file_path ?? 'NA',
+                ]
+            );
 
             $user = User::find($userId);
             if ($user) {

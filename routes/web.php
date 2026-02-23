@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\PdsSubmission;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ManageUserController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use App\Models\AdminUser;
@@ -31,57 +32,9 @@ Route::get('/employee', [EmployeeController::class, 'dashboard'])
     ->name('employee.dashboard');
 
 // Dashboard Route
-Route::get('/dashboard', function () {
-    $permanentCount = User::where('type', 'Permanent Employee')->count();
-    $jobOrderCount = User::where('type', 'Job Order')->count();
-
-    $pendingCount = PdsSubmission::where('status', 'Pending')->count();
-    $approvedCount = PdsSubmission::where('status', 'Approved')->count();
-    $rejectedCount = PdsSubmission::where('status', 'Rejected')->count();
-
-    $recentSubmissions = PdsSubmission::with('user')
-        ->orderBy('submitted', 'desc')
-        ->limit(10)
-        ->get()
-        ->map(function ($submission) {
-            $user = $submission->user;
-            $gender = $user->gender ?? 'Male';
-            $avatar = $gender === 'Female'
-                ? 'https://i.pravatar.cc/96?img=47'
-                : 'https://i.pravatar.cc/96?img=12';
-
-            return [
-                'id' => $submission->id,
-                'user_id' => $submission->user_id,
-                'name' => $submission->name ?? $user->name ?? '—',
-                'avatar' => $avatar,
-                'unit' => $submission->unit ?? $user->unit ?? '—',
-                'type' => $submission->type ?? $user->type ?? '—',
-                'email' => $submission->email ?? $user->email ?? '—',
-                'phone' => $user->phone ?? '—',
-                'location' => $user->location_assigned ?? '—',
-                'status' => $submission->status ? ucfirst($submission->status) : 'Pending',
-                'status_key' => $submission->status ? strtolower($submission->status) : 'pending',
-                'submitted_at' => $submission->submitted
-                    ? $submission->submitted->format('M d, Y • g:i A')
-                    : '—',
-            ];
-        });
-
-    $stats = [
-        // Permanent Employees card
-        'totalEmployees' => $permanentCount,
-        // Job Order card
-        'verifiedEmployees' => $jobOrderCount,
-        'pendingPds' => $pendingCount,
-        'approvedPds' => $approvedCount,
-        'rejectedPds' => $rejectedCount,
-        'recentHires' => 6,
-        'recentSubmissions' => $recentSubmissions,
-    ];
-
-    return view('dashboard', compact('stats'));
-})->middleware(['auth:admin,web'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth:admin,web'])
+    ->name('dashboard');
 
 
 

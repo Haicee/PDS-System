@@ -324,8 +324,8 @@
     <!-- PASSPORT PHOTO -->
     <label class="cursor-pointer">
       <div class="border-2 border-black w-[3.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
-        <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
-        <div id="photoPlaceholder">
+        <img id="photoPreview" src="{{ $passportPhotoUrl ?? '' }}" class="absolute inset-0 w-full h-full object-cover {{ empty($passportPhotoUrl) ? 'hidden' : '' }}" />
+        <div id="photoPlaceholder" class="{{ empty($passportPhotoUrl) ? '' : 'hidden' }}">
           Passport-sized unfiltered<br>
           picture taken within<br>
           the last 6 months<br>

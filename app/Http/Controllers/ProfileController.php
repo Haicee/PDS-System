@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -18,6 +19,7 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'avatar' => $this->avatarUrl($request->user()?->profile?->profile),
         ]);
     }
 
@@ -26,13 +28,31 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        if ($request->hasFile('profile_photo')) {
+            $oldPath = $user->profile?->profile;
+            $path = $request->file('profile_photo')->store('profiles', 'public');
+            $user->profile()->updateOrCreate([], [
+                'name' => $user->name,
+                'profile' => $path,
+            ]);
+
+            if ($oldPath) {
+                $oldFilename = basename($oldPath);
+                $oldSanitized = $oldFilename ? 'profiles/' . $oldFilename : null;
+                if ($oldSanitized && Storage::disk('public')->exists($oldSanitized)) {
+                    Storage::disk('public')->delete($oldSanitized);
+                }
+            }
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }

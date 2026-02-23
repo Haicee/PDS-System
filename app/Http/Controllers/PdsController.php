@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PdsController extends Controller
 {
@@ -94,8 +95,18 @@ class PdsController extends Controller
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
         $idInfo = DB::table('pds_id_infos')->where('user_id', $userId)->first();
         $references = DB::table('pds_references')->where('user_id', $userId)->get();
+        $passportPhotoPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('photo_file_path');
 
-        return view('pdsreview.pdsreview4', compact('declaration', 'idInfo', 'references'));
+        $passportPhotoUrl = null;
+        if ($passportPhotoPath) {
+            $filename = basename($passportPhotoPath);
+            $sanitized = $filename ? 'passport_photo/' . $filename : null;
+            if ($sanitized && Storage::disk('public')->exists($sanitized)) {
+                $passportPhotoUrl = $this->assetFromPublicDisk($sanitized);
+            }
+        }
+
+        return view('pdsreview.pdsreview4', compact('declaration', 'idInfo', 'references', 'passportPhotoUrl'));
     }
 
     public function review5()

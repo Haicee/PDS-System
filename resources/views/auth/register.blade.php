@@ -187,17 +187,18 @@
                     <label class="text-sm font-medium text-slate-700" for="profile_photo">Profile Photo</label>
 
                     <div class="flex flex-col items-center gap-3">
-                        <div class="relative h-32 w-32 overflow-hidden rounded-full border-4 border-white/70 bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 shadow-inner">
+                        <div class="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full overflow-hidden border border-gray-200 shadow-sm bg-white">
                             <video x-ref="video" class="absolute inset-0 h-full w-full object-cover" x-show="streaming" playsinline muted></video>
                             <template x-if="preview">
                                 <img :src="preview" alt="Profile preview" class="h-full w-full object-cover" />
                             </template>
                             <template x-if="!preview">
                                 <div class="flex h-full w-full items-center justify-center text-slate-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-44 lg:h-44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                 </div>
                             </template>
                         </div>
+
 
                         <div class="flex flex-col items-center gap-2">
                             <input 

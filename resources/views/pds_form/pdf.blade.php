@@ -1736,6 +1736,7 @@
             ">
 
                 <img id="photoPreview"
+                     src="{{ $passportPhotoUrl ?? '' }}"
                      style="
                         position:absolute;
                         top:0;
@@ -1743,10 +1744,10 @@
                         width:100%;
                         height:100%;
                         object-fit:cover;
-                        display:none;
+                        display: {{ empty($passportPhotoUrl) ? 'none' : 'block' }};
                      ">
 
-                <div>
+                <div style="{{ empty($passportPhotoUrl) ? '' : 'display:none;' }}">
                     Passport-sized unfiltered<br>
                     picture taken within<br>
                     the last 6 months<br>

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;    
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Storage;
 
 class PdsPdfController extends Controller
 {
@@ -93,6 +94,16 @@ class PdsPdfController extends Controller
         $references = DB::table('pds_references')->where('user_id', $userId)->get();
         $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
 
+        $passportPhotoPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('photo_file_path');
+        $passportPhotoUrl = null;
+        if ($passportPhotoPath) {
+            $filename = basename($passportPhotoPath);
+            $sanitized = $filename ? 'passport_photo/' . $filename : null;
+            if ($sanitized && Storage::disk('public')->exists($sanitized)) {
+                $passportPhotoUrl = $this->assetFromPublicDisk($sanitized);
+            }
+        }
+
         return compact(
             'personal',
             'address',
@@ -111,7 +122,8 @@ class PdsPdfController extends Controller
             'training',
             'otherInfo',
             'references',
-            'remarks'
+            'remarks',
+            'passportPhotoUrl'
         );
     }
 

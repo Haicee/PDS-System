@@ -6,40 +6,38 @@ use App\Models\User;
 use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ManageUserController extends Controller
 {
+    // profile
     public function index(Request $request)
-    {
-        $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned')
-            ->with('profile')
-            ->get()
-            ->map(function (User $user) {
-                $rawPath = $user->profile?->profile;
-                $sanitizedPath = $rawPath ? ltrim(str_replace('storage/', '', $rawPath), '/') : null;
-                $avatar = ($sanitizedPath && Storage::disk('public')->exists($sanitizedPath))
-                    ? Storage::disk('public')->url($sanitizedPath)
-                    : asset('images/avatar.jpg');
+        {
+            $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned')
+                ->with('profile')
+                ->get()
+                ->map(function (User $user) {
+                    $avatar = $this->avatarUrl($user->profile?->profile);
 
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'gender' => $user->gender,
-                    'unit' => $user->unit,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'type' => $user->type,
-                    'status' => $user->status,
-                    'location' => $user->location_assigned,
-                    'avatar' => $avatar,
-                ];
-            })
-            ->values();
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'gender' => $user->gender,
+                        'unit' => $user->unit,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'type' => $user->type,
+                        'status' => $user->status,
+                        'location' => $user->location_assigned,
+                        'avatar' => $avatar,
+                    ];
+                })
+                ->values();
 
-        return view('manage-user', compact('employees'));
-    }
+            return view('manage-user', compact('employees'));
+        }
 
+    
+        // update
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
@@ -61,6 +59,7 @@ class ManageUserController extends Controller
         ]);
     }
 
+    // delete all account info
     public function destroy(User $user)
     {
         DB::transaction(function () use ($user) {
