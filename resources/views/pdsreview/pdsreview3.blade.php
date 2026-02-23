@@ -333,9 +333,12 @@
       </td>
 
        <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        @if(empty($pdfMode))
-        <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+      <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
+        @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+        @if($signatureUrl)
+          <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
+        @else
+          <div class="text-xs text-gray-600">No signature on file</div>
         @endif
       </div>
     </td>

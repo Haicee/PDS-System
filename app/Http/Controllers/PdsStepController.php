@@ -2,26 +2,36 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
+use App\Models\PdsDraft;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redirect;
 
 class PdsStepController extends Controller
 {
     public function saveStep(Request $request, int $step)
     {
-        // Do not store uploaded files in session (they are not serializable)
+        $userId = Auth::id();
+
+        $signaturePath = $this->storeSignature($request, $userId);
         $fileKeys = array_keys($request->allFiles());
         $data = $request->except(array_merge(['_token'], $fileKeys));
 
-        $existing = session('pds', []);
-        session(['pds' => array_replace_recursive($existing, $data)]);
+        if ($signaturePath) {
+            $data['signature_path'] = $signaturePath;
+        }
 
-        // Track names of fields seen (all textareas/inputs are considered required for front-end gating)
-        $seen = session('pds_required_names', []);
-        $currentNames = array_keys($data);
-        session(['pds_required_names' => array_values(array_unique(array_merge($seen, $currentNames)))]);
+        $draft = PdsDraft::firstOrCreate(
+            ['user_id' => $userId]
+        );
 
-        // Map next route
+        $existingData = $draft->data ?? [];
+
+        $draft->data = array_replace_recursive($existingData, $data);
+        $draft->save();
+
         $nextRoute = match ($step) {
             1 => 'pds.form2',
             2 => 'pds.form3',
@@ -30,6 +40,157 @@ class PdsStepController extends Controller
             default => 'pds.form5',
         };
 
-        return Redirect::route($nextRoute)->with('status', 'Saved step '.$step);
+        return redirect()->route($nextRoute)
+            ->with('status', 'Saved step ' . $step);
+    }
+
+    public function autoSave(Request $request)
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $signaturePath = $this->storeSignature($request, $userId);
+        $fileKeys = array_keys($request->allFiles());
+        $data = $request->except(array_merge(['_token'], $fileKeys));
+
+        if ($signaturePath) {
+            $data['signature_path'] = $signaturePath;
+        }
+
+        $draft = PdsDraft::firstOrCreate(['user_id' => $userId]);
+        $existingData = $draft->data ?? [];
+
+        $draft->data = array_replace_recursive($existingData, $data);
+        $draft->save();
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    public function draft()
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $draft = PdsDraft::where('user_id', $userId)->first();
+
+        return response()->json([
+            'data' => $draft->data ?? [],
+        ]);
+    }
+
+    public function form1()
+    {
+        $userId = Auth::id();
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        $data = $draft->data ?? [];
+        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        return view('pds_form.form1', compact('data', 'signaturePath'));
+    }
+
+      public function form2()
+    {
+        $userId = Auth::id();
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        $data = $draft->data ?? [];
+        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        return view('pds_form.form2', compact('data', 'signaturePath'));
+    }
+
+      public function form3()
+    {
+        $userId = Auth::id();
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        $data = $draft->data ?? [];
+        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        return view('pds_form.form3', compact('data', 'signaturePath'));
+    }
+
+      public function form4()
+    {
+        $userId = Auth::id();
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        $data = $draft->data ?? [];
+        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        return view('pds_form.form4', compact('data', 'signaturePath'));
+    }
+
+    public function form5()
+    {
+        $userId = Auth::id();
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        $data = $draft->data ?? [];
+        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        return view('pds_form.form5', compact('data', 'signaturePath'));
+    }
+
+    private function storeSignature(Request $request, int $userId): ?string
+    {
+        $disk = 'public';
+        $directory = 'pds/signatures';
+
+        $existingPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $providedPath = $request->input('signature_path');
+        if ($providedPath && !$request->hasFile('signature') && !$request->hasFile('signature_attachment')) {
+            return $providedPath;
+        }
+
+        $fileKeys = [
+            'signature',
+            'signature_attachment',
+            'signature_attachment_1',
+            'signature_attachment_2',
+            'signature_attachment_3',
+            'signature_attachment_4',
+            'signature_attachment_5',
+            'signature_file',
+        ];
+
+        foreach ($fileKeys as $key) {
+            $uploaded = $request->file($key);
+            if ($uploaded) {
+                $filename = 'signature_' . $userId . '_' . time() . '.' . $uploaded->getClientOriginalExtension();
+                $path = $uploaded->storeAs($directory, $filename, $disk);
+                DB::table('pds_signature_files')->updateOrInsert(
+                    ['user_id' => $userId],
+                    ['signature_file_path' => $path]
+                );
+                return $path;
+            }
+        }
+
+        $dataUrl = $request->input('signature_data');
+        if ($dataUrl && str_starts_with($dataUrl, 'data:image')) {
+            if (preg_match('/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/', $dataUrl, $matches)) {
+                $mime = $matches[1];
+                $base64 = $matches[2];
+                $binary = base64_decode($base64);
+                if ($binary !== false) {
+                    $extension = match ($mime) {
+                        'image/png' => 'png',
+                        'image/webp' => 'webp',
+                        default => 'jpg',
+                    };
+                    $filename = 'signature_' . $userId . '_' . time() . '.' . $extension;
+                    $path = $directory . '/' . $filename;
+                    Storage::disk($disk)->put($path, $binary, 'public');
+                    DB::table('pds_signature_files')->updateOrInsert(
+                        ['user_id' => $userId],
+                        ['signature_file_path' => $path]
+                    );
+                    return $path;
+                }
+            }
+        }
+
+        return $existingPath;
     }
 }

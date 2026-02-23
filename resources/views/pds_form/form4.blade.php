@@ -1,5 +1,5 @@
 <x-app-layout>
-<form method="POST" action="{{ route('pds.saveStep', 4) }}" enctype="multipart/form-data">
+<form id="pds-form4" method="POST" action="{{ route('pds.saveStep', 4) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
         <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
@@ -18,6 +18,22 @@
     /* Mobile responsiveness: allow horizontal scroll and tighter spacing */
     .pds-responsive { overflow-x: auto; }
     .pds-sheet { min-width: 980px; }
+    .signature-box {
+      position: relative;
+      background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .signature-box.signature-has-image {
+      background: transparent;
+      border-color: transparent;
+    }
+    .signature-box.signature-has-image img {
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
     @media (max-width: 768px) {
       .pds-sheet { min-width: 760px; }
       td, th { padding: 4px; }
@@ -38,6 +54,7 @@
     // PHOTO capture helpers
     let photoStream;
     const photoConstraints = { video: { width: { ideal: 640 }, height: { ideal: 480 } } };
+    const photoCacheKey = 'pds_form4_photo_data';
 
     async function startPhotoCamera() {
       const video = document.getElementById('photoVideo');
@@ -93,6 +110,8 @@
       img.classList.remove('hidden');
       placeholder.classList.add('hidden');
       hiddenInput.value = dataUrl;
+      try { localStorage.setItem(photoCacheKey, dataUrl); } catch (e) { console.warn('Photo cache failed', e); }
+      hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
 
       // Populate the hidden file input so the server still receives a file
       const file = dataUrlToFile(dataUrl, 'photo.jpg');
@@ -106,7 +125,54 @@
       video.classList.add('hidden');
     }
 
-    // No upload fallback; enforce camera capture only.
+    function applyPhotoDataUrl(dataUrl) {
+      const img = document.getElementById('photoPreview');
+      const placeholder = document.getElementById('photoPlaceholder');
+      const hiddenInput = document.getElementById('photoData');
+      const fileInput = document.getElementById('photoFile');
+      const video = document.getElementById('photoVideo');
+      if (!dataUrl || !img || !placeholder || !hiddenInput || !fileInput) return;
+
+      img.src = dataUrl;
+      img.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      hiddenInput.value = dataUrl;
+      try { localStorage.setItem(photoCacheKey, dataUrl); } catch (e) { console.warn('Photo cache failed', e); }
+
+      const file = dataUrlToFile(dataUrl, 'photo.jpg');
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      fileInput.files = transfer.files;
+
+      stopPhotoCamera();
+      if (video) {
+        video.classList.add('hidden');
+      }
+      validateRequired();
+    }
+
+    function previewPhotoFromFile(file) {
+      const hiddenInput = document.getElementById('photoData');
+      if (!file || !hiddenInput) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result || '';
+        applyPhotoDataUrl(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function loadCachedPhoto() {
+      const hiddenInput = document.getElementById('photoData');
+      if (!hiddenInput || hiddenInput.value) return;
+      try {
+        const cached = localStorage.getItem(photoCacheKey);
+        if (cached) applyPhotoDataUrl(cached);
+      } catch (e) {
+        console.warn('Photo cache load failed', e);
+      }
+    }
 
     // Auto-grow textareas used in the references table and ID/date fields
     function autoSize(el) {
@@ -115,12 +181,139 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      const form = document.querySelector('#pds-form4');
+      if (!form) return;
+
+      const storageBase = "{{ asset('storage') }}/";
+      const initialSignaturePath = @json($signaturePath ?? '');
+
+      const signatureDataInput4 = document.getElementById('signature_data4');
+      const signaturePathInput4 = document.getElementById('signature_path4');
+      const signaturePreviews4 = [
+        document.getElementById('signaturePreviewImg4a'),
+        document.getElementById('signaturePreviewImg4b')
+      ];
+      const signaturePlaceholders4 = [
+        document.getElementById('signaturePlaceholder4a'),
+        document.getElementById('signaturePlaceholder4b')
+      ];
+      const signatureBoxes4 = [
+        document.getElementById('signatureBox4a'),
+        document.getElementById('signatureBox4b')
+      ];
+
+      const buildSignatureUrl4 = (path) => {
+        if (!path) return '';
+        const cleaned = path.replace(/^public\//, '');
+        return storageBase + cleaned;
+      };
+
+      const updateSignaturePreview4 = () => {
+        const dataUrl = signatureDataInput4?.value;
+        const pathVal = signaturePathInput4?.value || initialSignaturePath;
+        const url = dataUrl || buildSignatureUrl4(pathVal);
+        signaturePreviews4.forEach((img, idx) => {
+          if (!img) return;
+          if (url) {
+            img.src = url;
+            img.classList.remove('hidden');
+            signaturePlaceholders4[idx]?.classList.add('hidden');
+            signatureBoxes4[idx]?.classList.add('signature-has-image');
+          } else {
+            img.classList.add('hidden');
+            signaturePlaceholders4[idx]?.classList.remove('hidden');
+            signatureBoxes4[idx]?.classList.remove('signature-has-image');
+          }
+        });
+      };
+
+      window.handleSignatureUpload4 = (file) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const threshold = 240;
+            for (let i = 0; i < data.length; i += 4) {
+              if (data[i] > threshold && data[i + 1] > threshold && data[i + 2] > threshold) {
+                data[i + 3] = 0;
+              }
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            const output = canvas.toDataURL('image/png');
+            if (signatureDataInput4) signatureDataInput4.value = output;
+            if (signaturePathInput4) signaturePathInput4.value = '';
+            updateSignaturePreview4();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+
       document.querySelectorAll('.ref-field, .grow-field').forEach(el => {
         autoSize(el);
         el.addEventListener('input', () => autoSize(el));
       });
 
-      // NA locking for [] groups (e.g., references) — first NA/N/A/NONE disables fields BELOW it
+      const sessionData = @json(session('pds', []));
+      const draftData = @json($data ?? []);
+      const flat = {};
+      const walk = (obj, prefix = '') => {
+        if (obj === null || obj === undefined) return;
+        if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
+        if (Array.isArray(obj)) {
+          obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
+        } else {
+          Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
+        }
+      };
+      walk(sessionData);
+      walk(draftData);
+
+      loadCachedPhoto();
+
+      const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
+      const setField = (el, value) => {
+        if (!el) return;
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          el.checked = Array.isArray(value) ? value.map(String).includes(String(el.value)) : String(el.value) === String(value);
+        } else {
+          el.value = value;
+          if (el.tagName === 'TEXTAREA') {
+            el.dispatchEvent(new Event('input'));
+          }
+        }
+      };
+
+      Object.entries(flat).forEach(([name, value]) => {
+        if (name === 'photo_data' && value) {
+          applyPhotoDataUrl(value);
+          return;
+        }
+
+        const exact = Array.from(document.querySelectorAll(`[name="${cssName(name)}"]`));
+        if (exact.length) {
+          exact.forEach(el => setField(el, value));
+          return;
+        }
+        const matchIndex = name.match(/\[(\d+)\]$/);
+        if (matchIndex) {
+          const idx = parseInt(matchIndex[1], 10);
+          const base = name.replace(/\[\d+\]$/, '[]');
+          const arrFields = Array.from(document.querySelectorAll(`[name="${cssName(base)}"]`));
+          if (arrFields[idx]) setField(arrFields[idx], value);
+        }
+      });
+
       const isNA = (val) => {
         const v = (val || '').trim().toUpperCase();
         return v === 'NA' || v === 'N/A' || v === 'NONE';
@@ -138,13 +331,18 @@
         if (!fields.length) return;
 
         const refresh = () => {
-          const firstNAIndex = fields.findIndex(f => isNA(f.value));
+          const firstField = fields[0];
+          const firstIsNA = firstField ? isNA(firstField.value) : false;
+
           fields.forEach((f, idx) => {
-            const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
+            const shouldDisable = firstIsNA && idx > 0;
             f.disabled = shouldDisable;
             f.classList.toggle('bg-gray-200', shouldDisable);
             f.classList.toggle('text-gray-500', shouldDisable);
             f.classList.toggle('cursor-not-allowed', shouldDisable);
+            if (shouldDisable && f.tagName === 'TEXTAREA') {
+              f.value = '';
+            }
           });
         };
 
@@ -152,20 +350,53 @@
         refresh();
       });
 
-      // Next button gating: require all visible fields (treat NA/N/A/NONE as filled)
+      // First-row logic for reference table
+      const rowGroup = (namesArr) => namesArr.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
+      const referenceFirstRow = rowGroup(['reference_name[]','reference_address[]','reference_contact[]']);
+
+      const disableFollowingRows = (namesArr, disable) => {
+        namesArr.forEach(n => {
+          const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+          fields.forEach((f, idx) => {
+            if (idx === 0) return;
+            f.disabled = disable;
+            f.classList.toggle('bg-gray-200', disable);
+            f.classList.toggle('text-gray-500', disable);
+            f.classList.toggle('cursor-not-allowed', disable);
+            if (disable && f.tagName === 'TEXTAREA') {
+              f.value = '';
+            }
+          });
+        });
+        updateSignaturePreview4();
+      };
+
+      const firstRowState = (fields) => {
+        const values = fields.map(f => (f?.value || '').trim());
+        const allNA = values.length && values.every(v => isNA(v));
+        const anyData = values.some(v => v !== '' && !isNA(v));
+        return { allNA, anyData };
+      };
+
+      const refreshRows = () => {
+        const refState = firstRowState(referenceFirstRow);
+        disableFollowingRows(['reference_name[]','reference_address[]','reference_contact[]'], refState.allNA);
+      };
+
+      referenceFirstRow.forEach(f => f?.addEventListener('input', refreshRows));
+      refreshRows();
+
       const nextBtn = document.getElementById('pds4-next');
-      const visibleFields = () => Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'))
-        .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
+      const requiredFields = Array.from(document.querySelectorAll('[required]'));
 
       const isFilled = (el) => {
-        if (el.type === 'file') return true; // exempt file inputs on this page
+        if (el.type === 'file') return el.files && el.files.length > 0;
         if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
         const val = (el.value || '').trim();
         if (isNA(val)) return true;
         return val !== '';
       };
 
-      // Conditional blocks: if YES checked, details required; if NO checked, details optional; require a choice
       const conditionalGroups = [];
       const seenNames = new Set();
       document.querySelectorAll('input[type="checkbox"][name]').forEach(box => {
@@ -181,9 +412,8 @@
           return td ? Array.from(td.querySelectorAll('input[type="text"], textarea')).filter(el => !boxes.includes(el)) : [];
         })();
 
-        conditionalGroups.push({ name, boxes, details });
+        conditionalGroups.push({ name, boxes, details, detailCache: {}, detailDisabledState: {} });
 
-        // Make YES/NO mutually exclusive per group
         boxes.forEach(activeBox => {
           activeBox.addEventListener('change', () => {
             if (activeBox.checked) {
@@ -194,22 +424,52 @@
         });
       });
 
+      const firstRowSets = [referenceFirstRow];
+
+      const visibleFields = () => Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'))
+        .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
+
       const validateRequired = () => {
         let hasMissing = false;
 
-        // Evaluate conditional groups
+        const hasMissingRequired = requiredFields.some(el => {
+          if (el.disabled || el.readOnly) return false;
+          if (el.offsetParent === null) return false; // ignore hidden required controls (e.g., camera file input)
+          return !isFilled(el);
+        });
+
         for (const group of conditionalGroups) {
           const [yesBox, noBox] = group.boxes;
           const yesChecked = yesBox && yesBox.checked;
           const noChecked = noBox && noBox.checked;
 
-          // Toggle detail inputs based on YES/NO
           group.details.forEach(el => {
             const disable = noChecked || (!yesChecked && !noChecked);
             el.disabled = disable;
             el.classList.toggle('bg-gray-200', disable);
             el.classList.toggle('text-gray-500', disable);
             el.classList.toggle('cursor-not-allowed', disable);
+            const cacheKey = el.name;
+            const wasDisabled = group.detailDisabledState[cacheKey] ?? false;
+            group.detailDisabledState[cacheKey] = disable;
+
+            // Restore only on transition from disabled -> enabled
+            if (!disable && wasDisabled) {
+              if (typeof group.detailCache[cacheKey] === 'string' && el.value === '') {
+                el.value = group.detailCache[cacheKey];
+              }
+            }
+
+            // While enabled, keep cache in sync with current value (including empty)
+            if (!disable) {
+              group.detailCache[cacheKey] = el.value;
+            }
+
+            // When disabling (NO), store current then clear so it won't submit
+            if (disable) {
+              group.detailCache[cacheKey] = el.value;
+              el.value = '';
+            }
           });
 
           if (!yesChecked && !noChecked) {
@@ -229,18 +489,12 @@
           }
         }
 
-        if (!hasMissing) {
-          // Check remaining fields not part of conditional groups
-          const conditionalElements = new Set();
-          conditionalGroups.forEach(g => {
-            g.boxes.forEach(b => conditionalElements.add(b));
-            g.details.forEach(d => conditionalElements.add(d));
-          });
+        const firstRowsIncomplete = firstRowSets.some(set => {
+          const state = firstRowState(set);
+          return !(state.allNA || state.anyData);
+        });
 
-          hasMissing = visibleFields()
-            .filter(el => !conditionalElements.has(el))
-            .some(el => !isFilled(el));
-        }
+        hasMissing = hasMissing || hasMissingRequired || firstRowsIncomplete;
 
         if (!nextBtn) return;
         if (hasMissing) {
@@ -252,8 +506,13 @@
         }
       };
 
-      document.addEventListener('input', validateRequired, true);
-      document.addEventListener('change', validateRequired, true);
+      document.addEventListener('input', () => { refreshRows(); validateRequired(); }, true);
+      document.addEventListener('change', () => { refreshRows(); validateRequired(); }, true);
+      // Initialize disabled until validated
+      if (nextBtn) {
+        nextBtn.setAttribute('aria-disabled', 'true');
+        nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      }
       validateRequired();
 
       if (nextBtn) {
@@ -265,103 +524,151 @@
           }
         });
       }
-    });
-  </script>
-  <script>
-    const sessionData = @json(session('pds', []));
-    const flat = {};
-    const walk = (obj, prefix = '') => {
-        if (obj === null || obj === undefined) return;
-        if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
-        if (Array.isArray(obj)) {
-            obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
-        } else {
-            Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
-        }
-    };
-    walk(sessionData);
 
-    const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
-    const setField = (el, value) => {
-        if (!el) return;
-        if (el.type === 'checkbox' || el.type === 'radio') {
-            el.checked = Array.isArray(value) ? value.map(String).includes(String(el.value)) : String(el.value) === String(value);
-        } else {
-            el.value = value;
-            if (el.tagName === 'TEXTAREA') {
-                el.dispatchEvent(new Event('input'));
-            }
-        }
-    };
+      // Local cache + autosave/draft
+      const storageKey = 'pds_form_step4_' + ({{ auth()->id() ?? 0 }});
+      const singleSelectCheckboxNames = new Set();
 
-    Object.entries(flat).forEach(([name, value]) => {
-        const exact = Array.from(document.querySelectorAll(`[name="${cssName(name)}"]`));
-        if (exact.length) {
-            exact.forEach(el => setField(el, value));
-            return;
-        }
-        const matchIndex = name.match(/\[(\d+)\]$/);
-        if (matchIndex) {
-            const idx = parseInt(matchIndex[1], 10);
-            const base = name.replace(/\[\d+\]$/, '[]');
-            const arrFields = Array.from(document.querySelectorAll(`[name="${cssName(base)}"]`));
-            if (arrFields[idx]) setField(arrFields[idx], value);
-        }
-    });
-
-    // Client-side cache to persist form4 entries across navigation
-    const CACHE_KEY = 'pds_form4_cache';
-
-    const loadCache = () => {
+      const loadCache = (overrideData = null) => {
         let data = {};
-        try { data = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch (e) { data = {}; }
+        try {
+          data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (e) {
+          data = {};
+        }
+
+        if (overrideData) {
+          data = { ...data, ...overrideData };
+        }
+
+        if (overrideData?.signature_path && signaturePathInput4) {
+          signaturePathInput4.value = overrideData.signature_path;
+        }
+        if (overrideData?.signature_data && signatureDataInput4) {
+          signatureDataInput4.value = overrideData.signature_data;
+        }
+
         Object.entries(data).forEach(([name, stored]) => {
-            const selector = `[name="${cssName(name)}"]`;
-            const els = Array.from(document.querySelectorAll(selector));
-            els.forEach(el => {
-                if (el.type === 'checkbox') {
-                    const arr = Array.isArray(stored) ? stored.map(String) : [String(stored)];
-                    el.checked = arr.includes(String(el.value));
-                } else if (el.type === 'radio') {
-                    el.checked = String(stored) === String(el.value);
-                } else {
-                    el.value = stored;
-                    if (el.tagName === 'TEXTAREA') el.dispatchEvent(new Event('input'));
-                }
+          const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+          if (name.endsWith('[]') && Array.isArray(stored)) {
+            elements.forEach((el, idx) => {
+              const val = stored[idx] ?? '';
+              if (el.type === 'checkbox') {
+                el.checked = Array.isArray(val) ? val.includes(el.value) : String(val) === el.value;
+              } else if (el.type === 'radio') {
+                el.checked = val === el.value;
+              } else {
+                if (!el.value) el.value = val;
+              }
+              if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+              }
             });
-        });
-    };
+            return;
+          }
 
-    const saveCache = () => {
-        const fields = Array.from(document.querySelectorAll('input[name], textarea[name], select[name]'))
-          .filter(el => el.type !== 'file');
-        const data = {};
-        fields.forEach(el => {
-            const name = el.name;
-            if (!name) return;
+          elements.forEach(el => {
             if (el.type === 'checkbox') {
-                if (!data[name]) data[name] = [];
-                if (el.checked) data[name].push(el.value);
-            } else if (el.type === 'radio') {
-                if (el.checked) data[name] = el.value;
-            } else {
-                data[name] = el.value;
+              if (Array.isArray(stored)) {
+                el.checked = stored.includes(el.value);
+              } else {
+                el.checked = String(stored) === el.value;
+              }
             }
+            else if (el.type === 'radio') {
+              el.checked = stored === el.value;
+            }
+            else {
+              if (!el.value) {
+                el.value = stored;
+              }
+            }
+
+            if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          });
         });
-        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    };
+      };
 
-    document.addEventListener('input', saveCache, true);
-    document.addEventListener('change', saveCache, true);
+      const saveCache = () => {
+        const data = {};
 
-    // Load cache after session hydration so recent edits win
-    loadCache();
+        Array.from(form.elements).forEach(el => {
+          if (!el.name || el.disabled) return;
+          if (["button","submit","reset","file"].includes(el.type)) return;
 
-    const autoGrow = (el) => {
-        el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
-    }
+          const isArrayField = el.name.endsWith('[]');
+
+          if (el.type === 'checkbox') {
+            if (singleSelectCheckboxNames.has(el.name)) {
+              if (el.checked) {
+                data[el.name] = el.value;
+              } else if (!data[el.name]) {
+                data[el.name] = '';
+              }
+            } else {
+              if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
+              if (el.checked) data[el.name].push(el.value);
+            }
+          }
+          else if (el.type === 'radio') {
+            if (el.checked) data[el.name] = el.value;
+          }
+          else {
+            if (isArrayField) {
+              if (!data[el.name]) data[el.name] = [];
+              data[el.name].push(el.value);
+            } else {
+              data[el.name] = el.value;
+            }
+          }
+        });
+
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(data));
+        } catch (e) {}
+      };
+
+      const autoSaveToServer = (() => {
+        let timer;
+        return () => {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            const formData = new FormData(form);
+            fetch('{{ route('pds.autosave') }}', {
+              method: 'POST',
+              headers: {
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+              },
+              body: formData
+            }).catch(() => {});
+          }, 800);
+        };
+      })();
+      const persist = () => {
+        saveCache();
+        autoSaveToServer();
+      };
+
+      loadCache();
+      updateSignaturePreview4();
+
+      fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
+        .then(r => r.ok ? r.json() : null)
+        .then(json => {
+          if (!json || !json.data) return;
+          loadCache(json.data);
+          updateSignaturePreview4();
+        })
+        .catch(() => {});
+
+      form.addEventListener('input', persist);
+      form.addEventListener('change', persist);
+    });
   </script>
+  
   <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
   <div class="pds-sheet">
 
@@ -614,8 +921,11 @@
       <div class="flex flex-col items-center gap-2 text-xs w-full">
         <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
         <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-sky-600 text-white rounded shadow hidden" onclick="capturePhoto()">Capture photo</button>
-        <!-- Hidden file input populated by capturePhoto; not user-interactive -->
-        <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" required>
+        <!-- Upload option -->
+        <label class="px-3 py-1 bg-indigo-600 text-white rounded shadow cursor-pointer">
+          Upload photo
+          <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhotoFromFile(this.files[0])" required>
+        </label>
         <input type="hidden" id="photoData" name="photo_data">
       </div>
 
@@ -707,8 +1017,28 @@
         <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2">
           <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
             <tr>
-              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600">
-                (wet signature / e-signature / digital certificate)
+              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative p-1">
+                <label id="signatureBox4a" class="signature-box block h-full w-full cursor-pointer relative">
+                  <input
+                    type="file"
+                    name="signature_file"
+                    id="signatureFileInput4"
+                    accept="image/*"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onchange="handleSignatureUpload4(this.files[0])"
+                  >
+                  <img
+                    id="signaturePreviewImg4a"
+                    src="{{ !empty($signaturePath) ? Storage::url($signaturePath) : '' }}"
+                    alt="Signature preview"
+                    class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
+                  >
+                  <div id="signaturePlaceholder4a" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
+                    Upload signature here
+                  </div>
+                </label>
+                <input type="hidden" name="signature_path" id="signature_path4" value="{{ $signaturePath ?? '' }}">
+                <input type="hidden" name="signature_data" id="signature_data4">
               </td>
             </tr>
             <tr>
@@ -765,25 +1095,30 @@
         <td class="p-2 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-3">
             <tr>
-  <td class="border-black h-16 text-center align-middle italic text-red-600 relative">
+  <td class="border-black h-16 text-center align-middle italic text-red-600 relative overflow-hidden">
 
-    <!-- Placeholder / Text -->
-    <div id="signaturePlaceholder">
-      (wet signature / e-signature / digital certificate except for notary public)
-    </div>
+    <label id="signatureBox4b" class="signature-box block h-full w-full cursor-pointer relative">
+      <input
+        type="file"
+        name="signature_file"
+        id="signatureFileInput4b"
+        accept="image/*"
+        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        onchange="handleSignatureUpload4(this.files[0])"
+        @if(empty($signaturePath)) required @endif
+      />
 
-    <!-- File Input -->
-    <input
-      type="file"
-      name="signature_file"
-      accept=".jpg,.jpeg,.png,.pdf,.docx"
-      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      onchange="handleSignaturePreview(event)"
-      required
-    />
+      <img
+        id="signaturePreviewImg4b"
+        src="{{ !empty($signaturePath) ? Storage::url($signaturePath) : '' }}"
+        alt="Signature preview"
+        class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
+      >
 
-    <!-- Optional Preview -->
-    <div id="signaturePreview" class="mt-1 text-xs text-gray-700"></div>
+      <div id="signaturePlaceholder4b" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
+        Upload signature here
+      </div>
+    </label>
 
   </td>
 </tr>
@@ -797,7 +1132,7 @@
     </div>
       <div class="flex justify-between mt-4">
     <a href="{{ route('pds.form3') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300 print:text-white print:bg-gray-600">Previous Page</a>
-    <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</button>
+    <button type="submit" id="pds4-next" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</button>
   </div>
   </div>
 </form>

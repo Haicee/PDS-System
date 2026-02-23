@@ -1,14 +1,29 @@
 <x-app-layout>
-    <form method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
+    <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
     @csrf
     <style>
         /* Print-friendly, spreadsheet-like grid */
         table { border-collapse: collapse; width: 100%; }
-        td, th { padding: 4px; vertical-align: middle; }
+        td, th { padding: 4px; vertical-align: top; }
         /* Only apply borders where classes already exist */
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
-        /* Keep header cells distinct and preserve colors for print */
+        .signature-box {
+            position: relative;
+            background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .signature-box.signature-has-image {
+            background: transparent;
+            border-color: transparent;
+        }
+        .signature-box.signature-has-image img {
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -21,6 +36,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Prefill from session cache (pds) so going back restores values
             const sessionData = @json(session('pds', []));
+            const draftData = @json($data ?? []);
             const flat = {};
             const walk = (obj, prefix = '') => {
                 if (obj === null || obj === undefined) return;
@@ -31,7 +47,9 @@
                     Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
                 }
             };
+            // Draft data takes precedence, then session cache (will be refreshed below via API if route is static view)
             walk(sessionData);
+            walk(draftData);
 
             const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
             const setField = (el, value) => {
@@ -90,7 +108,59 @@
                 if (name) names.add(name);
             });
 
+            // Special handling for children rows: allow only one NA on first row, disable rest
+            const childrenNameFields = Array.from(document.querySelectorAll('textarea[name="children_familybg[]"]'));
+            const childrenDobFields = Array.from(document.querySelectorAll('textarea[name="children_dateofbirth_familybg[]"]'));
+
+            const refreshChildren = () => {
+                const firstName = childrenNameFields[0];
+                const firstDob = childrenDobFields[0];
+                if (!firstName || !firstDob) return;
+
+                const firstIsNA = isNA(firstName.value) && isNA(firstDob.value);
+
+                if (firstIsNA) {
+                    firstName.value = 'NA';
+                    firstDob.value = 'NA';
+                }
+
+                childrenNameFields.forEach((f, idx) => {
+                    const shouldDisable = firstIsNA && idx > 0;
+                    if (idx > 0) {
+                        f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
+                    }
+                    f.disabled = shouldDisable;
+                    f.readOnly = shouldDisable;
+                    f.classList.toggle('bg-gray-200', shouldDisable);
+                    f.classList.toggle('text-gray-500', shouldDisable);
+                    f.classList.toggle('cursor-not-allowed', shouldDisable);
+                    f.classList.toggle('pointer-events-none', shouldDisable);
+                });
+
+                childrenDobFields.forEach((f, idx) => {
+                    const shouldDisable = firstIsNA && idx > 0;
+                    if (idx > 0) {
+                        f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
+                    }
+                    f.disabled = shouldDisable;
+                    f.readOnly = shouldDisable;
+                    f.classList.toggle('bg-gray-200', shouldDisable);
+                    f.classList.toggle('text-gray-500', shouldDisable);
+                    f.classList.toggle('cursor-not-allowed', shouldDisable);
+                    f.classList.toggle('pointer-events-none', shouldDisable);
+                });
+            };
+
+            childrenNameFields.forEach(f => f.addEventListener('input', refreshChildren));
+            childrenDobFields.forEach(f => f.addEventListener('input', refreshChildren));
+            refreshChildren();
+
             names.forEach(name => {
+                // Skip children fields; handled above
+                if (name === 'children_familybg[]' || name === 'children_dateofbirth_familybg[]') {
+                    return;
+                }
+
                 const selectorName = name.replace(/["'\\]/g, '\\$&');
                 const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
                 if (!fields.length) return;
@@ -1043,8 +1113,11 @@
     </tr>
 
     @php
-        $childNames = collect(old('children_familybg', isset($children) ? $children->pluck('firstname')->toArray() : []));
-        $childDobs = collect(old('children_dateofbirth_familybg', isset($children) ? $children->pluck('date_of_birth')->toArray() : []));
+        $draftChildrenNames = $data['children_familybg'] ?? [];
+        $draftChildrenDobs = $data['children_dateofbirth_familybg'] ?? [];
+
+        $childNames = collect(old('children_familybg', $draftChildrenNames));
+        $childDobs = collect(old('children_dateofbirth_familybg', $draftChildrenDobs));
         $childRowCount = max(14, $childNames->count(), $childDobs->count());
         while ($childNames->count() < $childRowCount) { $childNames->push(''); }
         while ($childDobs->count() < $childRowCount) { $childDobs->push(''); }
@@ -1542,23 +1615,8 @@
 
 
     <tr>
-      <td class="bg-[#e7e7e7] px-2 align-middle border-t-2">
+      <td class="bg-[#e7e7e7] px-2 align-middle border-t-2" colspan="4">
         25. MOTHER'S MAIDEN NAME
-      </td>
-
-      <td colspan="3"
-          class="border-t-2 border h-10">
-          <div class="h-full w-full">
-         <textarea
-      name="mother_maiden_name"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-      placeholder="Enter Maiden Name"
-    ></textarea>
       </td>
 
       @php
@@ -2316,8 +2374,29 @@
     </td>
 
     <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        <input type="file" name="signature_attachment_1" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+      <div class="h-full w-full p-2">
+        <label id="signatureBox" data-signature-cell class="signature-box block h-36 w-full cursor-pointer">
+          <input
+            type="file"
+            name="signature_file"
+            id="signatureFileInput"
+            accept="image/*"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onchange="handleSignatureUpload(this.files[0])"
+          >
+          <img
+            id="signaturePreviewImg"
+            src="{{ !empty($signaturePath) ? Storage::url($signaturePath) : '' }}"
+            alt="Signature preview"
+            class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
+          >
+          <div id="signaturePlaceholder" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
+            Upload signature here
+          </div>
+        </label>
+
+        <input type="hidden" name="signature_path" id="signature_path" value="{{ $signaturePath ?? '' }}">
+        <input type="hidden" name="signature_data" id="signature_data">
       </div>
     </td>
 
@@ -2352,46 +2431,246 @@
     </div>
     </form>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form');
-  if (!form) return;
-  const storageKey = 'pds_form_step1_' + ({{ auth()->id() ?? 0 }});
+        document.addEventListener('DOMContentLoaded', () => {
 
-  const loadCache = () => {
-    try {
-      const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      Object.entries(cached).forEach(([name, value]) => {
-        const field = form.elements[name];
-        if (!field) return;
-        if (field.type === 'checkbox' || field.type === 'radio') {
-          field.checked = !!value;
-        } else {
-          field.value = value;
-          if (field.tagName === 'TEXTAREA') field.dispatchEvent(new Event('input'));
-        }
-      });
-    } catch (e) {}
+  const form = document.querySelector('#pds-form1');
+  if (!form) return;
+
+  const storageKey = 'pds_form_step1_' + ({{ auth()->id() ?? 0 }});
+  const singleSelectCheckboxNames = new Set(['sex[]','civilstatus[]','citizenship[]']);
+  const storageBase = "{{ asset('storage') }}/";
+  const initialSignaturePath = @json($signaturePath ?? '');
+
+  const signaturePreviewImg = document.getElementById('signaturePreviewImg');
+  const signaturePlaceholder = document.getElementById('signaturePlaceholder');
+  const signatureBox = document.getElementById('signatureBox');
+  const signatureDataInput = document.getElementById('signature_data');
+  const signaturePathInput = document.getElementById('signature_path');
+  const signatureFileName = document.getElementById('signatureFileName');
+
+  const buildSignatureUrl = (path) => {
+    if (!path) return '';
+    const cleaned = path.replace(/^public\//, '');
+    return storageBase + cleaned;
   };
 
-  const saveCache = () => {
-    const data = {};
-    Array.from(form.elements).forEach(el => {
-      if (!el.name || el.disabled) return;
-      if (['button','submit','reset','file'].includes(el.type)) return;
-      if (el.type === 'checkbox' || el.type === 'radio') {
-        data[el.name] = el.checked;
-      } else {
-        data[el.name] = el.value;
+  const updateSignaturePreviewFromInputs = () => {
+    if (!signaturePreviewImg || !signaturePlaceholder) return;
+    const dataUrl = signatureDataInput?.value;
+    const pathVal = signaturePathInput?.value || initialSignaturePath;
+    const url = dataUrl || buildSignatureUrl(pathVal);
+    if (url) {
+      signaturePreviewImg.src = url;
+      signaturePreviewImg.classList.remove('hidden');
+      signaturePlaceholder.classList.add('hidden');
+      signatureBox?.classList.add('signature-has-image');
+    } else {
+      signaturePreviewImg.classList.add('hidden');
+      signaturePlaceholder.classList.remove('hidden');
+      signatureBox?.classList.remove('signature-has-image');
+    }
+  };
+
+  // LOAD CACHE (localStorage + optional override from draft)
+  const loadCache = (overrideData = null) => {
+    let data = {};
+    try {
+      data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    } catch (e) {
+      data = {};
+    }
+
+    if (overrideData) {
+      data = { ...data, ...overrideData };
+    }
+
+    if (overrideData?.signature_path && signaturePathInput) {
+      signaturePathInput.value = overrideData.signature_path;
+    }
+    if (overrideData?.signature_data && signatureDataInput) {
+      signatureDataInput.value = overrideData.signature_data;
+    }
+
+    // For fields with [] names, ensure arrays apply in order
+    const arrayBucket = {};
+    Object.entries(data).forEach(([name, stored]) => {
+      if (name.endsWith('[]') && Array.isArray(stored)) {
+        arrayBucket[name] = stored;
       }
     });
-    try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {}
+
+    Object.entries(data).forEach(([name, stored]) => {
+      const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+      if (name.endsWith('[]') && Array.isArray(stored)) {
+        elements.forEach((el, idx) => {
+          const val = stored[idx] ?? '';
+          if (el.type === 'checkbox') {
+            el.checked = Array.isArray(val) ? val.includes(el.value) : String(val) === el.value;
+          } else if (el.type === 'radio') {
+            el.checked = val === el.value;
+          } else {
+            if (!el.value) el.value = val;
+          }
+          if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        });
+        return;
+      }
+
+      elements.forEach(el => {
+        if (el.type === 'checkbox') {
+          if (Array.isArray(stored)) {
+            el.checked = stored.includes(el.value);
+          } else {
+            el.checked = String(stored) === el.value;
+          }
+        }
+        else if (el.type === 'radio') {
+          el.checked = stored === el.value;
+        }
+        else {
+          if (!el.value) {
+            el.value = stored;
+          }
+        }
+
+        if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+    });
+  };
+
+  // SAVE CACHE locally (preserve [] groups as arrays)
+  const saveCache = () => {
+    const data = {};
+
+    Array.from(form.elements).forEach(el => {
+      if (!el.name || el.disabled) return;
+      if (["button","submit","reset","file"].includes(el.type)) return;
+
+      const isArrayField = el.name.endsWith('[]');
+
+      if (el.type === 'checkbox') {
+        if (singleSelectCheckboxNames.has(el.name)) {
+          if (el.checked) {
+            data[el.name] = el.value;
+          } else if (!data[el.name]) {
+            data[el.name] = '';
+          }
+        } else {
+          if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
+          if (el.checked) data[el.name].push(el.value);
+        }
+      }
+      else if (el.type === 'radio') {
+        if (el.checked) data[el.name] = el.value;
+      }
+      else {
+        if (isArrayField) {
+          if (!data[el.name]) data[el.name] = [];
+          data[el.name].push(el.value);
+        } else {
+          data[el.name] = el.value;
+        }
+      }
+    });
+
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  };
+
+  // --- Signature upload with auto background removal (single source for all forms) ---
+  window.handleSignatureUpload = (file) => {
+    if (!file) return;
+    if (signatureFileName) signatureFileName.textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const threshold = 240; // treat near-white as background
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] > threshold && data[i + 1] > threshold && data[i + 2] > threshold) {
+            data[i + 3] = 0; // transparent
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        const output = canvas.toDataURL('image/png');
+        signatureDataInput.value = output;
+        signaturePathInput.value = '';
+        signaturePreviewImg.src = output;
+        signaturePreviewImg.classList.remove('hidden');
+        signaturePlaceholder.classList.add('hidden');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // AUTOSAVE to server (throttled)
+  const autoSaveToServer = (() => {
+    let timer;
+    return () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const formData = new FormData(form);
+        fetch('{{ route('pds.autosave') }}', {
+          method: 'POST',
+          headers: {
+            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+          },
+          body: formData
+        }).catch(() => {});
+      }, 800);
+    };
+  })();
+
+  const persist = () => {
+    saveCache();
+    autoSaveToServer();
   };
 
   loadCache();
-  form.addEventListener('input', saveCache);
-  form.addEventListener('change', saveCache);
-  form.addEventListener('submit', () => { localStorage.removeItem(storageKey); });
+  updateSignaturePreviewFromInputs();
+
+  // Enforce single select behavior for specific checkbox groups
+  document.querySelectorAll('input[type="checkbox"]').forEach(box => {
+    if (!singleSelectCheckboxNames.has(box.name)) return;
+    box.addEventListener('change', () => {
+      if (!box.checked) return;
+      document.querySelectorAll(`input[type="checkbox"][name="${box.name}"]`).forEach(other => {
+        if (other !== box) other.checked = false;
+      });
+      saveCache();
+    });
+  });
+
+  // If served via static view (no $data), fetch draft and hydrate once
+  fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
+    .then(r => r.ok ? r.json() : null)
+    .then(json => {
+      if (!json || !json.data) return;
+      loadCache(json.data);
+      updateSignaturePreviewFromInputs();
+    })
+    .catch(() => {});
+
+  form.addEventListener('input', persist);
+  form.addEventListener('change', persist);
+
 });
 </script>
+
 
 </x-app-layout>

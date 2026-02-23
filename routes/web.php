@@ -735,6 +735,9 @@ Route::middleware('auth:admin,web')->group(function () {
 
     Route::post('/pds/submit', [PdsSubmissionController::class, 'store'])->name('pds.submit');
     Route::post('/pds/save-step/{step}', [PdsStepController::class, 'saveStep'])->name('pds.saveStep');
+    Route::post('/pds/autosave', [PdsStepController::class, 'autoSave'])
+    ->name('pds.autosave');
+    Route::get('/pds/draft', [PdsStepController::class, 'draft'])->name('pds.draft');
     Route::get('/pds/pdf', [PdsPdfController::class, 'download'])->name('pds.pdf');
 });
 

@@ -322,19 +322,21 @@
   <div class="mt-12 flex flex-col items-center">
 
     <!-- PASSPORT PHOTO -->
+    @php $photoUrl = !empty($photoPath) ? asset('storage/'.$photoPath) : null; @endphp
     <label class="cursor-pointer">
       <div class="border-2 border-black w-[3.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
-        <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
-        <div id="photoPlaceholder">
-          Passport-sized unfiltered<br>
-          picture taken within<br>
-          the last 6 months<br>
-          4.5 cm × 3.5 cm
-        </div>
+        @if($photoUrl)
+          <img src="{{ $photoUrl }}" class="absolute inset-0 w-full h-full object-cover" alt="Photo">
+        @else
+          <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
+          <div id="photoPlaceholder">
+            Passport-sized unfiltered<br>
+            picture taken within<br>
+            the last 6 months<br>
+            4.5 cm × 3.5 cm
+          </div>
+        @endif
       </div>
-      @if(empty($pdfMode))
-      <input type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhoto(event)" required>
-      @endif
     </label>
 
     <div class="mt-2 text-xs">PHOTO</div>
@@ -347,9 +349,6 @@
           Right Thumbmark
         </div>
       </div>
-      @if(empty($pdfMode))
-      <input type="file" name="thumbmark" accept="image/*" class="hidden" onchange="previewThumb(event)" required>
-      @endif
     </label>
   </div>
 </td>
@@ -430,10 +429,15 @@
 </table>
         </td>
         <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2">
+          @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
           <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
             <tr>
-              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600">
-                (wet signature / e-signature / digital certificate)
+              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative overflow-hidden">
+                @if($signatureUrl)
+                  <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:4.5cm;">
+                @else
+                  (wet signature / e-signature / digital certificate)
+                @endif
               </td>
             </tr>
             <tr>
@@ -490,27 +494,16 @@
         <td class="p-2 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-3">
             <tr>
-  <td class="border-black h-16 text-center align-middle italic text-red-600 relative">
+  <td class="border-black h-20 text-center align-middle italic text-red-600 relative overflow-hidden">
 
-    <!-- Placeholder / Text -->
-    <div id="signaturePlaceholder">
-      (wet signature / e-signature / digital certificate except for notary public)
-    </div>
-
-    <!-- File Input -->
-    @if(empty($pdfMode))
-    <input
-      type="file"
-      name="signature_file"
-      accept=".jpg,.jpeg,.png,.pdf,.docx"
-      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      onchange="handleSignaturePreview(event)"
-      required
-    />
+    @if($signatureUrl)
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:5cm;">
+    @else
+      <!-- Placeholder / Text -->
+      <div id="signaturePlaceholder">
+        (wet signature / e-signature / digital certificate except for notary public)
+      </div>
     @endif
-
-    <!-- Optional Preview -->
-    <div id="signaturePreview" class="mt-1 text-xs text-gray-700"></div>
 
   </td>
 </tr>

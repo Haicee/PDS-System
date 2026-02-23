@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Models\PdsSubmission;
 use App\Models\User;
+use App\Models\PdsDraft;
 
 class PdsSubmissionController extends Controller
 {
@@ -18,18 +20,22 @@ class PdsSubmissionController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        // Merge prior step data from session with current payload
-        // restore previous data
-        $request->merge(session('pds', []));
+        // Merge prior step data (draft + session) with current payload to avoid null inserts
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        $draftData = $draft->data ?? [];
+        $sessionData = session('pds', []);
 
-        // store current step without files
-        session([
-            'pds' => $request->except(
-                array_keys($request->allFiles())
-            )
-        ]);
+        $incoming = $request->except(array_keys($request->allFiles()));
+        $merged = array_replace_recursive($draftData, $sessionData, $incoming);
+
+        $request->merge($merged);
+
+        // store merged step without files for consistency
+        session(['pds' => $merged]);
         $req = $request;
         $userId = Auth::id();
+        $photoPath = $this->storePhoto($request, $userId);
+        $signaturePath = $this->storeSignature($request, $userId);
         $rowHasData = function (array $row): bool {
             return collect($row)->some(fn ($v) => strlen(trim((string) $v)) > 0);
         };
@@ -45,7 +51,7 @@ class PdsSubmissionController extends Controller
             abort(422, "$label requires at least one entry or an 'NA'.");
         };
 
-        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa) {
+        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath) {
             DB::table('pds_personal_infos')->updateOrInsert(
                 ['user_id' => $userId],
                 [
@@ -105,6 +111,14 @@ class PdsSubmissionController extends Controller
                     'gov_id' => $req->input('gov_id'),
                     'passport_licence_id' => $req->input('licence_passport_id'),
                     'date_place_issuance' => $req->input('id_issue_date_place'),
+                ]
+            );
+
+            DB::table('pds_signature_files')->updateOrInsert(
+                ['user_id' => $userId],
+                [
+                    'signature_file_path' => $signaturePath,
+                    'photo_file_path' => $photoPath,
                 ]
             );
 
@@ -202,7 +216,6 @@ class PdsSubmissionController extends Controller
 
             $mother = [
                 'type' => 'mother',
-                'maiden_name' => $req->input('mother_maiden_name'),
                 'firstname' => $req->input('mother_firstname'),
                 'middlename' => $req->input('mother_middlename'),
                 'surname' => $req->input('mother_surname'),
@@ -368,5 +381,97 @@ class PdsSubmissionController extends Controller
         session()->forget('pds');
 
         return back()->with('status', 'PDS saved');
+    }
+
+    /**
+     * Persist submitted or cached photo to storage and return its path.
+     */
+    private function storePhoto(Request $request, int $userId): ?string
+    {
+        $disk = 'public';
+        $directory = 'pds/photos';
+        $existingPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('photo_file_path');
+
+        $uploaded = $request->file('photo');
+        if ($uploaded) {
+            $filename = 'photo_' . $userId . '_' . time() . '.' . $uploaded->getClientOriginalExtension();
+            $path = $uploaded->storeAs($directory, $filename, $disk);
+            return $path;
+        }
+
+        $dataUrl = $request->input('photo_data');
+        if ($dataUrl && str_starts_with($dataUrl, 'data:image')) {
+            if (preg_match('/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/', $dataUrl, $matches)) {
+                $mime = $matches[1];
+                $base64 = $matches[2];
+                $binary = base64_decode($base64);
+                if ($binary !== false) {
+                    $extension = match ($mime) {
+                        'image/png' => 'png',
+                        'image/webp' => 'webp',
+                        default => 'jpg',
+                    };
+                    $filename = 'photo_' . $userId . '_' . time() . '.' . $extension;
+                    $path = $directory . '/' . $filename;
+                    Storage::disk($disk)->put($path, $binary, 'public');
+                    return $path;
+                }
+            }
+        }
+
+        return $existingPath;
+    }
+
+    private function storeSignature(Request $request, int $userId): ?string
+    {
+        $disk = 'public';
+        $directory = 'pds/signatures';
+        $existingPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $providedPath = $request->input('signature_path');
+        if ($providedPath && !$request->hasFile('signature') && !$request->hasFile('signature_attachment')) {
+            return $providedPath;
+        }
+
+        $fileKeys = [
+            'signature',
+            'signature_attachment',
+            'signature_attachment_1',
+            'signature_attachment_2',
+            'signature_attachment_3',
+            'signature_attachment_4',
+            'signature_attachment_5',
+            'signature_file',
+        ];
+
+        foreach ($fileKeys as $key) {
+            $uploaded = $request->file($key);
+            if ($uploaded) {
+                $filename = 'signature_' . $userId . '_' . time() . '.' . $uploaded->getClientOriginalExtension();
+                $path = $uploaded->storeAs($directory, $filename, $disk);
+                return $path;
+            }
+        }
+
+        $dataUrl = $request->input('signature_data');
+        if ($dataUrl && str_starts_with($dataUrl, 'data:image')) {
+            if (preg_match('/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/', $dataUrl, $matches)) {
+                $mime = $matches[1];
+                $base64 = $matches[2];
+                $binary = base64_decode($base64);
+                if ($binary !== false) {
+                    $extension = match ($mime) {
+                        'image/png' => 'png',
+                        'image/webp' => 'webp',
+                        default => 'jpg',
+                    };
+                    $filename = 'signature_' . $userId . '_' . time() . '.' . $extension;
+                    $path = $directory . '/' . $filename;
+                    Storage::disk($disk)->put($path, $binary, 'public');
+                    return $path;
+                }
+            }
+        }
+
+        return $existingPath;
     }
 }

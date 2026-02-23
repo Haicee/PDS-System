@@ -189,6 +189,22 @@
 <body>
 @endif
 
+@php
+  // Fallback: fetch signature/photo paths if they weren't passed into the view
+  if (empty($signaturePath) || empty($photoPath)) {
+      $userId = $userId ?? (\Illuminate\Support\Facades\Auth::id());
+      if ($userId) {
+          $signatureFiles = \Illuminate\Support\Facades\DB::table('pds_signature_files')->where('user_id', $userId)->first();
+          $signaturePath = $signaturePath ?? ($signatureFiles->signature_file_path ?? null);
+          $photoPath = $photoPath ?? ($signatureFiles->photo_file_path ?? null);
+      }
+  }
+
+  // If controller already provided data/base64 URLs, keep them; otherwise fall back to storage assets
+  $signatureUrl = $signatureUrl ?? (!empty($signaturePath) ? asset('storage/'.$signaturePath) : null);
+  $photoUrl = $photoUrl ?? (!empty($photoPath) ? asset('storage/'.$photoPath) : null);
+@endphp
+
 <table style="width:100%; border-collapse:collapse;">
 <td class="border-black" style="border:4px solid black; border-bottom:0;">
 <div class="p-0 font-serif text-sm" @if(!empty($pdfMode)) style="width:100%;max-width:100%;" @endif>
@@ -770,8 +786,7 @@
 
     <!-- Mother -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px;">25. MOTHER'S MAIDEN NAME</td>
-        <td colspan="3" style="border:1px solid black;">{{ $mother->maiden_name ?? '—' }}</td>
+        <td style="background:#e7e7e7; padding-left:4px;" colspan="4">25. MOTHER'S MAIDEN NAME</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
         @php $childIndex++; @endphp
@@ -873,7 +888,9 @@
 
   <!-- HEADER ROW 1 -->
   <tr>
-    <th class="border" rowspan="2" style="font-weight: normal;">26. LEVEL</th>
+    <th class="border" rowspan="2" style="font-weight: normal;"><div style="text-align: left;">
+    <span style="margin-right: 70px;">26.</span> <span>LEVEL</span>
+    </div></th>
     <th class="border" rowspan="2" style="font-weight: normal;">NAME OF SCHOOL<br>(Write in Full)</th>
     <th class="border" rowspan="2" style="font-weight: normal;">BASIC EDUCATION / DEGREE / COURSE<br>(Write in full)</th>
     <th class="border text-center" colspan="2" style="font-weight: normal;">PERIOD OF ATTENDANCE</th>
@@ -1136,11 +1153,15 @@
       SIGNATURE
     </td>
 
-    <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        <input type="file" name="signature_attachment_1" id="signature_attachment" disabled accept="image,.pdf" class="text-sm">
-      </div>
-    </td>
+ <td class="border" colspan="2">
+    <div class="h-full w-full flex flex-col items-center justify-center p-2">
+        @if($signatureUrl)
+            <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
+        @else
+            <div class="text-xs text-gray-600">No signature on file</div>
+        @endif
+    </div>
+</td>
 
     <td class="border text-center text-xl font-bold italic align-middle" colspan="2">
       DATE
@@ -1260,7 +1281,8 @@
 
     @php
         $workRows = $workExperiences ?? ($work ?? collect());
-        $workRows = $workRows->sortBy('from')->values();
+        // Show most recent work first per form instruction
+        $workRows = $workRows->sortByDesc('from')->values();
         $maxWorkRows = max(28, $workRows->count());
     @endphp
 
@@ -1291,9 +1313,11 @@
         </td>
 
         <td colspan="2" style="border:1px solid black;">
-            <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:2px;">
-                @if(empty($pdfMode))
-                <input type="file" name="signature_attachment_3" accept="image/*,.pdf" class="text-sm">
+            <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
+                @if($signatureUrl)
+                  <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
+                @else
+                  <div class="text-xs" style="color:#666;">No signature on file</div>
                 @endif
             </div>
         </td>
@@ -1372,7 +1396,7 @@
 
   @php
     $volRows = $voluntaryWorks ?? ($voluntary ?? collect());
-    $volRows = $volRows->sortBy('from')->values();
+    $volRows = $volRows->sortByDesc('from')->values();
     $maxRows = max(7, $volRows->count());
   @endphp
 
@@ -1449,7 +1473,7 @@
 
   @php
     $trainingRows = $training ?? ($learning ?? collect());
-    $trainingRows = $trainingRows->sortBy('from')->values();
+    $trainingRows = $trainingRows->sortByDesc('from')->values();
     $maxTraining = max(21, $trainingRows->count());
   @endphp
 
@@ -1528,9 +1552,11 @@
         </td>
 
         <td colspan="2" style="border:1px solid black;">
-            <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:2px;">
-                @if(empty($pdfMode))
-                <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+            <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
+                @if($signatureUrl)
+                  <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
+                @else
+                  <div class="text-xs" style="color:#666;">No signature on file</div>
                 @endif
             </div>
         </td>
@@ -1850,23 +1876,18 @@
                 justify-content:center;
             ">
 
-                <img id="photoPreview"
-                     style="
-                        position:absolute;
-                        top:0;
-                        left:0;
-                        width:100%;
-                        height:100%;
-                        object-fit:cover;
-                        display:none;
-                     ">
-
-                <div>
-                    Passport-sized unfiltered<br>
-                    picture taken within<br>
-                    the last 6 months<br>
-                    4.5 cm × 3.5 cm
-                </div>
+                @if($photoUrl)
+                  <img src="{{ $photoUrl }}"
+                       style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"
+                       alt="Photo">
+                @else
+                  <div id="photoPlaceholder" style="font-style:italic; color:#444; text-align:center;">
+                      Passport-sized unfiltered<br>
+                      picture taken within<br>
+                      the last 6 months<br>
+                      4.5 cm × 3.5 cm
+                  </div>
+                @endif
 
             </div>
 
@@ -2006,8 +2027,12 @@
         <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2" >
           <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2" style="margin-top:12px; margin-left:7px;">
           <td class="border-black text-center align-middle italic text-red-600">
-    <div style="height:3.06cm; display:flex; align-items:center; justify-content:center;" class="text-base">
-        (wet signature / e-signature / digital certificate)
+    <div style="height:3.06cm; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;" class="text-base">
+        @if($signatureUrl)
+          <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:4.5cm; object-fit:contain;">
+        @else
+          (wet signature / e-signature / digital certificate)
+        @endif
     </div>
 </td>
             <tr>
@@ -2066,25 +2091,14 @@
             <tr>
   <td class="border-black h-16 text-center align-middle italic text-red-600 relative">
 
-    <!-- Placeholder / Text -->
-    <div id="signaturePlaceholder">
-      
-    </div>
-
-    <!-- File Input -->
-    @if(empty($pdfMode))
-    <input
-      type="file"
-      name="signature_file"
-      accept=".jpg,.jpeg,.png,.pdf,.docx"
-      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      onchange="handleSignaturePreview(event)"
-      required
-    />
+    @if($signatureUrl)
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:5cm;">
+    @else
+      <!-- Placeholder / Text -->
+      <div id="signaturePlaceholder">
+        
+      </div>
     @endif
-
-    <!-- Optional Preview -->
-    <div id="signaturePreview" class="mt-1 text-xs text-gray-700"></div>
 
   </td>
 </tr>
@@ -2163,7 +2177,12 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 
 <!-- SIGNATURE / DATE (aligned right like pdsreview5) -->
 <div class="w-full flex justify-end" style="margin-top:100px; padding-right:8px;">
-  <div class="text-center" style="width:460px; margin-left:auto;">
+  <div class="text-center" style="width:460px; margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:8px;">
+    @if($signatureUrl)
+      <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
+    @else
+      <div class="text-xs" style="color:#666;">No signature on file</div>
+    @endif
     <div class="border-b-2 border-black" style="height:20px; width:100%;"></div>
     <div class="mt-2 text-sm">(Signature over Printed Name)</div>
   </div>

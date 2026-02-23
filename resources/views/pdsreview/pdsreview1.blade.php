@@ -826,15 +826,8 @@
 
 
     <tr>
-      <td class="bg-[#e7e7e7] px-2 align-middle border-t-2">
+      <td class="bg-[#e7e7e7] px-2 align-middle border-t-2" colspan="4">
         25. MOTHER'S MAIDEN NAME
-      </td>
-
-      <td colspan="3"
-          class="border-t-2 border h-10">
-       <div>
-        {{ $mother->maiden_name ?? '—' }}
-      </div>
       </td>
 
        <td class="border">
@@ -1244,9 +1237,12 @@
     </td>
 
     <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        @if(empty($pdfMode))
-        <input type="file" name="signature_attachment_1" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+      <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
+        @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+        @if($signatureUrl)
+          <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
+        @else
+          <div class="text-xs text-gray-600">No signature on file</div>
         @endif
       </div>
     </td>

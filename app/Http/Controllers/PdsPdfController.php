@@ -67,33 +67,55 @@ class PdsPdfController extends Controller
         $children = $family->where('type', 'child')->values();
         $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
-        $work = DB::table('pds_work_experiences')->where('user_id', $userId)->get();
+        $work = DB::table('pds_work_experiences')
+            ->where('user_id', $userId)
+            ->orderByDesc('from')
+            ->orderByDesc('to')
+            ->get();
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->get();
         $training = DB::table('pds_training_programs')->where('user_id', $userId)->get();
         $otherInfo = DB::table('pds_other_info')->where('user_id', $userId)->get();
         $references = DB::table('pds_references')->where('user_id', $userId)->get();
         $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
 
-        return compact(
-            'personal',
-            'address',
-            'contact',
-            'idInfo',
-            'declaration',
-            'family',
-            'spouse',
-            'father',
-            'mother',
-            'children',
-            'education',
-            'eligibilities',
-            'work',
-            'voluntary',
-            'training',
-            'otherInfo',
-            'references',
-            'remarks'
-        );
+        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+$signaturePath = $signatureFiles->signature_file_path ?? null;
+$photoPath = $signatureFiles->photo_file_path ?? null;
+
+// Browsershot-safe URL or Base64
+$signatureUrl = null;
+$photoUrl = null;
+
+if ($signaturePath && file_exists(storage_path('app/public/' . $signaturePath))) {
+    $signatureUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $signaturePath)));
+}
+
+if ($photoPath && file_exists(storage_path('app/public/' . $photoPath))) {
+    $photoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $photoPath)));
+}
+
+return compact(
+    'personal',
+    'address',
+    'contact',
+    'idInfo',
+    'declaration',
+    'family',
+    'spouse',
+    'father',
+    'mother',
+    'children',
+    'education',
+    'eligibilities',
+    'work',
+    'voluntary',
+    'training',
+    'otherInfo',
+    'references',
+    'remarks',
+    'signatureUrl',
+    'photoUrl' // <-- use this in Blade
+);
     }
 
     private function renderPdfView($userId)
@@ -128,8 +150,16 @@ class PdsPdfController extends Controller
 
     private function makeShot(string $html): Browsershot
     {
-        // Browsershot forbids HTML containing file://. Strip any accidental file:// references to prevent HtmlIsNotAllowedToContainFile.
-        $html = preg_replace('/file:\/\/[\w\.\-\/:]+/i', '', $html ?? '');
+        // Browsershot forbids HTML containing file://. Strip any accidental file:// or file:/ references (including backslashes) to prevent HtmlIsNotAllowedToContainFile.
+       $html = preg_replace(
+    [
+        '#file://[\w\.\-\\\/:%]+#i',   // file://...
+        '#file:/[\w\.\-\\\/:%]+#i',    // file:/...
+        '#file:\\\\[\w\.\-\\\/:%]+#i', // file:\...
+    ],
+    '',
+    $html ?? ''
+);
 
         $chromePath = env('BROWSERSHOT_CHROME_PATH', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
         $nodePath = env('BROWSERSHOT_NODE_PATH', 'C:\\Program Files\\nodejs\\node.exe');

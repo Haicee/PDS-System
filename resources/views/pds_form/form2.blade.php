@@ -1,5 +1,5 @@
 <x-app-layout>
-<form method="POST" action="{{ route('pds.saveStep', 2) }}" enctype="multipart/form-data">
+<form id="pds-form2" method="POST" action="{{ route('pds.saveStep', 2) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
         <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
@@ -13,6 +13,22 @@
 
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
+        .signature-box {
+            position: relative;
+            background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .signature-box.signature-has-image {
+            background: transparent;
+            border-color: transparent;
+        }
+        .signature-box.signature-has-image img {
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -63,13 +79,18 @@
                 if (!fields.length) return;
 
                 const refresh = () => {
-                    const firstNAIndex = fields.findIndex(f => isNA(f.value));
+                    const firstField = fields[0];
+                    const firstIsNA = firstField ? isNA(firstField.value) : false;
+
                     fields.forEach((f, idx) => {
-                        const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
+                        const shouldDisable = firstIsNA && idx > 0;
                         f.disabled = shouldDisable;
                         f.classList.toggle('bg-gray-200', shouldDisable);
                         f.classList.toggle('text-gray-500', shouldDisable);
                         f.classList.toggle('cursor-not-allowed', shouldDisable);
+                        if (shouldDisable && f.tagName === 'TEXTAREA') {
+                            f.value = '';
+                        }
                     });
                 };
 
@@ -77,10 +98,51 @@
                 refresh();
             });
 
-            // Next button gating: require all visible fields (treat NA/N/A/NONE as filled)
+            // First-row logic for eligibility and work tables
+            const rowGroup = (names) => names.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
+            const eligibilityFirstRow = rowGroup(['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]']);
+            const workFirstRow = rowGroup(['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]']);
+
+            const disableFollowingRows = (names, disable) => {
+                names.forEach(n => {
+                    const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+                    fields.forEach((f, idx) => {
+                        if (idx === 0) return;
+                        f.disabled = disable;
+                        f.classList.toggle('bg-gray-200', disable);
+                        f.classList.toggle('text-gray-500', disable);
+                        f.classList.toggle('cursor-not-allowed', disable);
+                        if (disable && f.tagName === 'TEXTAREA') {
+                            f.value = '';
+                        }
+                    });
+                });
+            };
+
+            const firstRowState = (fields) => {
+                const values = fields.map(f => (f?.value || '').trim());
+                const allNA = values.length && values.every(v => isNA(v));
+                const anyData = values.some(v => v !== '' && !isNA(v));
+                return { allNA, anyData };
+            };
+
+            const refreshRows = () => {
+                const eligState = firstRowState(eligibilityFirstRow);
+                disableFollowingRows(['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]'], eligState.allNA);
+
+                const workState = firstRowState(workFirstRow);
+                disableFollowingRows(['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]'], workState.allNA);
+            };
+
+            [...eligibilityFirstRow, ...workFirstRow].forEach(f => {
+                if (!f) return;
+                f.addEventListener('input', refreshRows);
+            });
+            refreshRows();
+
+            // Next button gating: required fields + first rows (allow NA as filled)
             const nextBtn = document.getElementById('next-btn');
-            const visibleFields = () => Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'))
-                .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
+            const requiredFields = Array.from(document.querySelectorAll('[required]'));
 
             const isFilled = (el) => {
                 if (el.type === 'file') return el.files && el.files.length > 0;
@@ -90,8 +152,17 @@
                 return val !== '';
             };
 
+            const firstRowSets = [eligibilityFirstRow, workFirstRow];
+
             const validateRequired = () => {
-                const hasMissing = visibleFields().some(el => !isFilled(el));
+                const hasMissingRequired = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
+
+                const firstRowsIncomplete = firstRowSets.some(set => {
+                    const state = firstRowState(set);
+                    return !(state.allNA || state.anyData);
+                });
+
+                const hasMissing = hasMissingRequired || firstRowsIncomplete;
 
                 if (!nextBtn) return;
                 if (hasMissing) {
@@ -103,8 +174,8 @@
                 }
             };
 
-            document.addEventListener('input', validateRequired, true);
-            document.addEventListener('change', validateRequired, true);
+            document.addEventListener('input', () => { refreshRows(); validateRequired(); }, true);
+            document.addEventListener('change', () => { refreshRows(); validateRequired(); }, true);
             validateRequired();
 
             if (nextBtn) {
@@ -118,6 +189,7 @@
             }
 
             const sessionData = @json(session('pds', []));
+            const draftData = @json($data ?? []);
             const flat = {};
             const walk = (obj, prefix = '') => {
                 if (obj === null || obj === undefined) return;
@@ -129,6 +201,7 @@
                 }
             };
             walk(sessionData);
+            walk(draftData);
 
             const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
             const setField = (el, value) => {
@@ -157,6 +230,225 @@
                     if (arrFields[idx]) setField(arrFields[idx], value);
                 }
             });
+
+            // Local cache + draft fetch + autosave (copied from form1)
+            const form = document.querySelector('#pds-form2');
+            if (!form) return;
+
+            const storageKey = 'pds_form_step2_' + ({{ auth()->id() ?? 0 }});
+            const singleSelectCheckboxNames = new Set();
+            const storageBase = "{{ asset('storage') }}/";
+            const initialSignaturePath = @json($signaturePath ?? '');
+
+            const signaturePreviewImg2 = document.getElementById('signaturePreviewImg2');
+            const signaturePlaceholder2 = document.getElementById('signaturePlaceholder2');
+            const signatureBox2 = document.getElementById('signatureBox2');
+            const signatureDataInput2 = document.getElementById('signature_data2');
+            const signaturePathInput2 = document.getElementById('signature_path2');
+
+            const buildSignatureUrl2 = (path) => {
+                if (!path) return '';
+                const cleaned = path.replace(/^public\//, '');
+                return storageBase + cleaned;
+            };
+
+            const updateSignaturePreviewFromInputs2 = () => {
+                if (!signaturePreviewImg2 || !signaturePlaceholder2) return;
+                const dataUrl = signatureDataInput2?.value;
+                const pathVal = signaturePathInput2?.value || initialSignaturePath;
+                const url = dataUrl || buildSignatureUrl2(pathVal);
+                if (url) {
+                    signaturePreviewImg2.src = url;
+                    signaturePreviewImg2.classList.remove('hidden');
+                    signaturePlaceholder2.classList.add('hidden');
+                    signatureBox2?.classList.add('signature-has-image');
+                } else {
+                    signaturePreviewImg2.classList.add('hidden');
+                    signaturePlaceholder2.classList.remove('hidden');
+                    signatureBox2?.classList.remove('signature-has-image');
+                }
+            };
+
+            window.handleSignatureUpload2 = (file) => {
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const data = imageData.data;
+                        const threshold = 240;
+                        for (let i = 0; i < data.length; i += 4) {
+                            if (data[i] > threshold && data[i + 1] > threshold && data[i + 2] > threshold) {
+                                data[i + 3] = 0;
+                            }
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+
+                        const output = canvas.toDataURL('image/png');
+                        if (signatureDataInput2) signatureDataInput2.value = output;
+                        if (signaturePathInput2) signaturePathInput2.value = '';
+                        if (signaturePreviewImg2) {
+                            signaturePreviewImg2.src = output;
+                            signaturePreviewImg2.classList.remove('hidden');
+                        }
+                        if (signaturePlaceholder2) signaturePlaceholder2.classList.add('hidden');
+                        if (signatureBox2) signatureBox2.classList.add('signature-has-image');
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            // LOAD CACHE (localStorage + optional override from draft)
+            const loadCache = (overrideData = null) => {
+                let data = {};
+                try {
+                    data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                } catch (e) {
+                    data = {};
+                }
+
+                if (overrideData) {
+                    data = { ...data, ...overrideData };
+                }
+
+                if (overrideData?.signature_path && signaturePathInput2) {
+                    signaturePathInput2.value = overrideData.signature_path;
+                }
+                if (overrideData?.signature_data && signatureDataInput2) {
+                    signatureDataInput2.value = overrideData.signature_data;
+                }
+
+                // For fields with [] names, ensure arrays apply in order
+                Object.entries(data).forEach(([name, stored]) => {
+                    const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+                    if (name.endsWith('[]') && Array.isArray(stored)) {
+                        elements.forEach((el, idx) => {
+                            const val = stored[idx] ?? '';
+                            if (el.type === 'checkbox') {
+                                el.checked = Array.isArray(val) ? val.includes(el.value) : String(val) === el.value;
+                            } else if (el.type === 'radio') {
+                                el.checked = val === el.value;
+                            } else {
+                                if (!el.value) el.value = val;
+                            }
+                            if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        });
+                        return;
+                    }
+
+                    elements.forEach(el => {
+                        if (el.type === 'checkbox') {
+                            if (Array.isArray(stored)) {
+                                el.checked = stored.includes(el.value);
+                            } else {
+                                el.checked = String(stored) === el.value;
+                            }
+                        }
+                        else if (el.type === 'radio') {
+                            el.checked = stored === el.value;
+                        }
+                        else {
+                            if (!el.value) {
+                                el.value = stored;
+                            }
+                        }
+
+                        if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    });
+                });
+            };
+
+            // SAVE CACHE locally (preserve [] groups as arrays)
+            const saveCache = () => {
+                const data = {};
+
+                Array.from(form.elements).forEach(el => {
+                    if (!el.name || el.disabled) return;
+                    if (["button","submit","reset","file"].includes(el.type)) return;
+
+                    const isArrayField = el.name.endsWith('[]');
+
+                    if (el.type === 'checkbox') {
+                        if (singleSelectCheckboxNames.has(el.name)) {
+                            if (el.checked) {
+                                data[el.name] = el.value;
+                            } else if (!data[el.name]) {
+                                data[el.name] = '';
+                            }
+                        } else {
+                            if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
+                            if (el.checked) data[el.name].push(el.value);
+                        }
+                    }
+                    else if (el.type === 'radio') {
+                        if (el.checked) data[el.name] = el.value;
+                    }
+                    else {
+                        if (isArrayField) {
+                            if (!data[el.name]) data[el.name] = [];
+                            data[el.name].push(el.value);
+                        } else {
+                            data[el.name] = el.value;
+                        }
+                    }
+                });
+
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(data));
+                } catch (e) {}
+            };
+
+            // AUTOSAVE to server (throttled)
+            const autoSaveToServer = (() => {
+                let timer;
+                return () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        const formData = new FormData(form);
+                        fetch('{{ route('pds.autosave') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                            },
+                            body: formData
+                        }).catch(() => {});
+                    }, 800);
+                };
+            })();
+
+            const persist = () => {
+                saveCache();
+                autoSaveToServer();
+            };
+
+            loadCache();
+            updateSignaturePreviewFromInputs2();
+
+            // If served via static view (no $data), fetch draft and hydrate once
+            fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
+                .then(r => r.ok ? r.json() : null)
+                .then(json => {
+                    if (!json || !json.data) return;
+                    loadCache(json.data);
+                    updateSignaturePreviewFromInputs2();
+                })
+                .catch(() => {});
+
+            form.addEventListener('input', persist);
+            form.addEventListener('change', persist);
         });
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
@@ -206,7 +498,7 @@
 
    @for ($i = 0; $i < 7; $i++)
       <tr>
-        <td class="border align-top"><textarea rows="1" placeholder="Eligibility" name="eligibility[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" placeholder="Eligibility" name="eligibility[]" ></textarea></td>
         <td class="border align-top"><textarea rows="1" placeholder="Rating" name="rating[]"></textarea></td>
         <td class="border align-top"><textarea rows="1" placeholder="Date" name="date[]"></textarea></td>
         <td class="border align-top"><textarea rows="1" placeholder="Place" name="place[]"></textarea></td>
@@ -259,7 +551,7 @@
       <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
      </tr>
 
-    @for ($i = 0; $i < 8; $i++)
+    @for ($i = 0; $i < 27; $i++)
      <tr>
       <td class="border align-top"><textarea rows="1" placeholder="From" name="work_from[]"></textarea></td>
       <td class="border align-top"><textarea rows="1" placeholder="To" name="work_to[]"></textarea></td>
@@ -283,8 +575,28 @@
     </td>
 
        <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+     <div class="h-full w-full p-2">
+        <label id="signatureBox2" data-signature-cell class="signature-box block h-36 w-full cursor-pointer">
+          <input
+            type="file"
+            name="signature_file"
+            id="signatureFileInput2"
+            accept="image/*"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onchange="handleSignatureUpload2(this.files[0])"
+          >
+          <img
+            id="signaturePreviewImg2"
+            src="{{ !empty($signaturePath) ? Storage::url($signaturePath) : '' }}"
+            alt="Signature preview"
+            class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
+          >
+          <div id="signaturePlaceholder2" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
+            Upload signature here
+          </div>
+        </label>
+        <input type="hidden" name="signature_path" id="signature_path2" value="{{ $signaturePath ?? '' }}">
+        <input type="hidden" name="signature_data" id="signature_data2">
       </div>
     </td>
 
@@ -321,47 +633,4 @@
             <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</button>
         </div>
 </form>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form');
-  if (!form) return;
-  const storageKey = 'pds_form_step2_' + ({{ auth()->id() ?? 0 }});
-
-  const loadCache = () => {
-    try {
-      const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      Object.entries(cached).forEach(([name, value]) => {
-        const field = form.elements[name];
-        if (!field) return;
-        if (field.type === 'checkbox' || field.type === 'radio') {
-          field.checked = !!value;
-        } else {
-          field.value = value;
-          if (field.tagName === 'TEXTAREA') field.dispatchEvent(new Event('input'));
-        }
-      });
-    } catch (e) {}
-  };
-
-  const saveCache = () => {
-    const data = {};
-    Array.from(form.elements).forEach(el => {
-      if (!el.name || el.disabled) return;
-      if (['button','submit','reset','file'].includes(el.type)) return;
-      if (el.type === 'checkbox' || el.type === 'radio') {
-        data[el.name] = el.checked;
-      } else {
-        data[el.name] = el.value;
-      }
-    });
-    try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {}
-  };
-
-  loadCache();
-  form.addEventListener('input', saveCache);
-  form.addEventListener('change', saveCache);
-  form.addEventListener('submit', () => { localStorage.removeItem(storageKey); });
-});
-</script>
-
 </x-app-layout>

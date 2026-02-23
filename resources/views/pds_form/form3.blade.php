@@ -1,5 +1,5 @@
 <x-app-layout>
-<form method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
+<form id="pds-form3" method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
         <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
@@ -15,6 +15,22 @@
         td, th { padding: 4px; vertical-align: middle; }
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
+        .signature-box {
+            position: relative;
+            background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .signature-box.signature-has-image {
+            background: transparent;
+            border-color: transparent;
+        }
+        .signature-box.signature-has-image img {
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -23,7 +39,11 @@
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('#pds-form3');
+            if (!form) return;
+
             const sessionData = @json(session('pds', []));
+            const draftData = @json($data ?? []);
             const flat = {};
             const walk = (obj, prefix = '') => {
                 if (obj === null || obj === undefined) return;
@@ -35,6 +55,7 @@
                 }
             };
             walk(sessionData);
+            walk(draftData);
 
             const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
             const setField = (el, value) => {
@@ -77,7 +98,7 @@
                 });
             });
 
-            // NA locking for all [] groups on this page (first NA/N/A/NONE disables fields BELOW it)
+            // NA handling helpers
             const isNA = (val) => {
                 const v = (val || '').trim().toUpperCase();
                 return v === 'NA' || v === 'N/A' || v === 'NONE';
@@ -95,13 +116,18 @@
                 if (!fields.length) return;
 
                 const refresh = () => {
-                    const firstNAIndex = fields.findIndex(f => isNA(f.value));
+                    const firstField = fields[0];
+                    const firstIsNA = firstField ? isNA(firstField.value) : false;
+
                     fields.forEach((f, idx) => {
-                        const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
+                        const shouldDisable = firstIsNA && idx > 0;
                         f.disabled = shouldDisable;
                         f.classList.toggle('bg-gray-200', shouldDisable);
                         f.classList.toggle('text-gray-500', shouldDisable);
                         f.classList.toggle('cursor-not-allowed', shouldDisable);
+                        if (shouldDisable && f.tagName === 'TEXTAREA') {
+                            f.value = '';
+                        }
                     });
                 };
 
@@ -109,10 +135,55 @@
                 refresh();
             });
 
-            // Next button gating: require all visible fields (treat NA/N/A/NONE as filled)
+            // First-row logic per table
+            const rowGroup = (namesArr) => namesArr.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
+            const voluntaryFirstRow = rowGroup(['voluntary_organization[]','voluntary_from[]','voluntary_to[]','voluntary_hours[]','voluntary_position_nature_of_work[]']);
+            const learningFirstRow = rowGroup(['learning_title_of_ld[]','learning_from[]','learning_to[]','learning_hours[]','learning_type_of_ld[]','learning_conducted_sponsored_by[]']);
+            const otherInfoFirstRow = rowGroup(['special_skills_hobbies[]','non_academic_distinctions_recognition[]','membership_in_association_organization[]']);
+
+            const disableFollowingRows = (namesArr, disable) => {
+                namesArr.forEach(n => {
+                    const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+                    fields.forEach((f, idx) => {
+                        if (idx === 0) return;
+                        f.disabled = disable;
+                        f.classList.toggle('bg-gray-200', disable);
+                        f.classList.toggle('text-gray-500', disable);
+                        f.classList.toggle('cursor-not-allowed', disable);
+                        if (disable && f.tagName === 'TEXTAREA') {
+                            f.value = '';
+                        }
+                    });
+                });
+            };
+
+            const firstRowState = (fields) => {
+                const values = fields.map(f => (f?.value || '').trim());
+                const allNA = values.length && values.every(v => isNA(v));
+                const anyData = values.some(v => v !== '' && !isNA(v));
+                return { allNA, anyData };
+            };
+
+            const refreshRows = () => {
+                const voluntaryState = firstRowState(voluntaryFirstRow);
+                disableFollowingRows(['voluntary_organization[]','voluntary_from[]','voluntary_to[]','voluntary_hours[]','voluntary_position_nature_of_work[]'], voluntaryState.allNA);
+
+                const learningState = firstRowState(learningFirstRow);
+                disableFollowingRows(['learning_title_of_ld[]','learning_from[]','learning_to[]','learning_hours[]','learning_type_of_ld[]','learning_conducted_sponsored_by[]'], learningState.allNA);
+
+                const otherState = firstRowState(otherInfoFirstRow);
+                disableFollowingRows(['special_skills_hobbies[]','non_academic_distinctions_recognition[]','membership_in_association_organization[]'], otherState.allNA);
+            };
+
+            [...voluntaryFirstRow, ...learningFirstRow, ...otherInfoFirstRow].forEach(f => {
+                if (!f) return;
+                f.addEventListener('input', refreshRows);
+            });
+            refreshRows();
+
+            // Next button gating
             const nextBtn = document.getElementById('pds3-next');
-            const visibleFields = () => Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'))
-                .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
+            const requiredFields = Array.from(document.querySelectorAll('[required]'));
 
             const isFilled = (el) => {
                 if (el.type === 'file') return el.files && el.files.length > 0;
@@ -122,8 +193,17 @@
                 return val !== '';
             };
 
+            const firstRowSets = [voluntaryFirstRow, learningFirstRow, otherInfoFirstRow];
+
             const validateRequired = () => {
-                const hasMissing = visibleFields().some(el => !isFilled(el));
+                const hasMissingRequired = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
+
+                const firstRowsIncomplete = firstRowSets.some(set => {
+                    const state = firstRowState(set);
+                    return !(state.allNA || state.anyData);
+                });
+
+                const hasMissing = hasMissingRequired || firstRowsIncomplete;
 
                 if (!nextBtn) return;
                 if (hasMissing) {
@@ -135,8 +215,8 @@
                 }
             };
 
-            document.addEventListener('input', validateRequired, true);
-            document.addEventListener('change', validateRequired, true);
+            document.addEventListener('input', () => { refreshRows(); validateRequired(); }, true);
+            document.addEventListener('change', () => { refreshRows(); validateRequired(); }, true);
             validateRequired();
 
             if (nextBtn) {
@@ -148,6 +228,211 @@
                     }
                 });
             }
+
+            // Local cache + autosave/draft
+            const storageKey = 'pds_form_step3_' + ({{ auth()->id() ?? 0 }});
+            const singleSelectCheckboxNames = new Set();
+            const storageBase = "{{ asset('storage') }}/";
+            const initialSignaturePath = @json($signaturePath ?? '');
+
+            const signaturePreviewImg3 = document.getElementById('signaturePreviewImg3');
+            const signaturePlaceholder3 = document.getElementById('signaturePlaceholder3');
+            const signatureBox3 = document.getElementById('signatureBox3');
+            const signatureDataInput3 = document.getElementById('signature_data3');
+            const signaturePathInput3 = document.getElementById('signature_path3');
+
+            const buildSignatureUrl3 = (path) => {
+                if (!path) return '';
+                const cleaned = path.replace(/^public\//, '');
+                return storageBase + cleaned;
+            };
+
+            const updateSignaturePreviewFromInputs3 = () => {
+                if (!signaturePreviewImg3 || !signaturePlaceholder3) return;
+                const dataUrl = signatureDataInput3?.value;
+                const pathVal = signaturePathInput3?.value || initialSignaturePath;
+                const url = dataUrl || buildSignatureUrl3(pathVal);
+                if (url) {
+                    signaturePreviewImg3.src = url;
+                    signaturePreviewImg3.classList.remove('hidden');
+                    signaturePlaceholder3.classList.add('hidden');
+                    signatureBox3?.classList.add('signature-has-image');
+                } else {
+                    signaturePreviewImg3.classList.add('hidden');
+                    signaturePlaceholder3.classList.remove('hidden');
+                    signatureBox3?.classList.remove('signature-has-image');
+                }
+            };
+
+            window.handleSignatureUpload3 = (file) => {
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const data = imageData.data;
+                        const threshold = 240;
+                        for (let i = 0; i < data.length; i += 4) {
+                            if (data[i] > threshold && data[i + 1] > threshold && data[i + 2] > threshold) {
+                                data[i + 3] = 0;
+                            }
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+
+                        const output = canvas.toDataURL('image/png');
+                        if (signatureDataInput3) signatureDataInput3.value = output;
+                        if (signaturePathInput3) signaturePathInput3.value = '';
+                        updateSignaturePreviewFromInputs3();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const loadCache = (overrideData = null) => {
+                let data = {};
+                try {
+                    data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                } catch (e) {
+                    data = {};
+                }
+
+                if (overrideData) {
+                    data = { ...data, ...overrideData };
+                }
+
+                if (overrideData?.signature_path && signaturePathInput3) {
+                    signaturePathInput3.value = overrideData.signature_path;
+                }
+                if (overrideData?.signature_data && signatureDataInput3) {
+                    signatureDataInput3.value = overrideData.signature_data;
+                }
+                Object.entries(data).forEach(([name, stored]) => {
+                    const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+                    if (name.endsWith('[]') && Array.isArray(stored)) {
+                        elements.forEach((el, idx) => {
+                            const val = stored[idx] ?? '';
+                            if (el.type === 'checkbox') {
+                                el.checked = Array.isArray(val) ? val.includes(el.value) : String(val) === el.value;
+                            } else if (el.type === 'radio') {
+                                el.checked = val === el.value;
+                            } else {
+                                if (!el.value) el.value = val;
+                            }
+                            if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        });
+                        return;
+                    }
+
+                    elements.forEach(el => {
+                        if (el.type === 'checkbox') {
+                            if (Array.isArray(stored)) {
+                                el.checked = stored.includes(el.value);
+                            } else {
+                                el.checked = String(stored) === el.value;
+                            }
+                        }
+                        else if (el.type === 'radio') {
+                            el.checked = stored === el.value;
+                        }
+                        else {
+                            if (!el.value) {
+                                el.value = stored;
+                            }
+                        }
+
+                        if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    });
+                });
+                updateSignaturePreviewFromInputs3();
+            };
+
+            const saveCache = () => {
+                const data = {};
+
+                Array.from(form.elements).forEach(el => {
+                    if (!el.name || el.disabled) return;
+                    if (["button","submit","reset","file"].includes(el.type)) return;
+
+                    const isArrayField = el.name.endsWith('[]');
+
+                    if (el.type === 'checkbox') {
+                        if (singleSelectCheckboxNames.has(el.name)) {
+                            if (el.checked) {
+                                data[el.name] = el.value;
+                            } else if (!data[el.name]) {
+                                data[el.name] = '';
+                            }
+                        } else {
+                            if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
+                            if (el.checked) data[el.name].push(el.value);
+                        }
+                    }
+                    else if (el.type === 'radio') {
+                        if (el.checked) data[el.name] = el.value;
+                    }
+                    else {
+                        if (isArrayField) {
+                            if (!data[el.name]) data[el.name] = [];
+                            data[el.name].push(el.value);
+                        } else {
+                            data[el.name] = el.value;
+                        }
+                    }
+                });
+
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(data));
+                } catch (e) {}
+            };
+
+            const autoSaveToServer = (() => {
+                let timer;
+                return () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        const formData = new FormData(form);
+                        fetch('{{ route('pds.autosave') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                            },
+                            body: formData
+                        }).catch(() => {});
+                    }, 800);
+                };
+            })();
+
+            const persist = () => {
+                saveCache();
+                autoSaveToServer();
+            };
+
+            loadCache();
+
+            fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
+                .then(r => r.ok ? r.json() : null)
+                .then(json => {
+                    if (!json || !json.data) return;
+                    loadCache(json.data);
+                    updateSignaturePreviewFromInputs3();
+                })
+                .catch(() => {});
+
+            form.addEventListener('input', () => { persist(); });
+            form.addEventListener('change', () => { persist(); });
         });
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
@@ -246,7 +531,7 @@
       <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
      </tr>
 
-    @for ($i = 0; $i < 8; $i++)
+    @for ($i = 0; $i < 27; $i++)
      <tr>
       <td class="border h-10"><textarea rows="1" placeholder="Title of L&D / Training" name="learning_title_of_ld[]"></textarea></td>
       <td class="border h-10"><textarea rows="1" placeholder="From" name="learning_from[]"></textarea></td>
@@ -309,8 +594,28 @@
     </td>
 
        <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2">
-        <input type="file" name="signature_attachment_3" id="signature_attachment" accept="image/*,.pdf" class="text-sm">
+     <div class="h-full w-full p-2">
+        <label id="signatureBox3" data-signature-cell class="signature-box block h-36 w-full cursor-pointer">
+          <input
+            type="file"
+            name="signature_file"
+            id="signatureFileInput3"
+            accept="image/*"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onchange="handleSignatureUpload3(this.files[0])"
+          >
+          <img
+            id="signaturePreviewImg3"
+            src="{{ !empty($signaturePath) ? Storage::url($signaturePath) : '' }}"
+            alt="Signature preview"
+            class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
+          >
+          <div id="signaturePlaceholder3" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
+            Upload signature here
+          </div>
+        </label>
+        <input type="hidden" name="signature_path" id="signature_path3" value="{{ $signaturePath ?? '' }}">
+        <input type="hidden" name="signature_data" id="signature_data3">
       </div>
     </td>
 

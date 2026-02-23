@@ -15,6 +15,10 @@ class PdsController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+        $signaturePath = $signatureFiles->signature_file_path ?? null;
+        $photoPath = $signatureFiles->photo_file_path ?? null;
+
         $personal = DB::table('pds_personal_infos')->where('user_id', $userId)->first();
         $address = DB::table('pds_addresses')->where('user_id', $userId)->first();
         $contact = DB::table('pds_contact_infos')->where('user_id', $userId)->first();
@@ -42,7 +46,9 @@ class PdsController extends Controller
             'education',
             'eligibilities',
             'work',
-            'voluntary'
+            'voluntary',
+            'signaturePath',
+            'photoPath'
         ));
     }
 
@@ -53,10 +59,14 @@ class PdsController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+        $signaturePath = $signatureFiles->signature_file_path ?? null;
+        $photoPath = $signatureFiles->photo_file_path ?? null;
+
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
         $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->orderBy('from')->get();
 
-        return view('pdsreview.pdsreview2', compact('eligibilities', 'workExperiences'));
+        return view('pdsreview.pdsreview2', compact('eligibilities', 'workExperiences', 'signaturePath', 'photoPath'));
     }
 
     public function review3()
@@ -65,6 +75,10 @@ class PdsController extends Controller
         if (!$userId) {
             abort(403, 'Unauthorized');
         }
+
+        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+        $signaturePath = $signatureFiles->signature_file_path ?? null;
+        $photoPath = $signatureFiles->photo_file_path ?? null;
 
         $voluntaryWorks = DB::table('pds_voluntary_work')
             ->where('user_id', $userId)
@@ -81,7 +95,7 @@ class PdsController extends Controller
             ->get();
 
 
-        return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'other'));
+        return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'other', 'signaturePath', 'photoPath'));
     }
 
     public function review4()
@@ -91,11 +105,15 @@ class PdsController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+        $signaturePath = $signatureFiles->signature_file_path ?? null;
+        $photoPath = $signatureFiles->photo_file_path ?? null;
+
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
         $idInfo = DB::table('pds_id_infos')->where('user_id', $userId)->first();
         $references = DB::table('pds_references')->where('user_id', $userId)->get();
 
-        return view('pdsreview.pdsreview4', compact('declaration', 'idInfo', 'references'));
+        return view('pdsreview.pdsreview4', compact('declaration', 'idInfo', 'references', 'signaturePath', 'photoPath'));
     }
 
     public function review5()
@@ -105,8 +123,12 @@ class PdsController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+        $signaturePath = $signatureFiles->signature_file_path ?? null;
+        $photoPath = $signatureFiles->photo_file_path ?? null;
+
         $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
 
-        return view('pdsreview.pdsreview5', compact('remarks'));
+        return view('pdsreview.pdsreview5', compact('remarks', 'signaturePath', 'photoPath'));
     }
 }

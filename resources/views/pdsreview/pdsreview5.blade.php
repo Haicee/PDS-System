@@ -166,8 +166,14 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 
 <!-- SIGNATURE -->
 <div class="w-full flex justify-end mt-[3cm] pr-6">
-<div class="w-[350px] text-center">
-  <div class="border-b-2 border-black"></div>
+<div class="w-[350px] text-center flex flex-col items-center space-y-2">
+  @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+  @if($signatureUrl)
+    <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-32 object-contain">
+  @else
+    <div class="text-xs text-gray-600">No signature on file</div>
+  @endif
+  <div class="border-b-2 border-black w-full"></div>
   <div class="mt-1 text-sm">(Signature over Printed Name)</div>
 </div>
 </div>
