@@ -30,6 +30,7 @@ class ProfileUpdateRequest extends FormRequest
             ],
             'type' => ['required', 'in:Permanent Employee,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
+            'profile_photo' => ['nullable', 'image', 'max:5120'],
         ];
     }
 }

@@ -325,17 +325,13 @@
     @php $photoUrl = !empty($photoPath) ? asset('storage/'.$photoPath) : null; @endphp
     <label class="cursor-pointer">
       <div class="border-2 border-black w-[3.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
-        @if($photoUrl)
-          <img src="{{ $photoUrl }}" class="absolute inset-0 w-full h-full object-cover" alt="Photo">
-        @else
-          <img id="photoPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
-          <div id="photoPlaceholder">
-            Passport-sized unfiltered<br>
-            picture taken within<br>
-            the last 6 months<br>
-            4.5 cm × 3.5 cm
-          </div>
-        @endif
+        <img id="photoPreview" src="{{ $passportPhotoUrl ?? '' }}" class="absolute inset-0 w-full h-full object-cover {{ empty($passportPhotoUrl) ? 'hidden' : '' }}" />
+        <div id="photoPlaceholder" class="{{ empty($passportPhotoUrl) ? '' : 'hidden' }}">
+          Passport-sized unfiltered<br>
+          picture taken within<br>
+          the last 6 months<br>
+          4.5 cm × 3.5 cm
+        </div>
       </div>
     </label>
 

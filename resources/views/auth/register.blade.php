@@ -7,7 +7,7 @@
                 <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>
 
-            <form class="space-y-6" method="POST" action="{{ route('register') }}">
+            <form class="space-y-6" method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
                 @csrf
 
                 <!-- Name -->
@@ -115,6 +115,128 @@
                         <input id="location_assigned" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="location_assigned" :value="old('location_assigned')" placeholder="e.g., BFAR Regional HQ – Lagao, GenSan" required oninput="this.value = this.value.toUpperCase();" />
                     </div>
                     <x-input-error :messages="$errors->get('location_assigned')" class="mt-2" />
+                </div>
+
+                <!-- Profile Photo -->
+                <div x-data="{
+                        preview: null,
+                        stream: null,
+                        streaming: false,
+                        setPreview(file) {
+                            if (!file) { this.preview = null; return; }
+                            const reader = new FileReader();
+                            reader.onload = e => { this.preview = e.target?.result; };
+                            reader.readAsDataURL(file);
+                        },
+                        clear() {
+                            this.preview = null;
+                            const input = this.$refs.uploadInput;
+                            if (input) { input.value = ''; }
+                            this.stopCamera();
+                        },
+                        async startCamera() {
+                            try {
+                                this.stopCamera();
+                                const stream = await navigator.mediaDevices?.getUserMedia?.({ video: true });
+                                if (!stream) return;
+                                this.stream = stream;
+                                this.streaming = true;
+                                const video = this.$refs.video;
+                                if (video) {
+                                    video.srcObject = stream;
+                                    await video.play();
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                this.streaming = false;
+                            }
+                        },
+                        captureFrame() {
+                            if (!this.streaming) return;
+                            const video = this.$refs.video;
+                            const canvas = this.$refs.canvas;
+                            if (!video || !canvas) return;
+                            const { videoWidth: w, videoHeight: h } = video;
+                            if (!w || !h) return;
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(video, 0, 0, w, h);
+                            canvas.toBlob(blob => {
+                                if (!blob) return;
+                                const file = new File([blob], 'profile_photo.jpg', { type: 'image/jpeg' });
+                                const dt = new DataTransfer();
+                                dt.items.add(file);
+                                this.$refs.uploadInput.files = dt.files;
+                                this.setPreview(file);
+                                this.stopCamera();
+                            }, 'image/jpeg', 0.9);
+                        },
+                        stopCamera() {
+                            if (this.stream) {
+                                this.stream.getTracks().forEach(t => t.stop());
+                            }
+                            this.stream = null;
+                            this.streaming = false;
+                        },
+                        chooseUpload() {
+                            this.stopCamera();
+                            this.$refs.uploadInput?.click();
+                        }
+                    }" class="space-y-3">
+                    <label class="text-sm font-medium text-slate-700" for="profile_photo">Profile Photo</label>
+
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full overflow-hidden border border-gray-200 shadow-sm bg-white">
+                            <video x-ref="video" class="absolute inset-0 h-full w-full object-cover" x-show="streaming" playsinline muted></video>
+                            <template x-if="preview">
+                                <img :src="preview" alt="Profile preview" class="h-full w-full object-cover" />
+                            </template>
+                            <template x-if="!preview">
+                                <div class="flex h-full w-full items-center justify-center text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-44 lg:h-44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                </div>
+                            </template>
+                        </div>
+
+
+                        <div class="flex flex-col items-center gap-2">
+                            <input 
+                                x-ref="uploadInput"
+                                id="profile_photo_upload"
+                                name="profile_photo"
+                                type="file"
+                                accept="image/*"
+                                required
+                                class="hidden"
+                                @change="setPreview($event.target.files[0])">
+
+                            <canvas x-ref="canvas" class="hidden"></canvas>
+
+                            <div class="flex flex-wrap items-center justify-center gap-3">
+                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="startCamera()" x-show="!streaming">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M17 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m3 10 2.586-2.586a2 2 0 0 1 2.828 0L12 11l2.586-2.586a2 2 0 0 1 2.828 0L21 11"/><circle cx="12" cy="13" r="3"/></svg>
+                                    Take Photo
+                                </button>   
+
+                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="chooseUpload()" x-show="!streaming">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7-7-7 7"/><path d="M5 19h14"/></svg>
+                                    Upload Photo
+                                </button>
+
+                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="captureFrame()" x-show="streaming">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+                                    Capture
+                                </button>
+                            </div>
+
+                            <button type="button" class="inline-flex items-center justify-center rounded-xl border border-transparent px-4 py-2 text-xs font-semibold text-slate-500 underline decoration-dashed decoration-slate-400 transition hover:text-rose-600" @click="clear()" x-show="preview || streaming">
+                                Remove photo / stop camera
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500">Use your device camera or upload a clear headshot. Square/circle framing shows how it will display.</p>
+                    <x-input-error :messages="$errors->get('profile_photo')" class="mt-1" />
                 </div>
 
                 <button type="submit" class="group relative inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;    
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Storage;
 
 class PdsPdfController extends Controller
 {
@@ -50,6 +51,25 @@ class PdsPdfController extends Controller
         $data = $this->buildPdfData($user);
 
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
+    }
+
+    // Admin download PDF for a specific user
+    public function downloadForAdmin(int $user)
+    {
+        $data = $this->buildPdfData($user);
+        $personal = $data['personal'];
+        $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
+
+        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
+        $pdfBinary =  $this->makeShot($html)->pdf();
+
+        return response()->streamDownload(
+            function () use ($pdfBinary) {
+                echo $pdfBinary;
+            },
+            $filename,
+            ['Content-Type' => 'application/pdf']
+        );
     }
 
     private function buildPdfData($userId)

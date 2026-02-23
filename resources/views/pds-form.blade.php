@@ -124,9 +124,9 @@
                     },
 
                     downloadPds() {
-                        if (!this.selected?.key) return;
-                        const key = encodeURIComponent(this.selected.key);
-                        window.location = `/pds-form/${key}/download`;
+                        if (!this.selected?.user_id) return;
+                        const userId = encodeURIComponent(this.selected.user_id);
+                        window.open(`/pds-preview/${userId}/download?ts=${Date.now()}`, '_blank');
                     },
 
                     close() {

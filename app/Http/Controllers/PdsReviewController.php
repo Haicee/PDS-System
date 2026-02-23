@@ -13,14 +13,14 @@ class PdsReviewController extends Controller
             ->orderBy('submitted', 'desc')
             ->get()
             ->map(function ($submission) {
+                $avatar = $this->avatarUrl($submission->user?->profile?->profile);
+
                 return [
                     'id' => $submission->id,
                     'key' => 'pds-' . $submission->id,
                     'user_id' => $submission->user_id,
                     'name' => $submission->name ?? 'Unknown',
-                    'avatar' => $submission->user && $submission->user->gender === 'Female' 
-                        ? 'https://i.pravatar.cc/96?img=47' 
-                        : 'https://i.pravatar.cc/96?img=12',
+                    'avatar' => $avatar,
                     'unit' => $submission->unit ?? '—',
                     'email' => $submission->email ?? '—',
                     'type' => $submission->type ?? 'Permanent Employee',
