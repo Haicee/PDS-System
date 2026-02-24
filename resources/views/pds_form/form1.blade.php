@@ -1,5 +1,6 @@
 <x-app-layout>
-    <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
+ <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">    
+<form id="pds-form1" method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
     @csrf
     <style>
         /* Print-friendly, spreadsheet-like grid */
@@ -32,250 +33,244 @@
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
     </style>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Prefill from session cache (pds) so going back restores values
-            const sessionData = @json(session('pds', []));
-            const draftData = @json($data ?? []);
-            const flat = {};
-            const walk = (obj, prefix = '') => {
-                if (obj === null || obj === undefined) return;
-                if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
-                if (Array.isArray(obj)) {
-                    obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
-                } else {
-                    Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
-                }
-            };
-            // Draft data takes precedence, then session cache (will be refreshed below via API if route is static view)
-            walk(sessionData);
-            walk(draftData);
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+   <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Prefill from session cache (pds) so going back restores values
+    const sessionData = @json(session('pds', []));
+    const draftData = @json($data ?? []);
+    const flat = {};
 
-            const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
-            const setField = (el, value) => {
-                if (!el) return;
-                if (el.type === 'checkbox' || el.type === 'radio') {
-                    el.checked = Array.isArray(value) ? value.map(String).includes(String(el.value)) : String(el.value) === String(value);
-                } else {
-                    el.value = value;
-                    if (el.tagName === 'TEXTAREA') {
-                        el.dispatchEvent(new Event('input'));
-                    }
-                }
-            };
+    const walk = (obj, prefix = '') => {
+        if (obj === null || obj === undefined) return;
+        if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
+        if (Array.isArray(obj)) {
+            obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
+        } else {
+            Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
+        }
+    };
 
-            Object.entries(flat).forEach(([name, value]) => {
-                const exact = Array.from(document.querySelectorAll(`[name="${cssName(name)}"]`));
-                if (exact.length) {
-                    exact.forEach(el => setField(el, value));
-                    return;
-                }
-                const matchIndex = name.match(/\[(\d+)\]$/);
-                if (matchIndex) {
-                    const idx = parseInt(matchIndex[1], 10);
-                    const base = name.replace(/\[\d+\]$/, '[]');
-                    const arrFields = Array.from(document.querySelectorAll(`[name="${cssName(base)}"]`));
-                    if (arrFields[idx]) setField(arrFields[idx], value);
-                }
-            });
-            // Keep textarea input uppercase
-            document.querySelectorAll('textarea').forEach(el => {
-                el.addEventListener('input', () => {
-                    const start = el.selectionStart;
-                    const end = el.selectionEnd;
-                    const upper = el.value.toUpperCase();
-                    if (el.value !== upper) {
-                        el.value = upper;
-                        el.setSelectionRange(start, end);
-                    }
-                });
-            });
+    // Draft data takes precedence, then session cache
+    walk(sessionData);
+    walk(draftData);
 
-            // NA handling: only disable fields BELOW the first NA in each [] group; do not clear existing values
-            const isNA = (val) => {
-                const v = (val || '').trim().toUpperCase();
-                return v === 'NA' || v === 'N/A' || v === 'NONE';
-            };
+    const cssName = (name) => name.replace(/(["'\\])/g, '\\$1');
 
-            const names = new Set();
-            document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
-                const name = el.getAttribute('name');
-                if (name) names.add(name);
-            });
-            // Also include education rows (not []-suffixed) for per-row NA locking
-            document.querySelectorAll('textarea[name*="[school_name]"]').forEach(el => {
-                const name = el.getAttribute('name');
-                if (name) names.add(name);
-            });
+    const setField = (el, value) => {
+        if (!el) return;
+        if (el.type === 'checkbox' || el.type === 'radio') {
+            el.checked = Array.isArray(value) ? value.map(String).includes(String(el.value)) : String(el.value) === String(value);
+        } else {
+            el.value = value;
+            if (el.tagName === 'TEXTAREA') {
+                el.dispatchEvent(new Event('input'));
+            }
+        }
+    };
 
-            // Special handling for children rows: allow only one NA on first row, disable rest
-            const childrenNameFields = Array.from(document.querySelectorAll('textarea[name="children_familybg[]"]'));
-            const childrenDobFields = Array.from(document.querySelectorAll('textarea[name="children_dateofbirth_familybg[]"]'));
+    // Apply flattened data to fields
+    Object.entries(flat).forEach(([name, value]) => {
+        const exact = Array.from(document.querySelectorAll(`[name="${cssName(name)}"]`));
+        if (exact.length) {
+            exact.forEach(el => setField(el, value));
+            return;
+        }
+        const matchIndex = name.match(/\[(\d+)\]$/);
+        if (matchIndex) {
+            const idx = parseInt(matchIndex[1], 10);
+            const base = name.replace(/\[\d+\]$/, '[]');
+            const arrFields = Array.from(document.querySelectorAll(`[name="${cssName(base)}"]`));
+            if (arrFields[idx]) setField(arrFields[idx], value);
+        }
+    });
 
-            const refreshChildren = () => {
-                const firstName = childrenNameFields[0];
-                const firstDob = childrenDobFields[0];
-                if (!firstName || !firstDob) return;
-
-                const firstIsNA = isNA(firstName.value) && isNA(firstDob.value);
-
-                if (firstIsNA) {
-                    firstName.value = 'NA';
-                    firstDob.value = 'NA';
-                }
-
-                childrenNameFields.forEach((f, idx) => {
-                    const shouldDisable = firstIsNA && idx > 0;
-                    if (idx > 0) {
-                        f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
-                    }
-                    f.disabled = shouldDisable;
-                    f.readOnly = shouldDisable;
-                    f.classList.toggle('bg-gray-200', shouldDisable);
-                    f.classList.toggle('text-gray-500', shouldDisable);
-                    f.classList.toggle('cursor-not-allowed', shouldDisable);
-                    f.classList.toggle('pointer-events-none', shouldDisable);
-                });
-
-                childrenDobFields.forEach((f, idx) => {
-                    const shouldDisable = firstIsNA && idx > 0;
-                    if (idx > 0) {
-                        f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
-                    }
-                    f.disabled = shouldDisable;
-                    f.readOnly = shouldDisable;
-                    f.classList.toggle('bg-gray-200', shouldDisable);
-                    f.classList.toggle('text-gray-500', shouldDisable);
-                    f.classList.toggle('cursor-not-allowed', shouldDisable);
-                    f.classList.toggle('pointer-events-none', shouldDisable);
-                });
-            };
-
-            childrenNameFields.forEach(f => f.addEventListener('input', refreshChildren));
-            childrenDobFields.forEach(f => f.addEventListener('input', refreshChildren));
-            refreshChildren();
-
-            names.forEach(name => {
-                // Skip children fields; handled above
-                if (name === 'children_familybg[]' || name === 'children_dateofbirth_familybg[]') {
-                    return;
-                }
-
-                const selectorName = name.replace(/["'\\]/g, '\\$&');
-                const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
-                if (!fields.length) return;
-
-                // Default: existing logic for pure [] groups
-                const refreshArray = () => {
-                    const firstNAIndex = fields.findIndex(f => isNA(f.value));
-                    fields.forEach((f, idx) => {
-                        const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
-                        f.disabled = shouldDisable;
-                        f.classList.toggle('bg-gray-200', shouldDisable);
-                        f.classList.toggle('text-gray-500', shouldDisable);
-                        f.classList.toggle('cursor-not-allowed', shouldDisable);
-                    });
-                };
-
-                // Special handling for education rows: when school_name is NA, disable ONLY siblings in same row
-                if (selectorName.includes('education[') && selectorName.endsWith('[school_name]')) {
-                    const schoolFields = fields;
-                    const rowSelectors = [
-                        '[basic_education]',
-                        '[from]',
-                        '[to]',
-                        '[highest_level]',
-                        '[year_graduated]',
-                        '[scholarship_acadhonors]'
-                    ];
-
-                    const refreshRow = () => {
-                        schoolFields.forEach(schoolField => {
-                            const isRowNA = isNA(schoolField.value);
-                            // derive row key prefix like education[elementary]
-                            const rowPrefix = schoolField.name.replace(/\[school_name\]$/, '');
-                            rowSelectors.forEach(sel => {
-                                const targetName = `${rowPrefix}${sel}`;
-                                const targets = document.querySelectorAll(`textarea[name="${targetName}"], input[name="${targetName}"]`);
-                                targets.forEach(target => {
-                                    target.disabled = isRowNA;
-                                    target.readOnly = isRowNA;
-                                    target.classList.toggle('bg-gray-200', isRowNA);
-                                    target.classList.toggle('text-gray-500', isRowNA);
-                                    target.classList.toggle('cursor-not-allowed', isRowNA);
-                                    target.classList.toggle('pointer-events-none', isRowNA);
-                                });
-                            });
-                        });
-                    };
-
-                    schoolFields.forEach(f => f.addEventListener('input', refreshRow));
-                    refreshRow();
-                    return;
-                }
-
-                fields.forEach(f => f.addEventListener('input', refreshArray));
-                refreshArray();
-            });
-
-            // Next button gating: require all required fields on this page + at least one checked per checkbox group
-            const nextBtn = document.getElementById('next-btn');
-            const requiredFields = Array.from(document.querySelectorAll('input[required], textarea[required], select[required]'));
-            const checkboxGroups = [
-                'sex[]',
-                'civilstatus[]',
-                'citizenship[]'
-            ];
-
-            const validateRequired = () => {
-                const missingRequiredInputs = requiredFields.some(el => {
-                    if (el.disabled || el.readOnly) return false;
-                    if (el.type === 'file') return !(el.files && el.files.length > 0);
-                    return !((el.value || '').trim());
-                });
-
-                const missingCheckboxGroup = checkboxGroups.some(name => {
-                    const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
-                    if (!boxes.length) return false;
-                    return !boxes.some(b => b.checked);
-                });
-
-                const hasMissing = missingRequiredInputs || missingCheckboxGroup;
-
-                if (!nextBtn) return;
-                if (hasMissing) {
-                    nextBtn.setAttribute('aria-disabled', 'true');
-                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                } else {
-                    nextBtn.removeAttribute('aria-disabled');
-                    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                }
-            };
-
-            requiredFields.forEach(el => {
-                el.addEventListener('input', validateRequired);
-                el.addEventListener('change', validateRequired);
-            });
-
-            checkboxGroups.forEach(name => {
-                document.querySelectorAll(`input[type="checkbox"][name="${name}"]`).forEach(box => {
-                    box.addEventListener('change', validateRequired);
-                });
-            });
-
-            validateRequired();
-
-            if (nextBtn) {
-                nextBtn.addEventListener('click', (e) => {
-                    if (nextBtn.getAttribute('aria-disabled') === 'true') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        validateRequired();
-                    }
-                });
+    // Force textarea input to uppercase
+    document.querySelectorAll('textarea').forEach(el => {
+        el.addEventListener('input', () => {
+            const start = el.selectionStart;
+            const end = el.selectionEnd;
+            const upper = el.value.toUpperCase();
+            if (el.value !== upper) {
+                el.value = upper;
+                el.setSelectionRange(start, end);
             }
         });
-    </script>
+    });
+
+    // Helper: detect NA / N/A / NONE
+    const isNA = (val) => {
+        const v = (val || '').trim().toUpperCase();
+        return v === 'NA' || v === 'N/A' || v === 'NONE';
+    };
+
+    // Collect []-suffixed fields
+    const names = new Set();
+    document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
+        const name = el.getAttribute('name');
+        if (name) names.add(name);
+    });
+
+    // Include education rows (school_name) for per-row NA logic
+    document.querySelectorAll('textarea[name*="[school_name]"]').forEach(el => {
+        const name = el.getAttribute('name');
+        if (name) names.add(name);
+    });
+
+    // Special handling: children rows
+    const childrenNameFields = Array.from(document.querySelectorAll('textarea[name="children_familybg[]"]'));
+    const childrenDobFields = Array.from(document.querySelectorAll('textarea[name="children_dateofbirth_familybg[]"]'));
+
+    const refreshChildren = () => {
+        const firstName = childrenNameFields[0];
+        const firstDob = childrenDobFields[0];
+        if (!firstName || !firstDob) return;
+
+        const firstIsNA = isNA(firstName.value) && isNA(firstDob.value);
+
+        if (firstIsNA) {
+            firstName.value = 'NA';
+            firstDob.value = 'NA';
+        }
+
+        childrenNameFields.forEach((f, idx) => {
+            const shouldDisable = firstIsNA && idx > 0;
+            if (idx > 0) {
+                f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
+            }
+            f.disabled = shouldDisable;
+            f.readOnly = shouldDisable;
+            f.classList.toggle('bg-gray-200', shouldDisable);
+            f.classList.toggle('text-gray-500', shouldDisable);
+            f.classList.toggle('cursor-not-allowed', shouldDisable);
+            f.classList.toggle('pointer-events-none', shouldDisable);
+        });
+
+        childrenDobFields.forEach((f, idx) => {
+            const shouldDisable = firstIsNA && idx > 0;
+            if (idx > 0) {
+                f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
+            }
+            f.disabled = shouldDisable;
+            f.readOnly = shouldDisable;
+            f.classList.toggle('bg-gray-200', shouldDisable);
+            f.classList.toggle('text-gray-500', shouldDisable);
+            f.classList.toggle('cursor-not-allowed', shouldDisable);
+            f.classList.toggle('pointer-events-none', shouldDisable);
+        });
+    };
+
+    childrenNameFields.forEach(f => f.addEventListener('input', refreshChildren));
+    childrenDobFields.forEach(f => f.addEventListener('input', refreshChildren));
+    refreshChildren();
+
+    // Handle all other [] and education fields
+    names.forEach(name => {
+        if (name === 'children_familybg[]' || name === 'children_dateofbirth_familybg[]') return;
+
+        const selectorName = name.replace(/["'\\]/g, '\\$&');
+        const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"], textarea[name="${selectorName}"]`));
+        if (!fields.length) return;
+
+        const refreshArray = () => {
+            const firstNAIndex = fields.findIndex(f => isNA(f.value));
+            fields.forEach((f, idx) => {
+                const shouldDisable = firstNAIndex !== -1 && idx > firstNAIndex;
+                f.disabled = shouldDisable;
+                f.classList.toggle('bg-gray-200', shouldDisable);
+                f.classList.toggle('text-gray-500', shouldDisable);
+                f.classList.toggle('cursor-not-allowed', shouldDisable);
+            });
+        };
+
+        // Education row special handling
+        if (selectorName.includes('education[') && selectorName.endsWith('[school_name]')) {
+            const schoolFields = fields;
+            const rowSelectors = ['[basic_education]', '[from]', '[to]', '[highest_level]', '[year_graduated]', '[scholarship_acadhonors]'];
+
+            const refreshRow = () => {
+                schoolFields.forEach(schoolField => {
+                    const isRowNA = isNA(schoolField.value);
+                    const rowPrefix = schoolField.name.replace(/\[school_name\]$/, '');
+                    rowSelectors.forEach(sel => {
+                        const targetName = `${rowPrefix}${sel}`;
+                        const targets = document.querySelectorAll(`textarea[name="${targetName}"], input[name="${targetName}"]`);
+                        targets.forEach(target => {
+                            target.disabled = isRowNA;
+                            target.readOnly = isRowNA;
+                            target.classList.toggle('bg-gray-200', isRowNA);
+                            target.classList.toggle('text-gray-500', isRowNA);
+                            target.classList.toggle('cursor-not-allowed', isRowNA);
+                            target.classList.toggle('pointer-events-none', isRowNA);
+                        });
+                    });
+                });
+            };
+
+            schoolFields.forEach(f => f.addEventListener('input', refreshRow));
+            refreshRow();
+            return;
+        }
+
+        fields.forEach(f => f.addEventListener('input', refreshArray));
+        refreshArray();
+    });
+
+    // Next button validation
+    const nextBtn = document.getElementById('next-btn');
+    const requiredFields = Array.from(document.querySelectorAll('input[required], textarea[required], select[required]'));
+    const checkboxGroups = ['sex[]', 'civilstatus[]', 'citizenship[]'];
+
+    const validateRequired = () => {
+        const missingRequiredInputs = requiredFields.some(el => {
+            if (el.disabled || el.readOnly) return false;
+            if (el.type === 'file') return !(el.files && el.files.length > 0);
+            return !((el.value || '').trim());
+        });
+
+        const missingCheckboxGroup = checkboxGroups.some(name => {
+            const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
+            if (!boxes.length) return false;
+            return !boxes.some(b => b.checked);
+        });
+
+        const hasMissing = missingRequiredInputs || missingCheckboxGroup;
+
+        if (!nextBtn) return;
+        if (hasMissing) {
+            nextBtn.setAttribute('aria-disabled', 'true');
+            nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        } else {
+            nextBtn.removeAttribute('aria-disabled');
+            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        }
+    };
+
+    requiredFields.forEach(el => {
+        el.addEventListener('input', validateRequired);
+        el.addEventListener('change', validateRequired);
+    });
+
+    checkboxGroups.forEach(name => {
+        document.querySelectorAll(`input[type="checkbox"][name="${name}"]`).forEach(box => {
+            box.addEventListener('change', validateRequired);
+        });
+    });
+
+    validateRequired();
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+            if (nextBtn.getAttribute('aria-disabled') === 'true') {
+                e.preventDefault();
+                e.stopPropagation();
+                validateRequired();
+            }
+        });
+    }
+
+});
+</script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
   <!-- HEADER -->
   <header class="mb-4 flex items-start justify-between gap-4">
@@ -461,19 +456,32 @@
             <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="by_naturalization"> by naturalization</label>
           </div>
           <p class="py-3 flex justify-center">Pls. indicate country:</p>
-          <div class="border mb-2 mt-1 w-full text-center" style="min-height: 38px;">
-            <textarea
-      name="country"
-      id="country"
-      required
-      rows="1"
-      class="w-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden text-center"
-      placeholder="Enter Country"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
-          </div>
+        <div class="border mb-2 mt-1 w-full text-center" style="min-height: 38px;">
+  <select
+    name="country"
+    id="country"
+    placeholder="Enter Country"
+    required
+    class="w-full text-lg text-center"
+  >
+    <option value="">Select a country...</option>
+    <option value="Afghanistan">Afghanistan</option>
+    <option value="Albania">Albania</option>
+    <option value="Algeria">Algeria</option>
+    <option value="Andorra">Andorra</option>
+    <option value="Angola">Angola</option>
+    <option value="Argentina">Argentina</option>
+    <option value="Armenia">Armenia</option>
+    <option value="Australia">Australia</option>
+    <option value="Austria">Austria</option>
+    <option value="Azerbaijan">Azerbaijan</option>
+    <!-- ...add all countries here -->
+    <option value="Philippines">Philippines</option>
+    <option value="United States">United States</option>
+    <option value="United Kingdom">United Kingdom</option>
+    <option value="Vietnam">Vietnam</option>
+  </select>
+</div>
         </div>
       </td>
     </tr>

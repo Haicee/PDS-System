@@ -16,8 +16,8 @@
     @endif
    <style>
         /* Print-friendly, spreadsheet-like grid */
-        table { border-collapse: collapse; width: 100%; }
-        td, th { padding: 4px; vertical-align: middle; }
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+        td, th { padding: 4px; vertical-align: middle; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
         /* Only apply borders where classes already exist */
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
@@ -96,7 +96,7 @@
 
       <td class="bg-[#e7e7e7] align-top border">
         <span class="italic text-xs px-2">NAME EXTENSION (JR., SR)</span>
-        <div>
+        <div  class="px-2">
            {{ $personal->name_extension ?? '—' }}
       </div>
       </td>
@@ -158,7 +158,7 @@
       <td class="bg-[#e7e7e7] px-2 border align-middle">
         4. PLACE OF BIRTH
       </td>
-      <td class="border px-2 h-10">
+      <td class="border h-10">
         <div class="py-2 text-lg">{{ $personal->place_of_birth ?? '—' }}</div>
       </td>
     </tr>
@@ -593,13 +593,13 @@
 
       <td class="bg-[#e7e7e7] align-top">
         <span class="italic text-xs px-2">NAME EXTENSION (JR., SR)</span>
-        <div>
+        <div class="px-2">
             {{ $spouse->name_extension ?? '—' }}
         </div>
       </td>
       
       <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? '' }}
        </div>
       </td>
@@ -625,7 +625,7 @@
       </td>
 
       <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? '' }}
        </div>
       </td>
@@ -648,7 +648,7 @@
       </td>
 
     <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -672,7 +672,7 @@
 
 
         <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -696,7 +696,7 @@
 
 
      <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -720,7 +720,7 @@
 
 
         <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -748,7 +748,7 @@
 
 
         <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -777,13 +777,13 @@
 
       <td class="bg-[#e7e7e7] align-top">
         <span class="italic text-xs px-2">NAME EXTENSION (JR., SR)</span>
-       <div>
+       <div  class="px-2">
         {{ $father->name_extension ?? '—' }}
       </div>
       </td>
 
        <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -810,7 +810,7 @@
       </td>
 
     <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -831,7 +831,7 @@
       </td>
 
        <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -859,7 +859,7 @@
 
 
       <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -886,7 +886,7 @@
       </td>
 
        <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -913,7 +913,7 @@
 
       
         <td class="border">
-       <div class="h-full w-full px-2 text-center">
+       <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
       </td>
@@ -997,45 +997,45 @@
 
     <!-- EDITABLE CELL PATTERN -->
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('elementary','school_name') }}
           </div>
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduCourse('elementary') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('elementary','from') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('elementary','to') }}
       </td>
 
       <td
-            class="border h-10">
-            <div class="h-full w-full px-2 text-center">
+            class="border h-10 align-middle">
+            <div class="h-full w-full px-2 flex items-center justify-center">
               {{ $eduVal('elementary','highest_level') }}
         </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('elementary','year_graduated') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduHonors('elementary') }}
       </td>
   </tr>
@@ -1046,44 +1046,44 @@
 
     <!-- EDITABLE CELL PATTERN -->
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('secondary','school_name') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduCourse('secondary') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('secondary','from') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('secondary','to') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('secondary','highest_level') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('secondary','year_graduated') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduHonors('secondary') }}
       </td>
   </tr>
@@ -1093,44 +1093,44 @@
 
     <!-- EDITABLE CELL PATTERN -->
     <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('vocational','school_name') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduCourse('vocational') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('vocational','from') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('vocational','to') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('vocational','highest_level') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('vocational','year_graduated') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduHonors('vocational') }}
       </td>
   </tr>
@@ -1140,44 +1140,44 @@
 
     <!-- EDITABLE CELL PATTERN -->
     <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('college','school_name') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduCourse('college') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('college','from') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('college','to') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('college','highest_level') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('college','year_graduated') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduHonors('college') }}
       </td>
   </tr>
@@ -1187,44 +1187,44 @@
 
     <!-- EDITABLE CELL PATTERN -->
    <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('graduate_studies','school_name') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduCourse('graduate_studies') }}
       </td>
 
       <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('graduate_studies','from') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('graduate_studies','to') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('graduate_studies','highest_level') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduVal('graduate_studies','year_graduated') }}
       </td>
 
      <td
-          class="border h-10">
-          <div class="h-full w-full px-2 text-center">
+          class="border h-10 align-middle">
+          <div class="h-full w-full px-2 flex items-center justify-center">
             {{ $eduHonors('graduate_studies') }}
       </td>
   </tr>

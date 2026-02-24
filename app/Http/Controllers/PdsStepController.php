@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class PdsStepController extends Controller
 {
@@ -18,6 +19,8 @@ class PdsStepController extends Controller
         $signaturePath = $this->storeSignature($request, $userId);
         $fileKeys = array_keys($request->allFiles());
         $data = $request->except(array_merge(['_token'], $fileKeys));
+
+        $data = $this->normalizeArrayFields($data);
 
         if ($signaturePath) {
             $data['signature_path'] = $signaturePath;
@@ -31,6 +34,9 @@ class PdsStepController extends Controller
 
         $draft->data = array_replace_recursive($existingData, $data);
         $draft->save();
+
+        // keep session cache in sync per user
+        session(['pds' => $draft->data, 'pds_owner' => $userId]);
 
         $nextRoute = match ($step) {
             1 => 'pds.form2',
@@ -58,6 +64,8 @@ class PdsStepController extends Controller
         $fileKeys = array_keys($request->allFiles());
         $data = $request->except(array_merge(['_token'], $fileKeys));
 
+        $data = $this->normalizeArrayFields($data);
+
         if ($signaturePath) {
             $data['signature_path'] = $signaturePath;
         }
@@ -67,6 +75,9 @@ class PdsStepController extends Controller
 
         $draft->data = array_replace_recursive($existingData, $data);
         $draft->save();
+
+        // keep session cache in sync per user
+        session(['pds' => $draft->data, 'pds_owner' => $userId]);
 
         \Log::info('Auto-save successful', ['user_id' => $userId, 'data_keys' => array_keys($data)]);
 
@@ -90,6 +101,10 @@ class PdsStepController extends Controller
     public function form1()
     {
         $userId = Auth::id();
+        // clear stale session cache if it belongs to another user
+        if (session('pds_owner') && session('pds_owner') !== $userId) {
+            session()->forget(['pds', 'pds_owner']);
+        }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
@@ -100,6 +115,9 @@ class PdsStepController extends Controller
       public function form2()
     {
         $userId = Auth::id();
+        if (session('pds_owner') && session('pds_owner') !== $userId) {
+            session()->forget(['pds', 'pds_owner']);
+        }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
@@ -110,6 +128,9 @@ class PdsStepController extends Controller
       public function form3()
     {
         $userId = Auth::id();
+        if (session('pds_owner') && session('pds_owner') !== $userId) {
+            session()->forget(['pds', 'pds_owner']);
+        }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
@@ -120,6 +141,9 @@ class PdsStepController extends Controller
       public function form4()
     {
         $userId = Auth::id();
+        if (session('pds_owner') && session('pds_owner') !== $userId) {
+            session()->forget(['pds', 'pds_owner']);
+        }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
@@ -130,11 +154,34 @@ class PdsStepController extends Controller
     public function form5()
     {
         $userId = Auth::id();
+        if (session('pds_owner') && session('pds_owner') !== $userId) {
+            session()->forget(['pds', 'pds_owner']);
+        }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
 
         return view('pds_form.form5', compact('data', 'signaturePath'));
+    }
+
+    /**
+     * Ensure checkbox groups are stored as arrays even when only one option is selected.
+     */
+    private function normalizeArrayFields(array $data): array
+    {
+        $singleSelectCheckboxes = ['sex', 'civilstatus', 'citizenship'];
+
+        foreach ($singleSelectCheckboxes as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = Arr::wrap($data[$key]);
+            }
+        }
+
+        if (array_key_exists('remarks', $data)) {
+            $data['remarks'] = Arr::wrap($data['remarks']);
+        }
+
+        return $data;
     }
 
     private function storeSignature(Request $request, int $userId): ?string

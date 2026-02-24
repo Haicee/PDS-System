@@ -11,8 +11,8 @@
 @csrf
     <style>
         body { margin: 24px; }
-        table { border-collapse: collapse; width: 100%; }
-        td, th { padding: 4px; vertical-align: top; }
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+        td, th { padding: 4px; vertical-align: middle; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
 
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
@@ -23,7 +23,7 @@
 
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
-        td { height: 30px }
+        td { height: 38px; min-height: 38px; vertical-align: middle; }
     </style>  
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
@@ -147,52 +147,50 @@
     <td class="border align-top text-center">{{ $workRow->govt_service ?? " " }}</td>
   </tr>
 @endfor
-    <tr>
-      <table class="border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
-        <colgroup>
-          <col style="width: 17%;">
-           <col style="width: 20%;">
-            <col style="width: 16.02%;">
-             <col style="width: 15%;">
-        </colgroup>
-      <tr>
-      <td class="text-center font-bold text-xl border align-middle italic">
-          SIGNATURE
-      </td>
-
-       <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
-        @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
-        @if($signatureUrl)
-          <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
-        @else
-          <div class="text-xs text-gray-600">No signature on file</div>
-        @endif
-      </div>
-    </td>
-
-      <td class="border text-center font-bold text-xl align-middle italic">
-        DATE
-      </td>
-
-       <td
-          class="border h-10">
-          <div class="h-full w-full">
-         <textarea
-      name="date2"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
-      </td>
-      </tr>
     </table>
 
-    </tr>
-    </table>    
+    <table class="border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
+      <colgroup>
+        <col style="width: 17%;">
+        <col style="width: 20%;">
+        <col style="width: 16.02%;">
+        <col style="width: 15%;">
+      </colgroup>
+      <tr>
+        <td class="text-center font-bold text-xl border align-middle italic">
+            SIGNATURE
+        </td>
+
+        <td class="border" colspan="2">
+          <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
+            @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+            @if($signatureUrl)
+              <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
+            @else
+              <div class="text-xs text-gray-600">No signature on file</div>
+            @endif
+          </div>
+        </td>
+
+        <td class="border text-center font-bold text-xl align-middle italic">
+          DATE
+        </td>
+
+        <td class="border h-10">
+          <div class="h-full w-full">
+            <textarea
+              name="date2"
+              required
+              rows="1"
+              class="w-full h-full text-lg resize-none
+                     focus:outline-none focus:ring-0
+                     whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+              oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
+            ></textarea>
+          </div>
+        </td>
+      </tr>
+    </table>
 
      
       <div class="flex justify-end mr-2 border-b-0 font-['Arial_Narrow','sans-serif']">

@@ -16,13 +16,14 @@
     </div>
   <style>
     body { margin: 24px; font-family: 'Arial Narrow','Arial',sans-serif; }
-    table { border-collapse: collapse; }
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
     .border-3 { border: 3px solid #000; }
     .border-2 { border: 2px solid #000; }
     .border-black { border-color: #000; }
     input[type="text"], textarea { width: 100%; background: transparent; border: none; border-bottom: 1px solid #000; outline: none; resize: none; overflow: hidden; padding: 2px 0; line-height: 1.2; font-family: 'Arial Narrow','Arial',sans-serif; font-size: inherit; }
     textarea:focus { outline: none; box-shadow: none; }
     input:focus { outline: none; box-shadow: none; }
+    td, th { padding: 4px; vertical-align: middle; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     /* Mobile responsiveness: allow horizontal scroll and tighter spacing */
     .pds-responsive { overflow-x: auto; }
     .pds-sheet { min-width: 980px; }

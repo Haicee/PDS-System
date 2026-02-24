@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\PdsDraft;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,7 +35,20 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('dashboard', absolute: false));
         }
 
+        // Reset any stale pds session data before hydrating for this user
+        session()->forget(['pds', 'pds_owner']);
+
         $user = Auth::guard('web')->user();
+
+        // hydrate per-user pds session cache from persisted draft
+        if ($user) {
+            $draft = PdsDraft::where('user_id', $user->id)->first();
+            if ($draft && $draft->data) {
+                session(['pds' => $draft->data, 'pds_owner' => $user->id]);
+            } else {
+                session()->forget('pds');
+            }
+        }
 
         if ($user?->role === 'employee') {
             return redirect('/employee');
@@ -51,6 +65,19 @@ class AuthenticatedSessionController extends Controller
         // Logout both guards to avoid lingering admin sessions
         $adminGuard = Auth::guard('admin');
         $webGuard = Auth::guard('web');
+
+        // persist cached pds data to draft before clearing session, only if owned by this user
+        $webUserId = $webGuard->id();
+        $sessionPds = session('pds');
+        $sessionOwner = session('pds_owner');
+        if ($webUserId && is_array($sessionPds) && $sessionOwner === $webUserId) {
+            $draft = PdsDraft::firstOrCreate(['user_id' => $webUserId]);
+            $existing = $draft->data ?? [];
+            $draft->data = array_replace_recursive($existing, $sessionPds);
+            $draft->save();
+        }
+
+        session()->forget(['pds', 'pds_owner']);
 
         $adminGuard->logout();
         $webGuard->logout();

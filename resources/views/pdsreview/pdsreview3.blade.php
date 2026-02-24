@@ -14,8 +14,9 @@
   table {
     border-collapse: collapse;
     width: 100%;
+    table-layout: fixed;
  }
-        td, th { padding: 4px; vertical-align: middle; }
+        td, th { padding: 4px; vertical-align: middle; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
         @media print {
@@ -23,7 +24,7 @@
         }
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
-        td { height: 30px; }
+        td { height: auto; min-height: 30px; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

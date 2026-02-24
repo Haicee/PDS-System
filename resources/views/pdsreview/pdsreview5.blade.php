@@ -15,6 +15,9 @@
 textarea:focus { outline: none; box-shadow: none; }
 [contenteditable]:focus { outline: none; margin: 0; padding: 0; }
 
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+td, th { padding: 4px; vertical-align: middle; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use App\Models\PdsSubmission;
 use App\Models\User;
 use App\Models\PdsDraft;
@@ -50,31 +51,12 @@ class PdsSubmissionController extends Controller
             abort(422, "$label requires at least one entry or an 'NA'.");
         };
 
-        $newPhotoPath = null;
-        if ($req->hasFile('photo')) {
-            $newPhotoPath = $req->file('photo')->store('passport_photo', 'public');
-        } elseif ($req->filled('photo_data')) {
-            // Fallback: data URL from camera capture saved in session
-            $dataUrl = $req->input('photo_data');
-            if (str_starts_with($dataUrl, 'data:image')) {
-                [$meta, $content] = explode(',', $dataUrl, 2);
-                $ext = 'jpg';
-                if (preg_match('/data:image\/(.+);base64/', $meta, $m)) {
-                    $ext = $m[1];
-                }
-                $binary = base64_decode($content, true);
-                if ($binary !== false) {
-                    $filename = 'passport_photo/' . uniqid('passport_', true) . '.' . $ext;
-                    Storage::disk('public')->put($filename, $binary);
-                    $newPhotoPath = $filename;
-                }
-            }
-        }
-
-        $oldPhotoPath = null;
         $existingSignatureRow = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+        $existingPhotoPath = $existingSignatureRow->photo_file_path ?? null;
+        $existingSignaturePath = $existingSignatureRow->signature_file_path ?? null;
+        $existingThumbmarkPath = $existingSignatureRow->thumbmark_file_path ?? null;
 
-        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $newPhotoPath, &$oldPhotoPath, $signaturePath) {
+        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath, $existingPhotoPath, $existingSignaturePath, $existingThumbmarkPath) {
             DB::table('pds_personal_infos')->updateOrInsert(
                 ['user_id' => $userId],
                 [
@@ -134,14 +116,6 @@ class PdsSubmissionController extends Controller
                     'gov_id' => $req->input('gov_id'),
                     'passport_licence_id' => $req->input('licence_passport_id'),
                     'date_place_issuance' => $req->input('id_issue_date_place'),
-                ]
-            );
-
-            DB::table('pds_signature_files')->updateOrInsert(
-                ['user_id' => $userId],
-                [
-                    'signature_file_path' => $signaturePath,
-                    'photo_file_path' => $photoPath,
                 ]
             );
 
@@ -210,22 +184,6 @@ class PdsSubmissionController extends Controller
                 $name = strtoupper(trim((string) $row['firstname']));
                 return $name !== '' && $name !== 'NA';
             });
-
-        if ($oldPhotoPath && $newPhotoPath && $oldPhotoPath !== $newPhotoPath) {
-            $oldFilename = basename($oldPhotoPath);
-            $oldSanitized = $oldFilename ? 'passport_photo/' . $oldFilename : null;
-            if ($oldSanitized && Storage::disk('public')->exists($oldSanitized)) {
-                Storage::disk('public')->delete($oldSanitized);
-            }
-        }
-
-        if ($oldPhotoPath && $newPhotoPath && $oldPhotoPath !== $newPhotoPath) {
-            $oldFilename = basename($oldPhotoPath);
-            $oldSanitized = $oldFilename ? 'passport_photo/' . $oldFilename : null;
-            if ($oldSanitized && Storage::disk('public')->exists($oldSanitized)) {
-                Storage::disk('public')->delete($oldSanitized);
-            }
-        }
 
             if ($hasRealChild) {
                 $children = $children->filter(function ($row) {
@@ -408,15 +366,16 @@ class PdsSubmissionController extends Controller
                 DB::table('pds_form5_remarks')->insert($remarks->map(fn ($v) => ['user_id' => $userId, 'remarks' => $v])->all());
             }
 
-            $photoPathToPersist = $newPhotoPath ?? ($existingSignatureRow->photo_file_path ?? null);
-            $oldPhotoPath = $existingSignatureRow->photo_file_path ?? null;
+            $photoPathToPersist = $photoPath ?? $existingPhotoPath;
+            $signaturePathToPersist = $signaturePath ?? ($existingSignaturePath ?? 'NA');
+            $thumbmarkPathToPersist = $existingThumbmarkPath ?? 'NA';
 
             DB::table('pds_signature_files')->updateOrInsert(
                 ['user_id' => $userId],
                 [
                     'photo_file_path' => $photoPathToPersist,
-                    'signature_file_path' => $existingSignatureRow->signature_file_path ?? 'NA',
-                    'thumbmark_file_path' => $existingSignatureRow->thumbmark_file_path ?? 'NA',
+                    'signature_file_path' => $signaturePathToPersist,
+                    'thumbmark_file_path' => $thumbmarkPathToPersist,
                 ]
             );
 
@@ -446,13 +405,22 @@ class PdsSubmissionController extends Controller
     private function storePhoto(Request $request, int $userId): ?string
     {
         $disk = 'public';
-        $directory = 'pds/photos';
+        $directory = 'passport_photo';
         $existingPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('photo_file_path');
+
+        $deleteExisting = function (?string $path) use ($disk) {
+            if ($path && Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
+        };
 
         $uploaded = $request->file('photo');
         if ($uploaded) {
             $filename = 'photo_' . $userId . '_' . time() . '.' . $uploaded->getClientOriginalExtension();
             $path = $uploaded->storeAs($directory, $filename, $disk);
+            if ($existingPath && $existingPath !== $path) {
+                $deleteExisting($existingPath);
+            }
             return $path;
         }
 
@@ -471,6 +439,9 @@ class PdsSubmissionController extends Controller
                     $filename = 'photo_' . $userId . '_' . time() . '.' . $extension;
                     $path = $directory . '/' . $filename;
                     Storage::disk($disk)->put($path, $binary, 'public');
+                    if ($existingPath && $existingPath !== $path) {
+                        $deleteExisting($existingPath);
+                    }
                     return $path;
                 }
             }

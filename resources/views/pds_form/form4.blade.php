@@ -125,6 +125,8 @@
       video.classList.add('hidden');
     }
 
+    let validateRequired;
+
     function applyPhotoDataUrl(dataUrl) {
       const img = document.getElementById('photoPreview');
       const placeholder = document.getElementById('photoPlaceholder');
@@ -148,7 +150,7 @@
       if (video) {
         video.classList.add('hidden');
       }
-      validateRequired();
+      if (typeof validateRequired === 'function') validateRequired();
     }
 
     function previewPhotoFromFile(file) {
@@ -161,17 +163,6 @@
         applyPhotoDataUrl(dataUrl);
       };
       reader.readAsDataURL(file);
-    }
-
-    function loadCachedPhoto() {
-      const hiddenInput = document.getElementById('photoData');
-      if (!hiddenInput || hiddenInput.value) return;
-      try {
-        const cached = localStorage.getItem(photoCacheKey);
-        if (cached) applyPhotoDataUrl(cached);
-      } catch (e) {
-        console.warn('Photo cache load failed', e);
-      }
     }
 
     // Auto-grow textareas used in the references table and ID/date fields
@@ -278,6 +269,17 @@
       };
       walk(sessionData);
       walk(draftData);
+
+      const loadCachedPhoto = () => {
+        const hiddenInput = document.getElementById('photoData');
+        if (!hiddenInput || hiddenInput.value) return;
+        try {
+          const cached = localStorage.getItem(photoCacheKey);
+          if (cached) applyPhotoDataUrl(cached);
+        } catch (e) {
+          console.warn('Photo cache load failed', e);
+        }
+      };
 
       loadCachedPhoto();
 
@@ -447,13 +449,27 @@
 
       const isGroupAnswered = (group) => group?.boxes?.some(b => b.checked);
 
+      const isGroupComplete = (group) => {
+        if (!group) return false;
+        const [yesBox, noBox] = group.boxes;
+        const yesChecked = yesBox && yesBox.checked;
+        const noChecked = noBox && noBox.checked;
+        if (noChecked) return true;
+        if (!yesChecked) return false;
+        const detailMissing = group.details.some(el => {
+          if (el.disabled || el.readOnly || el.offsetParent === null) return false;
+          return !isFilled(el);
+        });
+        return !detailMissing;
+      };
+
       const refreshSequential = () => {
         let allow = true;
         sequentialOrder.forEach(name => {
           const group = groupMap.get(name);
           if (!group) return;
           setGroupEnabled(name, allow);
-          if (allow && !isGroupAnswered(group)) {
+          if (allow && !isGroupComplete(group)) {
             allow = false;
           }
         });
@@ -464,7 +480,7 @@
       const visibleFields = () => Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea, select'))
         .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
 
-      const validateRequired = () => {
+      window.validateRequired = validateRequired = () => {
         let hasMissing = false;
 
         const hasMissingRequired = requiredFields.some(el => {
@@ -541,8 +557,8 @@
         }
       };
 
-      document.addEventListener('input', () => { refreshRows(); validateRequired(); }, true);
-      document.addEventListener('change', () => { refreshRows(); validateRequired(); }, true);
+      document.addEventListener('input', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
+      document.addEventListener('change', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
       // Initialize disabled until validated
       if (nextBtn) {
         nextBtn.setAttribute('aria-disabled', 'true');
@@ -583,8 +599,21 @@
           signatureDataInput4.value = overrideData.signature_data;
         }
 
-        Object.entries(data).forEach(([name, stored]) => {
-          const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+        Object.entries(data).forEach(([rawName, stored]) => {
+          let name = rawName;
+          let elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+          // Server draft arrays come back without [] (e.g., reference_name), but fields use []
+          if (!elements.length && Array.isArray(stored) && !name.endsWith('[]')) {
+            const altName = `${name}[]`;
+            const altElements = Array.from(form.querySelectorAll(`[name="${altName}"]`));
+            if (altElements.length) {
+              name = altName;
+              elements = altElements;
+            }
+          }
+
+          if (!elements.length) return;
 
           if (name.endsWith('[]') && Array.isArray(stored)) {
             elements.forEach((el, idx) => {
@@ -701,6 +730,8 @@
       updateSignaturePreview4();
 
       refreshSequential();
+      validateRequired();
+      loadCachedPhoto();
 
       fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
         .then(r => r.ok ? r.json() : null)
@@ -709,6 +740,8 @@
           loadCache(json.data);
           updateSignaturePreview4();
           refreshSequential();
+          validateRequired();
+          loadCachedPhoto();
         })
         .catch(() => {});
 

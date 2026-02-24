@@ -82,6 +82,10 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        // ensure fresh pds session cache for new account
+        session()->forget(['pds', 'pds_owner']);
+        session(['pds_owner' => $user->id]);
+
         return $user->role === 'employee'
             ? redirect('/employee')
             : redirect(route('dashboard', absolute: false));
