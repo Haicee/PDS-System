@@ -578,7 +578,9 @@
 
       // Local cache + autosave/draft
       const storageKey = 'pds_form_step4_' + ({{ auth()->id() ?? 0 }});
-      const singleSelectCheckboxNames = new Set();
+      const singleSelectCheckboxNames = new Set([
+        'q34_a','q34_b','q35_a','q35_b','q36','q37','q38_a','q38_b','q39','q40_a','q40_b','q40_c'
+      ]);
 
       const loadCache = (overrideData = null) => {
         let data = {};
@@ -748,6 +750,35 @@
       form.addEventListener('input', persist);
       form.addEventListener('change', persist);
     });
+
+    // Check for master date from form1 and apply it
+    function ensureMasterDateSeed() {
+      const date4Input = document.querySelector('input[name="date4"]');
+      const existing = localStorage.getItem('pds_master_date');
+      const candidate = existing || date4Input?.value;
+      if (candidate && !existing) {
+        localStorage.setItem('pds_master_date', candidate);
+      }
+      return candidate || null;
+    }
+
+    function syncFromForm1() {
+      const masterDate = ensureMasterDateSeed();
+      if (masterDate) {
+        const date4Input = document.querySelector('input[name="date4"]');
+        if (date4Input && date4Input.value !== masterDate) {
+          date4Input.value = masterDate;
+          // Trigger change event to save to cache
+          date4Input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
+
+    // Check for master date when page loads
+    syncFromForm1();
+
+    // Also check periodically in case user navigates back from form1
+    setInterval(syncFromForm1, 1000);
   </script>
   
   <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
@@ -1127,33 +1158,13 @@
             </tr>
            <tr>
   <td>
-    <div class="relative flex justify-center py-2">
-      <div class="flex items-center space-x-1 relative">
+    <div class="relative flex justify-center py-2 h-10">
+      <div class="flex items-center justify-center w-full">
         <input
-          type="text"
-          name="date4_month"
-          maxlength="2"
-          placeholder="MM"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_day"
-          maxlength="2"
-          placeholder="DD"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_year"
-          maxlength="2"
-          placeholder="YY"
-          inputmode="numeric"
-          class="text-center text-xl bg-transparent border-none focus:outline-none"
+          type="date"
+          name="date4"
+          required
+          class="w-full h-full text-center text-lg bg-transparent border-none focus:outline-none px-2 py-1"
         />
       </div>
     </div>
@@ -1176,7 +1187,7 @@
         <td class="p-2 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-3">
             <tr>
-  <td class="border-black h-16 text-center align-middle italic text-red-600 relative overflow-hidden">
+  <td class="border-black h-24 text-center align-middle italic text-red-600 relative overflow-hidden">
 
     <label id="signatureBox4b" class="signature-box block h-full w-full cursor-pointer relative">
       <input
@@ -1216,4 +1227,77 @@
   </div>
   </div>
 </form>
+
+<style>
+/* Custom styling for date inputs - bigger calendar icon and middle text alignment */
+input[type="date"] {
+  color-scheme: light dark;
+  font-size: 30px;
+  text-align: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin-left: 50px;
+}
+
+/* Hide calendar icon since date is synced from form1 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* Ensure text is vertically centered and black */
+input[type="date"]::-webkit-datetime-edit-text {
+  vertical-align: middle;
+  color: #000000;
+  font-size: 16px;
+  text-align: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center;
+}
+
+/* Firefox date input text color and centering */
+input[type="date"]::-moz-datetime-edit-text {
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-moz-datetime-edit-month-field {
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-moz-datetime-edit-day-field {
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-moz-datetime-edit-year-field {
+  color: #000000;
+  text-align: center;
+}
+</style>
 </x-app-layout>

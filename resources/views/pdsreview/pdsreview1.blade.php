@@ -798,12 +798,12 @@
 
     <!-- MIDDLE NAME -->
     <tr>
-      <td class="bg-[#e7e7e7]  px-8"> 
+      <td class="bg-[#e7e7e7]  px-8 border border-black"> 
         MIDDLE NAME
       </td>
 
       <td colspan="3"
-          class="border h-10">
+          class="border h-10 border-black">
           <div>
         {{ $father->middlename ?? '—' }}
       </div>
@@ -830,7 +830,7 @@
         25. MOTHER'S MAIDEN NAME
       </td>
 
-       <td class="border">
+       <td class="border border-black">
        <div class="h-full w-full px-2 flex items-center justify-center">
          {{ $childNames[$childIndex] ?? ' ' }}
        </div>
@@ -1240,7 +1240,12 @@
       <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
         @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
         @if($signatureUrl)
-          <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
+          <img src="{{ $signatureUrl }}"
+     alt="Signature"
+     class="object-contain"
+     style="max-height: 150px;
+            mix-blend-mode: multiply;
+            filter: contrast(1.2) brightness(1.1);">
         @else
           <div class="text-xs text-gray-600">No signature on file</div>
         @endif
@@ -1253,16 +1258,8 @@
 
     <td colspan="3"
           class="border h-10">
-          <div class="h-full w-full">
-         <textarea
-      name="date1"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+          <div class="h-full w-full flex items-center justify-center">
+         <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
       </td>
 </table>
 

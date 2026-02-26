@@ -169,15 +169,15 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 
 <!-- SIGNATURE -->
 <div class="w-full flex justify-end mt-[3cm] pr-6">
-<div class="w-[350px] text-center flex flex-col items-center space-y-2">
+<div class="w-[350px] text-center flex flex-col items-center">
   @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
   @if($signatureUrl)
-    <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-32 object-contain">
+    <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-48 object-contain" style="mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
   @else
     <div class="text-xs text-gray-600">No signature on file</div>
   @endif
   <div class="border-b-2 border-black w-full"></div>
-  <div class="mt-1 text-sm">(Signature over Printed Name)</div>
+  <div class="text-sm">(Signature over Printed Name)</div>
 </div>
 </div>
 
@@ -188,20 +188,7 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <div class="border-b-2 border-black w-full absolute bottom-6 left-0"></div>
 
 <div class="flex justify-center space-x-1 relative">
-@if(empty($pdfMode))
-<input type="file" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base" style="display: none;">
-@endif
-@if(empty($pdfMode))
-<input type="file" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none" style="display: none;">
-@endif
-@if(empty($pdfMode))
-<input type="file" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none" style="display: none;">
-@endif
-<input type="text" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base">
-<span class="mt-2">/</span>
-<input type="text" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none">
-<span class="mt-2">/</span>
-<input type="text" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none">
+<div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
 </div>
 
 <div class="text-sm">DATE</div>

@@ -34,6 +34,7 @@ class PdsController extends Controller
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
         $work = DB::table('pds_work_experiences')->where('user_id', $userId)->orderByDesc('from')->get();
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->orderByDesc('from')->get();
+        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
         
         return view('pdsreview.pdsreview1', compact(
             'personal',
@@ -48,6 +49,7 @@ class PdsController extends Controller
             'eligibilities',
             'work',
             'voluntary',
+            'declaration',
             'signaturePath',
             'photoPath'
         ));
@@ -66,8 +68,9 @@ class PdsController extends Controller
 
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
         $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->orderBy('from')->get();
+        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
-        return view('pdsreview.pdsreview2', compact('eligibilities', 'workExperiences', 'signaturePath', 'photoPath'));
+        return view('pdsreview.pdsreview2', compact('eligibilities', 'workExperiences', 'declaration', 'signaturePath', 'photoPath'));
     }
 
     public function review3()
@@ -95,8 +98,10 @@ class PdsController extends Controller
             ->where('user_id', $userId)
             ->get();
 
+        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
-        return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'other', 'signaturePath', 'photoPath'));
+
+        return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'other', 'declaration', 'signaturePath', 'photoPath'));
     }
 
     public function review4()
@@ -139,7 +144,8 @@ class PdsController extends Controller
         $photoPath = $signatureFiles->photo_file_path ?? null;
 
         $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
+        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
-        return view('pdsreview.pdsreview5', compact('remarks', 'signaturePath', 'photoPath'));
+        return view('pdsreview.pdsreview5', compact('remarks', 'declaration', 'signaturePath', 'photoPath'));
     }
 }

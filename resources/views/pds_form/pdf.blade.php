@@ -63,7 +63,7 @@
         input[type="checkbox"]:checked::after {
             content: '✓';  
             color: black;           /* checkmark color */
-            font-size: 10px;        /* adjust to fit box */
+            font-size: 12px;        /* adjust to fit box */
             line-height: 1;
         }
 
@@ -327,16 +327,16 @@
         <tr>
           <td class="py-1">
             <div class="flex justify-center items-center gap-6">
-              <label class="inline-flex items-center gap-2 text-2xl"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="filipino" {{ $personal->citizenship  == 'filipino' ? 'checked' : '' }} disabled> Filipino</label>
-              <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="dual_citizenship" {{ $personal->citizenship  == 'dual_citizenship' ? 'checked' : '' }} disabled> Dual Citizenship</label>
+              <label class="inline-flex items-center gap-2 text-2xl"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="filipino" {{ optional($personal)->citizenship  == 'filipino' ? 'checked' : '' }} disabled> Filipino</label>
+              <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="dual_citizenship" {{ optional($personal)->citizenship  == 'dual_citizenship' ? 'checked' : '' }} disabled> Dual Citizenship</label>
             </div>
           </td>
         </tr>
         <tr>
           <td class="py-1">
             <div class="flex justify-center items-center gap-6" style="margin-left:80px">
-              <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="by_birth" {{ $personal->citizenship  == 'by_birth' ? 'checked' : '' }} disabled> by birth</label>
-              <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="by_naturalization" {{ $personal->citizenship  == 'by_naturalization' ? 'checked' : '' }} disabled> by naturalization</label>
+              <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="by_birth" {{ optional($personal)->citizenship  == 'by_birth' ? 'checked' : '' }} disabled> by birth</label>
+              <label class="inline-flex items-center gap-2"><input type="checkbox" class="align-middle checkbox-large" name="citizenship[]" value="by_naturalization" {{ optional($personal)->citizenship  == 'by_naturalization' ? 'checked' : '' }} disabled> by naturalization</label>
             </div>
           </td>
         </tr>
@@ -1169,16 +1169,9 @@
 
     <td colspan="3"
           class="border h-10">
-          <div class="h-full w-full">
-         <textarea
-      name="date1"
-      disabled
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+          <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;"> 
+            {{ $declaration->date_accomplished ?? '—' }}
+          </div>
       </td>
 </table>
 
@@ -1188,7 +1181,7 @@
     </table>
   </div>
 </div>
-<div style="page-break-before: always;"></div>
+<div style="page-break-before: always;">
 {{-- IV. CIVIL SERVICE ELIGIBILITY --}}
 <table style="width:100%; border-collapse:collapse; table-layout:fixed;
                font-family:'Arial Narrow','Arial',sans-serif;" border="1">
@@ -1221,7 +1214,7 @@
         <th colspan="2" style="border:1px solid black;">LICENSE <br>(if applicable)</th>
     </tr>
 
-    <tr style="background:#e7e7e7; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+    <tr style="background:#e7e7e7; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
         <th style="border:1px solid black;">NUMBER</th>
         <th style="border:1px solid black;">VALID UNTIL</th>
     </tr>
@@ -1258,23 +1251,23 @@
     <tr>
         <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px;
                                text-align:left; padding:6px; border:2px solid black;
-                               -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-            V. WORK EXPERIENCE
-            <p style="font-weight:100; font-size:14px;">
+                               -webkit-print-color-adjust:exact; print-color-adjust:exact; font-size:23px;">
+            V. WORK EXPERIENCE <br>
+            <span style="font-weight:100; font-size:20px;">
                 (Include private employment. Start from your recent work. Description of duties should be indicated in the attached Work Experience Sheet.)
-            </p>
+            </span>
         </th>
     </tr>
 
-    <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-        <th colspan="2" style="border:1px solid black;">INCLUSIVE DATES OF ATTENDANCE<p>(dd/mm/yyyy)</p></th>
-        <th rowspan="2" style="border:1px solid black;">POSITION TITLE<p>(Write in full/Do not abbreviate)</p></th>
-        <th rowspan="2" style="border:1px solid black;">DEPARTMENT / AGENCY / OFFICE / COMPANY (Write in full/Do not abbreviate)</th>
+    <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
+        <th colspan="2" style="border:1px solid black;">INCLUSIVE DATES OF ATTENDANCE <br> <span>(dd/mm/yyyy)</span></th>
+        <th rowspan="2" style="border:1px solid black;">POSITION TITLE <br> <span>(Write in full/Do not abbreviate)</span></th>
+        <th rowspan="2" style="border:1px solid black;">DEPARTMENT / AGENCY / OFFICE / COMPANY <br> <span>(Write in full/Do not abbreviate)</span></th>
         <th rowspan="2" style="border:1px solid black;">STATUS OF APPOINTMENT</th>
-        <th rowspan="2" style="border:1px solid black;">GOV'T SERVICE (Y/N)</th>
+        <th rowspan="2" style="border:1px solid black;">GOV'T SERVICE <br> (Y/N)</th>
     </tr>
 
-    <tr style="background:#e7e7e7; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+    <tr style="background:#e7e7e7; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
         <th style="border:1px solid black;">FROM</th>
         <th style="border:1px solid black;">TO</th>
     </tr>
@@ -1282,8 +1275,8 @@
     @php
         $workRows = $workExperiences ?? ($work ?? collect());
         // Show most recent work first per form instruction
-        $workRows = $workRows->sortByDesc('from')->values();
-        $maxWorkRows = max(28, $workRows->count());
+        $workRows = $workRows->sortBy('from')->values();
+        $maxWorkRows = max(27, $workRows->count());
     @endphp
 
     @for ($i = 0; $i < $maxWorkRows; $i++)
@@ -1294,7 +1287,7 @@
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->position_title ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->department ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->status ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $workRow->govt_service ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->govt_service ?? ' ' }}</td>
         </tr>
     @endfor
 </table>
@@ -1326,19 +1319,17 @@
             DATE
         </td>
 
-        <td style="border:1px solid black; height:40px;">
-            <div style="height:100%; width:100%;">
-                @if(empty($pdfMode))
-                <input type="text" name="date2" class="w-full h-full text-lg text-center border-none" placeholder="MM/DD/YYYY">
-                @else
-                <span>{{ $declaration->date_signed ?? 'MM/DD/YYYY' }}</span>
-                @endif
-            </div>
-        </td>
+         <td colspan="2"
+          class="border h-10">
+          <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
+            {{ $declaration->date_accomplished ?? '—' }}
+          </div>
+      </td>
     </tr>
 </table>  
-      <div class="text-base w-full" style="text-align:right; font-family:'Arial_Narrow','sans-serif'; margin-top: 10px;">
+      <div class="text-base w-full" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 2 of 5
+</div>
 </div>
 </div>
 
@@ -1360,43 +1351,43 @@
                text-align:left; padding:6px;
                border:2px solid black;
                -webkit-print-color-adjust:exact;
-               print-color-adjust:exact;">
+               print-color-adjust:exact; font-size:23px;">
       VI. VOLUNTARY WORK OR INVOLVEMENT IN CIVIC / NON-GOVERNMENTAL / PEOPLE / VOLUNTARY ORGANIZATION
     </th>
   </tr>
 
   <tr>
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       29. NAME & ADDRESS OF ORGANIZATION (Write in full)
     </th>
 
     <th colspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-      INCLUSIVE DATES <p>(dd/mm/yyyy)</p>
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
+      INCLUSIVE DATES <br> <span>(dd/mm/yyyy)</span>
     </th>
 
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       NUMBER OF HOURS
     </th>
 
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       POSITION / NATURE OF WORK
     </th>
   </tr>
 
   <tr>
     <th style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">FROM</th>
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
     <th style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">TO</th>
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
   </tr>
 
   @php
     $volRows = $voluntaryWorks ?? ($voluntary ?? collect());
-    $volRows = $volRows->sortByDesc('from')->values();
+    $volRows = $volRows->sortBy('from')->values();
     $maxRows = max(7, $volRows->count());
   @endphp
 
@@ -1432,48 +1423,48 @@
                text-align:left; padding:6px;
                border:2px solid black;
                -webkit-print-color-adjust:exact;
-               print-color-adjust:exact;">
+               print-color-adjust:exact;" font-size:23px;>
       VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
     </th>
   </tr>
 
   <tr>
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS
     </th>
 
     <th colspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       INCLUSIVE DATES OF ATTENDANCE
     </th>
 
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       NUMBER OF HOURS
     </th>
 
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       Type of L&D
     </th>
 
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
       CONDUCTED/SPONSORED BY
     </th>
   </tr>
 
   <tr>
     <th style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">FROM</th>
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
     <th style="background:#e7e7e7; border:1px solid black;
-         -webkit-print-color-adjust:exact; print-color-adjust:exact;">TO</th>
+         -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
   </tr>
 
   @php
     $trainingRows = $training ?? ($learning ?? collect());
-    $trainingRows = $trainingRows->sortByDesc('from')->values();
+    $trainingRows = $trainingRows->sortBy('from')->values();
     $maxTraining = max(21, $trainingRows->count());
   @endphp
 
@@ -1506,15 +1497,15 @@
                    text-align:left; padding:6px;
                    border:2px solid black;
                    -webkit-print-color-adjust:exact;
-                   print-color-adjust:exact;">
+                   print-color-adjust:exact; font-size:23px;">
             VIII. OTHER INFORMATION
         </th>
     </tr>
 
-    <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+    <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
         <th style="border:1px solid black;">SPECIAL SKILLS and HOBBIES</th>
-        <th style="border:1px solid black;">NON-ACADEMIC DISTINCTIONS / RECOGNITION <p>(Write in full)</p></th>
-        <th style="border:1px solid black;">MEMBERSHIP IN ASSOCIATION / ORGANIZATION <p>(Write in full)</p></th>
+        <th style="border:1px solid black;">NON-ACADEMIC DISTINCTIONS / RECOGNITION <br> <span>(Write in full)</span></th>
+        <th style="border:1px solid black;">MEMBERSHIP IN ASSOCIATION / ORGANIZATION <br> <span>(Write in full)</span></th>
     </tr>
 
     @php
@@ -1565,15 +1556,12 @@
             DATE
         </td>
 
-        <td colspan="2" style="border:1px solid black;">
-            <div style="height:100%; width:100%;">
-                @if(empty($pdfMode))
-                <input type="text" name="date3" class="w-full h-full text-lg text-center border-none" placeholder="MM/DD/YYYY">
-                @else
-                <span>{{ $declaration->date_signed ?? 'MM/DD/YYYY' }}</span>
-                @endif
-            </div>
-        </td>
+        <td 
+          class="border h-10">
+          <div class="h-full w-full flex items-center justify-center text-center" style="font-size: 30px;">
+            {{ $declaration->date_accomplished ?? '—' }}
+          </div>
+      </td>
     </tr>
 </table>
     <div class="text-base w-full" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
@@ -1597,20 +1585,50 @@
   <td style="border:1px solid black; width:34%; vertical-align:top; padding:10px;">
 
     <!-- 34A -->
-    <table style="width:100%; margin-top:57px;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q34_a ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q34_a ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; margin-top:72px; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px; margin-bottom:10px;"
+             disabled
+             @checked(($declaration->q34_a ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px; margin-bottom:5px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px; margin-bottom:10px;"
+             disabled
+             @checked(($declaration->q34_a ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <!-- 34B -->
-    <table style="width:100%; margin-top:5px;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q34_b ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q34_b ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; margin-top:5px; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q34_b ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q34_b ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
@@ -1631,12 +1649,27 @@
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q35_a ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q35_a ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q35_a ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q35_a ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
@@ -1654,24 +1687,39 @@
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q35_b ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q35_b ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q35_b ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q35_b ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
     <div style="margin-top:5px;">
       Date Filed:
-      <input type="text" style="border:none; border-bottom:1px solid black; width:120px;"
+      <input type="text" style="border:none; border-bottom:1px solid black; width:100%;"
         Disabled value="{{ $declaration->q35_b_details_date ?? '' }}">
     </div>
 
     <div style="margin-top:5px;">
       Status of Case/s:
-      <input type="text" style="border:none; border-bottom:1px solid black; width:180px;"
+      <input type="text" style="border:none; border-bottom:1px solid black; width:100%;"
         Disabled value="{{ $declaration->q35_b_details_status ?? '' }}">
     </div>
 
@@ -1687,12 +1735,27 @@
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q36 ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q36 ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q36 ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q36 ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
@@ -1710,12 +1773,27 @@
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q37 ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q37 ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q37 ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q37 ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
@@ -1733,12 +1811,27 @@
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q38_a ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q38_a ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q38_a ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q38_a ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
@@ -1758,12 +1851,27 @@
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q38_b ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q38_b ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q38_b ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q38_b ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
@@ -1781,12 +1889,27 @@
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q39 ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q39 ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q39 ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q39 ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
 
     <div style="margin-top:8px;">if yes, give details:</div>
 
@@ -1801,40 +1924,85 @@
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
     40. Pursuant to RA 8371, RA 7277 (as amended), and RA 11861:
 
-    <div style="margin-left:30px; margin-top:10px;">a. Are you a member of any indigenous group?</div>
-    <div style="margin-left:30px; margin-top:10px;">b. Are you a person with disability?</div>
-    <div style="margin-left:30px; margin-top:10px;">c. Are you a solo parent?</div>
+    <div style="margin-left:30px; margin-top:15px;">a. Are you a member of any indigenous group?</div>
+    <div style="margin-left:30px; margin-top:40px;">b. Are you a person with disability?</div>
+    <div style="margin-left:30px; margin-top:40px;">c. Are you a solo parent?</div>
   </td>
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
     <!-- 40A -->
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q40_a ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q40_a ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse; margin-top:35px;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q40_a ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q40_a ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
     <input type="text" style="width:100%; border:none; border-bottom:1px solid black; margin-bottom:10px;"
       Disabled value="{{ $declaration->q40_a_details ?? '' }}">
 
     <!-- 40B -->
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q40_b ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q40_b ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q40_b ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q40_b ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
     <input type="text" style="width:100%; border:none; border-bottom:1px solid black; margin-bottom:10px;"
       Disabled value="{{ $declaration->q40_b_details ?? '' }}">
 
     <!-- 40C -->
-    <table style="width:100%;">
-      <tr>
-        <td><input type="checkbox" Disabled @checked(($declaration->q40_c ?? '') === 'YES')> YES</td>
-        <td><input type="checkbox" Disabled @checked(($declaration->q40_c ?? '') === 'NO')> NO</td>
-      </tr>
-    </table>
+    <table style="width:auto; border-collapse:collapse;">
+  <tr>
+    <td style="padding:0;">
+      <input type="checkbox"
+      class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q40_c ?? '') === 'YES')>
+      YES
+    </td>
+
+    <td style="padding:0 0 0 15px;">
+      <input type="checkbox"
+         class="checkbox-large"
+             style="width:13px; height:13px; margin-right:4px;"
+             disabled
+             @checked(($declaration->q40_c ?? '') === 'NO')>
+      NO
+    </td>
+  </tr>
+</table>
     <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
       Disabled value="{{ $declaration->q40_c_details ?? '' }}">
 
@@ -1970,18 +2138,10 @@
         </td>
       </tr>
       <tr>
-        <td class="pr-5 p-0 align-top w-[40%] border-l border-black border-r-0 flex-1">
-       <table style="
-    width:100%;
-    border-collapse:collapse;
-    height:6.4cm;
-    table-layout:fixed;
-    font-size:12px;
-    margin-bottom:4px;
-" class="border-2 border-black ml-2 mt-2">
-
+        <td class="pr-5 p-0 align-top  border-l border-black border-r-0 flex-1">
+          <table class="border-collapse text-xs border-2 ml-2 h-[5.71cm]" style="width:13cm;">
     <!-- HEADER -->
-    <tr style="height:1.4cm;">
+    <tr style="height:2.5cm;">
         <td colspan="2"
             style="border:1px solid black; padding:6px; font-weight:bold;" class="text-base">
             Government Issued ID (i.e. Passport, GSIS, SSS, PRC, Driver's License, etc.)<br>
@@ -2024,12 +2184,12 @@
 </table>
 
         </td>
-        <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2" >
-          <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2" style="margin-top:12px; margin-left:7px;">
+        <td class="p-0 align-top border-b-0 border-l-0 border-r-0 border-black" colspan="2" style="width:20%;">
+          <table class="border-collapse text-xs border-3 mt-2 border-2 mb-2 mx-auto" style="margin-left: 10px; width:11.6cm; margin-left: 195px;">
           <td class="border-black text-center align-middle italic text-red-600">
     <div style="height:3.06cm; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;" class="text-base">
         @if($signatureUrl)
-          <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:4.5cm; object-fit:contain;">
+          <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:3.5cm; object-fit:contain;">
         @else
           (wet signature / e-signature / digital certificate)
         @endif
@@ -2042,32 +2202,7 @@
   <td>
     <div class="relative flex justify-center py-2  text-base">
       <div class="flex items-center space-x-1 relative">
-        <input
-          type="text"
-          name="date4_month"
-          maxlength="2"
-          placeholder="MM"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_day"
-          maxlength="2"
-          placeholder="DD"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_year"
-          maxlength="2"
-          placeholder="YY"
-          inputmode="numeric"
-          class="text-center text-xl bg-transparent border-none focus:outline-none"
-        />
+        <span class="text-base text-center" style="font-size: 30px;">{{ $declaration->date_accomplished ?? '—' }}</span>
       </div>
     </div>
   </td>
@@ -2179,7 +2314,7 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <div class="w-full flex justify-end" style="margin-top:100px; padding-right:8px;">
   <div class="text-center" style="width:460px; margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:8px;">
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
+      <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:150px; object-fit:contain;">
     @else
       <div class="text-xs" style="color:#666;">No signature on file</div>
     @endif
@@ -2190,6 +2325,9 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 
 <div class="w-full flex justify-end" style="margin-top:50px; padding-right:8px; font-family:'Arial Narrow','Arial',sans-serif;">
   <div class="text-center relative" style="width:460px; margin-left:auto;">
+    <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
+            {{ $declaration->date_accomplished ?? '—' }}
+          </div>
     <div class="border-b-2 border-black w-full absolute mt-10" style="bottom:26px; left:0; width:100%;"></div>
     <div class="text-sm" style="margin-top:8px; margin-bottom:40px">DATE</div>
   </div>

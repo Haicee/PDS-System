@@ -1,4 +1,5 @@
 <x-app-layout>
+<div id="autosaveOverlay2" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form2" method="POST" action="{{ route('pds.saveStep', 2) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
@@ -36,6 +37,8 @@
 
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
+        .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
+        .autosave-overlay.hidden { display: none; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -422,20 +425,50 @@
             };
 
             // AUTOSAVE to server (throttled)
+            const autosaveOverlay = document.getElementById('autosaveOverlay2');
+
             const autoSaveToServer = (() => {
                 let timer;
+                const retryDelay = 1200;
+                const showOverlay = (flag) => {
+                    if (!autosaveOverlay) return;
+                    autosaveOverlay.classList.toggle('hidden', !flag);
+                };
+                const send = () => {
+                    const formData = new FormData(form);
+                    fetch('{{ route('pds.autosave') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                        },
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            showOverlay(true);
+                            setTimeout(send, retryDelay);
+                            throw new Error('Auto-save failed');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const ok = data && data.status === 'ok';
+                        if (ok) {
+                            showOverlay(false);
+                        } else {
+                            showOverlay(true);
+                            setTimeout(send, retryDelay);
+                        }
+                    })
+                    .catch(() => {
+                        showOverlay(true);
+                        setTimeout(send, retryDelay);
+                    });
+                };
+
                 return () => {
                     clearTimeout(timer);
-                    timer = setTimeout(() => {
-                        const formData = new FormData(form);
-                        fetch('{{ route('pds.autosave') }}', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-                            },
-                            body: formData
-                        }).catch(() => {});
-                    }, 800);
+                    timer = setTimeout(send, 800);
                 };
             })();
 
@@ -460,6 +493,27 @@
             form.addEventListener('input', persist);
             form.addEventListener('change', persist);
         });
+
+        // Check for master date from form1 and apply it
+        function syncFromForm1() {
+            const masterDate = localStorage.getItem('pds_master_date');
+            if (masterDate) {
+                console.log('Found master date from localStorage:', masterDate);
+                const date2Input = document.querySelector('input[name="date2"]');
+                if (date2Input && date2Input.value !== masterDate) {
+                    console.log('Updating form2 date to:', masterDate);
+                    date2Input.value = masterDate;
+                    // Trigger change event to save to cache
+                    date2Input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        }
+
+        // Check for master date when page loads
+        syncFromForm1();
+
+        // Also check periodically in case user navigates back from form1
+        setInterval(syncFromForm1, 1000);
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
@@ -616,16 +670,15 @@
 
        <td
           class="border h-10">
-          <div class="h-full w-full">
-         <textarea
+          <div class="h-full w-full flex items-center justify-center">
+         <input
+      type="date"
       name="date2"
       required
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+             px-2 py-1 text-center bg-transparent border-none"
+    ></input>
       </td>
       </tr>
     </table>
@@ -643,4 +696,77 @@
             <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</button>
         </div>
 </form>
+
+<style>
+/* Custom styling for date inputs - bigger calendar icon and middle text alignment */
+input[type="date"] {
+  color-scheme: light dark;
+  font-size: 30px;
+  text-align: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin-left: 50px;
+}
+
+/* Hide calendar icon since date is synced from form1 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* Ensure text is vertically centered and black */
+input[type="date"]::-webkit-datetime-edit-text {
+  vertical-align: middle;
+  color: #000000;
+  font-size: 16px;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+/* Firefox date input text color and centering */
+input[type="date"]::-moz-datetime-edit-text {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-month-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-day-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-year-field {
+  color: #000000;
+  text-align: center !important;
+}
+</style>
 </x-app-layout>

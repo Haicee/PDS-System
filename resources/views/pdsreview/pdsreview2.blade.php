@@ -78,12 +78,12 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $row = $rows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $row->eligibility ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->rating ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->exam_date ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->exam_place ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->license_no ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->validity ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->eligibility ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->rating ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->exam_date ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->exam_place ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->license_no ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->validity ?? ' ' }}</td>
   </tr>
 @endfor
     </table>
@@ -133,18 +133,19 @@
 
    @php
     $workRows = $workExperiences ?? collect();
-    $maxRows = max(28, $workRows->count());
+    $maxRows = max(27, $workRows->count());
+     $workRows = $workRows->sortBy('from')->values();
 @endphp
 
 @for ($i = 0; $i < $maxRows; $i++)
   @php $workRow = $workRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $workRow->from ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->to ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->position_title ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->department ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->status ?? " " }}</td>
-    <td class="border align-top text-center">{{ $workRow->govt_service ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow->from ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow->to ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow->position_title ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow->department ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow->status ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow->govt_service ?? " " }}</td>
   </tr>
 @endfor
     </table>
@@ -165,7 +166,12 @@
           <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
             @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
             @if($signatureUrl)
-              <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
+              <img src="{{ $signatureUrl }}"
+     alt="Signature"
+     class="object-contain"
+     style="max-height: 150px;
+            mix-blend-mode: multiply;
+            filter: contrast(1.2) brightness(1.1);">
             @else
               <div class="text-xs text-gray-600">No signature on file</div>
             @endif
@@ -177,16 +183,8 @@
         </td>
 
         <td class="border h-10">
-          <div class="h-full w-full">
-            <textarea
-              name="date2"
-              required
-              rows="1"
-              class="w-full h-full text-lg resize-none
-                     focus:outline-none focus:ring-0
-                     whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-              oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-            ></textarea>
+          <div class="h-full w-full flex items-center justify-center">
+            <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
           </div>
         </td>
       </tr>

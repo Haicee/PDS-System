@@ -460,6 +460,12 @@ class PdsSubmissionController extends Controller
             return $providedPath;
         }
 
+        $deleteExisting = function (?string $path) use ($disk) {
+            if ($path && Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
+        };
+
         $fileKeys = [
             'signature',
             'signature_attachment',
@@ -476,6 +482,9 @@ class PdsSubmissionController extends Controller
             if ($uploaded) {
                 $filename = 'signature_' . $userId . '_' . time() . '.' . $uploaded->getClientOriginalExtension();
                 $path = $uploaded->storeAs($directory, $filename, $disk);
+                if ($existingPath && $existingPath !== $path) {
+                    $deleteExisting($existingPath);
+                }
                 return $path;
             }
         }
@@ -495,6 +504,9 @@ class PdsSubmissionController extends Controller
                     $filename = 'signature_' . $userId . '_' . time() . '.' . $extension;
                     $path = $directory . '/' . $filename;
                     Storage::disk($disk)->put($path, $binary, 'public');
+                    if ($existingPath && $existingPath !== $path) {
+                        $deleteExisting($existingPath);
+                    }
                     return $path;
                 }
             }

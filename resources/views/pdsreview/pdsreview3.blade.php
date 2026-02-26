@@ -204,11 +204,11 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $row = $volRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $row->organization ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->from ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->to ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->hours ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->position ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->organization ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->from ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->to ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->hours ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->position ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -260,17 +260,18 @@
       @php
     $trainingRows = $training ?? collect();
     $maxTraining = max(21, $trainingRows->count());
+      $trainingRows = $trainingRows->sortBy('from')->values();
 @endphp
 
 @for ($i = 0; $i < $maxTraining; $i++)
   @php $trow = $trainingRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $trow->title ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->from ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->to ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->hours ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->conducted_by ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->title ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->from ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->to ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->hours ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->conducted_by ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -313,9 +314,9 @@
 
 @for ($i = 0; $i < $maxOther; $i++)
   <tr>
-    <td class="border align-top text-center">{{ $skills[$i] ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $recognition[$i] ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $assoc[$i] ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $skills[$i] ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $recognition[$i] ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $assoc[$i] ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -323,8 +324,8 @@
 
     <table class="border border-black w-full h-15 font-['Arial_Narrow','sans-serif'] italic">
         <colgroup>
-          <col style="width: 30.3%;">
-           <col style="width: 20%;">
+          <col style="width: 31.95%;">
+           <col style="width: 20.9%;">
             <col style="width: 19.7%;">
              <col style="width: 10%;">
         </colgroup>
@@ -337,7 +338,12 @@
       <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
         @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
         @if($signatureUrl)
-          <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
+          <img src="{{ $signatureUrl }}"
+     alt="Signature"
+     class="object-contain"
+     style="max-height: 150px;
+            mix-blend-mode: multiply;
+            filter: contrast(1.2) brightness(1.1);">
         @else
           <div class="text-xs text-gray-600">No signature on file</div>
         @endif
@@ -351,16 +357,8 @@
 
         <td colspan="2"
           class="border">
-          <div class="h-full w-full">
-         <textarea
-      name="date3"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+          <div class="h-full w-full flex items-center justify-center">
+         <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
       </td>
       </tr>
     </table>

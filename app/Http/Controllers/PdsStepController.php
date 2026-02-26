@@ -195,6 +195,12 @@ class PdsStepController extends Controller
             return $providedPath;
         }
 
+        $deleteExisting = function (?string $path) use ($disk) {
+            if ($path && Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
+        };
+
         $fileKeys = [
             'signature',
             'signature_attachment',
@@ -215,6 +221,9 @@ class PdsStepController extends Controller
                     ['user_id' => $userId],
                     ['signature_file_path' => $path]
                 );
+                if ($existingPath && $existingPath !== $path) {
+                    $deleteExisting($existingPath);
+                }
                 return $path;
             }
         }
@@ -238,6 +247,9 @@ class PdsStepController extends Controller
                         ['user_id' => $userId],
                         ['signature_file_path' => $path]
                     );
+                    if ($existingPath && $existingPath !== $path) {
+                        $deleteExisting($existingPath);
+                    }
                     return $path;
                 }
             }

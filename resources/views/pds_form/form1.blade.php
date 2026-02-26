@@ -1,5 +1,6 @@
 <x-app-layout>
  <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">    
+<div id="autosaveOverlay" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
     @csrf
     <style>
@@ -32,6 +33,8 @@
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
+        .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
+        .autosave-overlay.hidden { display: none; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
    <script>
@@ -385,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- MIDDLE NAME -->
     <tr>
-      <td class="bg-[#e7e7e7] align-middle px-7 border-b-2"> 
+      <td class="bg-[#e7e7e7] align-middle px-5 border-b-2"> 
         MIDDLE NAME
       </td>
       <td colspan="3" class="border border-b-2 h-10 align-middle">
@@ -2414,16 +2417,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <td colspan="3"
           class="border h-10">
-          <div class="h-full w-full">
-         <textarea
+          <div class="h-full w-full flex items-center justify-center">
+         <input
+      type="date"
       name="date1"
       required
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+             px-2 py-1 text-center bg-transparent border-none"
+    ></input>
       </td>
 </table>
 
@@ -2442,6 +2444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('DOMContentLoaded', () => {
 
   const form = document.querySelector('#pds-form1');
+  const autosaveOverlay = document.getElementById('autosaveOverlay');
   if (!form) {
     console.error('Form element #pds-form1 not found!');
     return;
@@ -2642,36 +2645,53 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsDataURL(file);
   };
 
-  // AUTOSAVE to server (throttled)
+  // AUTOSAVE to server (throttled with retry + overlay until OK)
   const autoSaveToServer = (() => {
     let timer;
+    const retryDelay = 1200;
+    const showOverlay = (flag) => {
+      if (!autosaveOverlay) return;
+      autosaveOverlay.classList.toggle('hidden', !flag);
+    };
+    const send = () => {
+      const formData = new FormData(form);
+      console.log('Auto-saving to server...');
+      fetch('{{ route('pds.autosave') }}', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+        },
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          console.error('Auto-save failed:', response.status, response.statusText);
+          showOverlay(true);
+          setTimeout(send, retryDelay);
+          throw new Error('Auto-save failed');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Auto-save response:', data);
+        const ok = data && data.status === 'ok';
+        if (ok) {
+          showOverlay(false);
+        } else {
+          showOverlay(true);
+          setTimeout(send, retryDelay);
+        }
+      })
+      .catch(error => {
+        console.error('Auto-save error:', error);
+        showOverlay(true);
+        setTimeout(send, retryDelay);
+      });
+    };
+
     return () => {
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const formData = new FormData(form);
-        console.log('Auto-saving to server...');
-        fetch('{{ route('pds.autosave') }}', {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-          },
-          body: formData
-        })
-        .then(response => {
-          if (!response.ok) {
-            console.error('Auto-save failed:', response.status, response.statusText);
-            throw new Error('Auto-save failed');
-          }
-          console.log('Auto-save successful');
-          return response.json();
-        })
-        .then(data => {
-          console.log('Auto-save response:', data);
-        })
-        .catch(error => {
-          console.error('Auto-save error:', error);
-        });
-      }, 800);
+      timer = setTimeout(send, 800);
     };
   })();
 
@@ -2719,8 +2739,149 @@ document.addEventListener('DOMContentLoaded', () => {
     persist();
   });
 
+  // Sync all date fields across forms using localStorage - form1 is the master
+  window.syncAllDates = function(selectedDate) {
+    console.log('syncAllDates called with:', selectedDate);
+    if (!selectedDate) return;
+    
+    // Save to localStorage for cross-page synchronization
+    localStorage.setItem('pds_master_date', selectedDate);
+    console.log('Saved master date to localStorage:', selectedDate);
+    
+    // Update all date inputs on current page (excluding form1)
+    const dateInputs = document.querySelectorAll('input[type="date"][name^="date"]');
+    console.log('Found date inputs on current page:', dateInputs.length);
+    
+    dateInputs.forEach(input => {
+      console.log('Processing input:', input.name, 'current value:', input.value);
+      // Skip form1's date input - it's the master
+      if (input.name === 'date1') return;
+      
+      if (input.value !== selectedDate) {
+        console.log('Updating', input.name, 'from', input.value, 'to', selectedDate);
+        input.value = selectedDate;
+        // Trigger change event to save to cache
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  };
+
+  // Initialize sync when form1 date changes
+  const form1DateInput = document.querySelector('input[name="date1"]');
+  if (form1DateInput) {
+    const storedMasterDate = localStorage.getItem('pds_master_date');
+    if (storedMasterDate && !form1DateInput.value) {
+      console.log('Applying master date from localStorage to form1:', storedMasterDate);
+      form1DateInput.value = storedMasterDate;
+      form1DateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    form1DateInput.addEventListener('change', function() {
+      console.log('Form1 date changed to:', this.value);
+      syncAllDates(this.value);
+    });
+
+    // Seed master date on initial load so other forms can pick it up without requiring a change event
+    if (form1DateInput.value) {
+      console.log('Seeding master date from existing form1 value:', form1DateInput.value);
+      syncAllDates(form1DateInput.value);
+    }
+  }
+
 });
 </script>
+
+<style>
+/* Custom styling for date inputs - bigger calendar icon and middle text alignment */
+input[type="date"] {
+  color-scheme: light dark;
+  font-size: 30px;
+  text-align: center !important;
+  padding-right: 40px;
+  position: relative;
+  margin-left: 100px;
+}
+
+/* Make calendar icon bigger and black in WebKit browsers (Chrome, Safari, Edge) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  background-size: 30px 30px;
+  background-color: transparent;
+  filter: invert(0) brightness(0) !important;
+  opacity: 1 !important;
+  -webkit-filter: invert(0) brightness(0) !important;
+  vertical-align: middle;
+  position: absolute;
+  right: 5px;
+}
+
+/* Make calendar icon bigger and black in Firefox */
+input[type="date"]::-moz-calendar-picker-indicator {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  background-size: 30px 30px;
+  background-color: transparent;
+  filter: invert(0) brightness(0) !important;
+  opacity: 1 !important;
+  -webkit-filter: invert(0) brightness(0) !important;
+  vertical-align: middle;
+  position: absolute;
+  right: 5px;
+}
+
+/* Ensure text is vertically centered and black */
+input[type="date"]::-webkit-datetime-edit-text {
+  vertical-align: middle;
+  color: #000000;
+  font-size: 16px;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+/* Firefox date input text color and centering */
+input[type="date"]::-moz-datetime-edit-text {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-month-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-day-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-year-field {
+  color: #000000;
+  text-align: center !important;
+}
+</style>
 
 
 </x-app-layout>
