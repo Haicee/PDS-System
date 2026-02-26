@@ -440,8 +440,8 @@
                         class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         :disabled="savingAdmin || !(adminName.trim() && adminEmail.trim() && adminPassword && adminPasswordConfirm)"
                         @click="submitAdmin()">
-                        <span x-show="!savingAdmin">Save</span>
-                        <span x-show="savingAdmin">Saving...</span>
+                        <span x-show="!savingAdmin">Create</span>
+                        <span x-show="savingAdmin">Creating...</span>
                     </button>
                 </div>
             </div>

@@ -25,13 +25,18 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <x-input-label for="unit" :value="__('Unit')" />
-                <x-text-input id="unit" name="unit" type="text" class="mt-1 block w-full uppercase" :value="old('unit', $user->unit)" required autocomplete="organization" oninput="this.value = this.value.toUpperCase();" />
+                <x-input-label for="unit" :value="__('Unit/Division/Section')" />
+                <select id="unit" name="unit" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                    <option value="" disabled {{ old('unit', $user->unit) ? '' : 'selected' }}>Select unit</option>
+                    @foreach ($units ?? config('units.list', []) as $unit)
+                        <option value="{{ $unit }}" {{ old('unit', $user->unit) === $unit ? 'selected' : '' }}>{{ $unit }}</option>
+                    @endforeach
+                </select>
                 <x-input-error class="mt-2" :messages="$errors->get('unit')" />
             </div>
 
             <div>
-                <x-input-label for="phone" :value="__('Phone (11 digits)')" />
+                <x-input-label for="phone" :value="__('Phone Number')" />
                 <x-text-input id="phone" name="phone" type="tel" class="mt-1 block w-full" :value="old('phone', $user->phone)" required maxlength="11" pattern="\d{11}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);" />
                 <x-input-error class="mt-2" :messages="$errors->get('phone')" />
             </div>
@@ -97,7 +102,7 @@
                     x-transition
                     x-init="setTimeout(() => show = false, 2000)"
                     class="text-sm text-gray-600"
-                >{{ __('Saved.') }}</p>
+                >{{ __('Saved') }}</p>
             @endif
         </div>
     </form>

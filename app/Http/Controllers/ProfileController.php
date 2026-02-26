@@ -20,6 +20,7 @@ class ProfileController extends Controller
         return view('profile.edit', [
             'user' => $request->user(),
             'avatar' => $this->avatarUrl($request->user()?->profile?->profile),
+            'units' => config('units.list', []),
         ]);
     }
 

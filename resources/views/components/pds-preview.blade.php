@@ -53,11 +53,34 @@
                         <p class="text-xs uppercase text-slate-400 font-semibold">Unit</p>
                         <p class="font-medium" x-text="selected?.unit ?? '—'"></p>
                     </div>
-                    <div>
+                    <div class="flex flex-col gap-2">
                         <p class="text-xs uppercase text-slate-400 font-semibold">Status</p>
-                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
-                            :class="(selected?.status_key ?? '') === 'approved' ? 'text-emerald-600 bg-emerald-50' : (selected?.status_key ?? '') === 'rejected' ? 'text-rose-600 bg-rose-50' : 'text-amber-600 bg-amber-50'"
-                            x-text="selected?.status ?? '—'"></span>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button"
+                                class="rounded-full px-3 py-1.5 text-xs font-semibold border"
+                                :class="(selected?.status_key ?? 'pending') === 'pending'
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700 shadow-sm'
+                                    : 'border-slate-200 text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700'"
+                                @click.stop="requestConfirm('pending')">
+                                Pending
+                            </button>
+                            <button type="button"
+                                class="rounded-full px-3 py-1.5 text-xs font-semibold border"
+                                :class="(selected?.status_key ?? 'pending') === 'approved'
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm'
+                                    : 'border-slate-200 text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'"
+                                @click.stop="requestConfirm('approved')">
+                                Approved
+                            </button>
+                            <button type="button"
+                                class="rounded-full px-3 py-1.5 text-xs font-semibold border"
+                                :class="(selected?.status_key ?? 'pending') === 'rejected'
+                                    ? 'border-rose-200 bg-rose-50 text-rose-700 shadow-sm'
+                                    : 'border-slate-200 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700'"
+                                @click.stop="requestConfirm('rejected')">
+                                Rejected
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <p class="text-xs uppercase text-slate-400 font-semibold">Submitted</p>
@@ -66,23 +89,6 @@
                 </div>
 
                 <div class="flex flex-col gap-3 pt-2">
-                    <p class="text-xs uppercase text-slate-400 font-semibold">Actions</p>
-                    <template x-if="selected?.status_key === 'pending'">
-                        <div class="flex justify-center gap-3">
-                            <button type="button"
-                                class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100"
-                                @click.stop="requestConfirm('approved')">
-                                <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                                Approve
-                            </button>
-                            <button type="button"
-                                class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-100 hover:bg-rose-100"
-                                @click.stop="requestConfirm('rejected')">
-                                <span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span>
-                                Reject
-                            </button>
-                        </div>
-                    </template>
                     <button type="button"
                         class="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100"
                         @click.stop="downloadPds()">

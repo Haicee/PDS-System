@@ -13,6 +13,7 @@
             deleting: false,
 
             newEmployeeName: '',
+            newEmployeeUnit: '',
             savingEmployee: false,
             employeeError: '',
             employeeFieldErrors: {},
@@ -23,6 +24,7 @@
                 this.employeeError = '';
                 this.employeeFieldErrors = {};
                 this.newEmployeeName = '';
+                this.newEmployeeUnit = '';
                 this.savingEmployee = false;
                 this.addEmployeeOpen = true;
             },
@@ -100,6 +102,7 @@
                     },
                     body: JSON.stringify({
                         full_name: this.newEmployeeName,
+                        unit: this.newEmployeeUnit,
                     })
                 })
                 .then(async (res) => {
@@ -134,6 +137,7 @@
 
                     this.addEmployeeOpen = false;
                     this.newEmployeeName = '';
+                    this.newEmployeeUnit = '';
                     this.employeeFieldErrors = {};
                 })
                 .catch(err => {
@@ -149,7 +153,7 @@
         x-on:open-delete.window="requestDelete($event.detail)">
         
 
-        <div class="mx-auto sm:px-6 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-180px)]">
+        <div class="mx-auto sm:px-6 lg:px-20 flex flex-col h-[calc(100vh-180px)]">
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -176,9 +180,10 @@
                     search: '',
                     filterStatus: '',
                     filterType: '',
-                    sortKey: 'name',
-                    sortDir: 'asc',
+                    sortKey: 'created_at',
+                    sortDir: 'desc',
                     employees: @js($employees),
+                    units: @js($units ?? []),
                     init() {
                         window.addEventListener('employee-deleted', (e) => {
                             const id = e.detail?.id;
@@ -255,6 +260,7 @@
                             <option value="Job Order">Job Order</option>
                         </select>
                         <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
+                            <option value="created_at">Sort: Date</option>
                             <option value="name">Sort: Name</option>
                             <option value="department">Sort: Department</option>
                             <option value="status">Sort: Status</option>
@@ -294,7 +300,7 @@
                                 <thead class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
                                         <th class="px-6 py-3">Employee</th>
-                                        <th class="px-6 py-3">Unit</th>
+                                        <th class="px-6 py-3">Unit/Division/Section</th>
                                         <th class="px-6 py-3">Email</th>
                                         <th class="px-6 py-3">Phone</th>
                                         <th class="px-6 py-3">Status</th>
@@ -357,11 +363,11 @@
             </div>
 
             @foreach ($employees as $employee)
-                <x-view-user-modal :employee="$employee" :name="'employee-details-' . $employee['id']" :key="'employee-details-' . $employee['id']" width="2xl" />
+                <x-view-user-modal :employee="$employee" :name="'employee-details-' . $employee['id']" :key="'employee-details-' . $employee['id']" width="2xl" :units="$units" />
             @endforeach
 
             <!-- Add Employee Modal -->
-            <div x-show="addEmployeeOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+            <div x-show="addEmployeeOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4"
                 x-transition.opacity @click.self="closeEmployee()">
                 <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-slate-100"
                     x-transition.scale>
@@ -387,7 +393,6 @@
                             <template x-if="employeeFieldErrors?.full_name">
                                 <p class="text-sm text-rose-600" >The name has already been taken.</p>
                             </template>
-                            
                         </div>
                     </div>
 

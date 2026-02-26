@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        $units = config('units.list', []);
+
+        Schema::create('users', function (Blueprint $table) use ($units) {
             $table->id();
             $table->string('name');
             $table->enum('gender', ['Male', 'Female'])->nullable();
-            $table->string('unit')->nullable();
+            $table->enum('unit', $units)->nullable();
             $table->string('phone', 32)->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();

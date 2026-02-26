@@ -6,14 +6,18 @@ use App\Models\User;
 use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ManageUserController extends Controller
 {
     // profile
     public function index(Request $request)
         {
-            $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned')
+            $units = config('units.list', []);
+
+            $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned', 'created_at')
                 ->with('profile')
+                ->latest('created_at')
                 ->get()
                 ->map(function (User $user) {
                     $avatar = $this->avatarUrl($user->profile?->profile);
@@ -28,21 +32,24 @@ class ManageUserController extends Controller
                         'type' => $user->type,
                         'status' => $user->status,
                         'location' => $user->location_assigned,
+                        'created_at' => $user->created_at?->toIso8601String(),
                         'avatar' => $avatar,
                     ];
                 })
                 ->values();
 
-            return view('manage-user', compact('employees'));
+            return view('manage-user', compact('employees', 'units'));
         }
 
     
         // update
     public function update(Request $request, User $user)
     {
+        $units = config('units.list', []);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'unit' => ['required', 'string', 'max:255'],
+            'unit' => ['required', Rule::in($units)],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'phone' => ['required', 'digits:11'],
             'type' => ['required', 'in:Permanent Employee,Job Order'],

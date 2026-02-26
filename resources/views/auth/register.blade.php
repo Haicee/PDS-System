@@ -101,7 +101,12 @@
                         <label for="unit" class="text-sm font-medium text-slate-700">Unit</label>
                         <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2-icon lucide-building-2"><path d="M10 12h4"/><path d="M10 8h4"/><path d="M14 21v-3a2 2 0 0 0-4 0v3"/><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/></svg>
-                            <input id="unit" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="unit" :value="old('unit')" autocomplete="organization" placeholder="e.g., NSAP" required oninput="this.value = this.value.toUpperCase();" />
+                            <select id="unit" name="unit" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" required>
+                                <option value="" disabled {{ old('unit') ? '' : 'selected' }}>Select unit</option>
+                                @foreach (config('units.list', []) as $unit)
+                                    <option value="{{ $unit }}" {{ old('unit') === $unit ? 'selected' : '' }}>{{ $unit }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <x-input-error :messages="$errors->get('unit')" class="mt-2" />
                     </div>
