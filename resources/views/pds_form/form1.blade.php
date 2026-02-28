@@ -29,16 +29,22 @@
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
+        /* Offset native scroll positioning to account for sticky navbar */
+        html, body { scroll-padding-top: 240px; }
+
         /* Form controls styled as lined cells */
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
+        /* Prevent focused fields from hiding under sticky header when scrolled into view */
+        input, textarea, select { scroll-margin-top: 240px; }
         .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
         .autosave-overlay.hidden { display: none; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
    <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('pds-form1');
     // Prefill from session cache (pds) so going back restores values
     const sessionData = @json(session('pds', []));
     const draftData = @json($data ?? []);
@@ -219,10 +225,45 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshArray();
     });
 
-    // Next button validation
+    // Next button validation (required fields + first-row completeness for array tables)
     const nextBtn = document.getElementById('next-btn');
     const requiredFields = Array.from(document.querySelectorAll('input[required], textarea[required], select[required]'));
     const checkboxGroups = ['sex[]', 'civilstatus[]', 'citizenship[]'];
+
+    // First-row completeness: children table (first row must be fully filled or all N/A)
+    const firstRowFields = [
+        document.querySelector('textarea[name="children_familybg[]"]'),
+        document.querySelector('textarea[name="children_dateofbirth_familybg[]"]')
+    ].filter(Boolean);
+
+    const firstRowState = (fields) => {
+        const values = fields.map(f => (f?.value || '').trim());
+        const allNA = values.length && values.every(v => isNA(v));
+        const allBlank = values.every(v => v === '');
+        const anyBlank = values.some(v => v === '');
+        const anyData = values.some(v => v !== '' && !isNA(v));
+        const allFilledNoBlank = values.length > 0 && !anyBlank;
+        return { allNA, allBlank, anyData, allFilledNoBlank };
+    };
+
+    const scrollToField = (el) => {
+        if (!el) return;
+        const nav = document.querySelector('nav');
+        const navHeight = nav?.getBoundingClientRect().height || 80;
+        const offset = navHeight + 540; // generous buffer so field lands well below navbar
+        const anchor = el.closest('td, th') || el; // use table cell as anchor when possible
+
+        const applyOffset = () => {
+            const targetY = Math.max(anchor.getBoundingClientRect().top + window.pageYOffset - offset, 0);
+            window.scrollTo({ top: targetY, behavior: 'auto' });
+        };
+
+        // Immediate scroll, then re-apply for stability
+        applyOffset();
+        requestAnimationFrame(applyOffset);
+        setTimeout(applyOffset, 140);
+        setTimeout(applyOffset, 300);
+    };
 
     const validateRequired = () => {
         const missingRequiredInputs = requiredFields.some(el => {
@@ -234,19 +275,63 @@ document.addEventListener('DOMContentLoaded', () => {
         const missingCheckboxGroup = checkboxGroups.some(name => {
             const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
             if (!boxes.length) return false;
-            return !boxes.some(b => b.checked);
+            const noneChecked = !boxes.some(b => b.checked);
+
+            // Surface native message and clear it for the whole group
+            boxes.forEach(box => box.setCustomValidity(noneChecked ? 'Please select an option in this group.' : ''));
+
+            return noneChecked;
         });
 
-        const hasMissing = missingRequiredInputs || missingCheckboxGroup;
+        const firstRowStateResult = firstRowState(firstRowFields);
+        const firstRowIncomplete = !(firstRowStateResult.allNA || firstRowStateResult.allBlank || firstRowStateResult.allFilledNoBlank);
 
-        if (!nextBtn) return;
-        if (hasMissing) {
-            nextBtn.setAttribute('aria-disabled', 'true');
-            nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        } else {
-            nextBtn.removeAttribute('aria-disabled');
-            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        return missingRequiredInputs || missingCheckboxGroup || firstRowIncomplete;
+    };
+
+    const focusFirstMissing = () => {
+        for (const el of requiredFields) {
+            if (el.disabled || el.readOnly) continue;
+            if (el.type === 'file') {
+                if (!(el.files && el.files.length > 0)) {
+                    el.focus();
+                    scrollToField(el);
+                    return true;
+                }
+                continue;
+            }
+            if (!((el.value || '').trim())) {
+                el.focus();
+                scrollToField(el);
+                return true;
+            }
         }
+
+        for (const name of checkboxGroups) {
+            const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
+            if (!boxes.length) continue;
+            if (!boxes.some(b => b.checked)) {
+                boxes[0].focus();
+                scrollToField(boxes[0]);
+                return true;
+            }
+        }
+
+        const firstState = firstRowState(firstRowFields);
+        if (!(firstState.allNA || firstState.allBlank || firstState.allFilledNoBlank)) {
+            const firstMissing = firstRowFields.find(f => f && !(f.value || '').trim());
+            const target = firstMissing || firstRowFields[0];
+            if (target) {
+                target.setCustomValidity('Please complete the first row or mark N/A.');
+                target.reportValidity();
+                target.focus();
+                scrollToField(target);
+                setTimeout(() => target.setCustomValidity(''), 1200);
+            }
+            return true;
+        }
+
+        return false;
     };
 
     requiredFields.forEach(el => {
@@ -262,12 +347,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     validateRequired();
 
-    if (nextBtn) {
-        nextBtn.addEventListener('click', (e) => {
-            if (nextBtn.getAttribute('aria-disabled') === 'true') {
+    if (form && nextBtn) {
+        form.addEventListener('submit', (e) => {
+            const middleNameInput = document.getElementById('middlename');
+            if (middleNameInput && !middleNameInput.value.trim()) {
                 e.preventDefault();
                 e.stopPropagation();
-                validateRequired();
+                alert('Middle name is required.');
+                middleNameInput.focus();
+                scrollToField(middleNameInput);
+                return;
+            }
+
+            const hasMissing = validateRequired();
+            if (hasMissing) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Trigger native validity UI for checkbox groups
+                for (const name of checkboxGroups) {
+                    const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
+                    if (boxes.length && !boxes.some(b => b.checked)) {
+                        boxes[0].reportValidity();
+                        break;
+                    }
+                }
+
+                focusFirstMissing();
             }
         });
     }
@@ -299,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </p>
 
   <p class="  font-['Arial_Narrow','sans-serif'] text-base mb-3">
-    Print legibly if accomplished through own handwriting. Tick appropriate boxes and use separate sheet if necessary. Indicate <span class="font-bold">N/A</span> if not applicable. <span class="font-bold">DO NOT ABBREVIATE.</span>
+    Print legibly if accomplished through own handwriting. Tick appropriate boxes <span style="font-style:normal;">&#x2610;</span> and use separate sheet if necessary. Indicate <span class="font-bold">N/A</span> if not applicable. <span class="font-bold">DO NOT ABBREVIATE.</span>
   </p>
 
   <!-- MAIN TABLE -->
@@ -400,6 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
            <textarea
       name="middlename"
       id="middlename"
+      required
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -427,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
            text-lg">
            <textarea
       name="date_of_birth"
+      required
       rows="1"
       class="w-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2451,6 +2559,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   console.log('Form element found:', form);
 
+  const sessionData = @json(session('pds', []));
+  const draftData = @json($data ?? []);
+  const flat = {};
+
+  const walk = (obj, prefix = '') => {
+    if (obj === null || obj === undefined) return;
+    if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
+    if (Array.isArray(obj)) {
+      obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
+    } else {
+      Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
+    }
+  };
+
+  walk(sessionData);
+  walk(draftData);
+  
+
   const storageKey = 'pds_form_step1_' + ({{ auth()->id() ?? 0 }});
   const singleSelectCheckboxNames = new Set(['sex[]','civilstatus[]','citizenship[]']);
   const storageBase = "{{ asset('storage') }}/";
@@ -2496,13 +2622,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (overrideData) {
-      data = { ...data, ...overrideData };
+      // Prefer local cache; only backfill keys missing locally
+      Object.entries(overrideData).forEach(([k, v]) => {
+        if (data[k] === undefined) {
+          data[k] = v;
+        }
+      });
     }
 
-    if (overrideData?.signature_path && signaturePathInput) {
+    // Map single-select checkbox arrays from draft/session (keys without []) into form fields
+    const hydrateSingleSelect = (baseKey) => {
+      const val = Array.isArray(data[baseKey]) ? data[baseKey][0] : data[baseKey];
+      if (val === undefined) return;
+      const targetName = `${baseKey}[]`;
+      form.querySelectorAll(`input[type="checkbox"][name="${targetName}"]`).forEach(el => {
+        el.checked = String(el.value) === String(val);
+      });
+    };
+
+    ['sex', 'civilstatus', 'citizenship'].forEach(hydrateSingleSelect);
+
+    // Only apply server/session signature if local value is missing
+    if (overrideData?.signature_path && signaturePathInput && !signaturePathInput.value) {
       signaturePathInput.value = overrideData.signature_path;
     }
-    if (overrideData?.signature_data && signatureDataInput) {
+    if (overrideData?.signature_data && signatureDataInput && !signatureDataInput.value) {
       signatureDataInput.value = overrideData.signature_data;
     }
 
@@ -2525,7 +2669,7 @@ document.addEventListener('DOMContentLoaded', () => {
           } else if (el.type === 'radio') {
             el.checked = val === el.value;
           } else {
-            if (!el.value) el.value = val;
+            el.value = val;
           }
           if (el.tagName === 'TEXTAREA' || el.type === 'text') {
             el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2546,9 +2690,7 @@ document.addEventListener('DOMContentLoaded', () => {
           el.checked = stored === el.value;
         }
         else {
-          if (!el.value) {
-            el.value = stored;
-          }
+          el.value = stored;
         }
 
         if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -2653,8 +2795,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!autosaveOverlay) return;
       autosaveOverlay.classList.toggle('hidden', !flag);
     };
+
+    const appendSingleSelectGroups = (formData) => {
+      ['sex', 'civilstatus', 'citizenship'].forEach((base) => {
+        const selected = form.querySelector(`input[name="${base}[]"]:checked`);
+        if (selected) {
+          formData.set(base, selected.value);
+        }
+      });
+    };
     const send = () => {
       const formData = new FormData(form);
+      appendSingleSelectGroups(formData);
       console.log('Auto-saving to server...');
       fetch('{{ route('pds.autosave') }}', {
         method: 'POST',
@@ -2695,13 +2847,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   })();
 
+  let hydrated = false;
+
   const persist = () => {
+    if (!hydrated) return;
     console.log('Persist function called');
     saveCache();
     autoSaveToServer();
   };
 
-  loadCache();
+  // Hydrate: server/session defaults, then local cache overrides
+  loadCache({ ...(draftData || {}), ...(sessionData || {}) });
+  hydrated = true;
+  // Persist merged cache once so a fast refresh keeps latest values
+  saveCache();
+  // Push hydrated values to server immediately so data survives logout/localStorage clears
+  autoSaveToServer();
   updateSignaturePreviewFromInputs();
 
   // Debug: Check if form element exists
@@ -2725,8 +2886,12 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(r => r.ok ? r.json() : null)
     .then(json => {
       if (!json || !json.data) return;
+      // Apply server data as defaults; keep existing local overrides
       loadCache(json.data);
       updateSignaturePreviewFromInputs();
+      // Persist merged cache once so a fast refresh keeps latest values
+      hydrated = true;
+      saveCache();
     })
     .catch(() => {});
 

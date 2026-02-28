@@ -16,7 +16,7 @@
         .border-2 { border: 2px solid #000 !important; }
         .signature-box {
             position: relative;
-            background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+            background: transparent;
             border: 1px solid #d1d5db;
             border-radius: 6px;
             overflow: hidden;
@@ -33,9 +33,14 @@
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
+        /* Offset native scroll positioning to account for sticky navbar */
+        html, body { scroll-padding-top: 240px; }
+
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
 
-        textarea:focus { outline: none; box-shadow: none; }
+        textarea:focus, input:focus { outline: none; box-shadow: none; }
+        /* Prevent focused fields from hiding under sticky header when scrolled into view */
+        input, textarea, select { scroll-margin-top: 240px; }
         input[type="checkbox"] { width: 12px; height: 12px; }
         .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
         .autosave-overlay.hidden { display: none; }
@@ -122,11 +127,42 @@
                 });
             };
 
+            const scrollToField = (el) => {
+                if (!el) return;
+                const nav = document.querySelector('nav');
+                const navHeight = nav?.getBoundingClientRect().height || 80;
+                const offset = navHeight + 540;
+                const anchor = el.closest('td, th') || el;
+
+                const applyOffset = () => {
+                    const targetY = Math.max(anchor.getBoundingClientRect().top + window.pageYOffset - offset, 0);
+                    window.scrollTo({ top: targetY, behavior: 'auto' });
+                };
+
+                applyOffset();
+                requestAnimationFrame(applyOffset);
+                setTimeout(applyOffset, 140);
+                setTimeout(applyOffset, 300);
+            };
+
             const firstRowState = (fields) => {
-                const values = fields.map(f => (f?.value || '').trim());
-                const allNA = values.length && values.every(v => isNA(v));
-                const anyData = values.some(v => v !== '' && !isNA(v));
-                return { allNA, anyData };
+                const active = fields.filter(f => f && !f.disabled && !f.readOnly);
+                const optionalNames = new Set();
+
+                const allBlank = active.every(f => (f.value || '').trim() === '');
+                const allNA = active.length && active.every(f => isNA(f.value));
+
+                let requiredMissing = false;
+                if (!(allBlank || allNA)) {
+                    requiredMissing = active.some(f => {
+                        if (optionalNames.has(f.name)) return false;
+                        return !isFilled(f);
+                    });
+                }
+
+                const incomplete = !(allBlank || allNA) && requiredMissing;
+
+                return { allBlank, allNA, incomplete };
             };
 
             const refreshRows = () => {
@@ -143,7 +179,7 @@
             });
             refreshRows();
 
-            // Next button gating: required fields + first rows (allow NA as filled)
+            // Next button inline validation: required fields + first rows (allow NA as filled)
             const nextBtn = document.getElementById('next-btn');
             const requiredFields = Array.from(document.querySelectorAll('[required]'));
 
@@ -157,36 +193,109 @@
 
             const firstRowSets = [eligibilityFirstRow, workFirstRow];
 
-            const validateRequired = () => {
-                const hasMissingRequired = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
+            const workRowNames = ['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]'];
+            const eligibilityRowNames = ['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]'];
 
-                const firstRowsIncomplete = firstRowSets.some(set => {
-                    const state = firstRowState(set);
-                    return !(state.allNA || state.anyData);
-                });
-
-                const hasMissing = hasMissingRequired || firstRowsIncomplete;
-
-                if (!nextBtn) return;
-                if (hasMissing) {
-                    nextBtn.setAttribute('aria-disabled', 'true');
-                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                } else {
-                    nextBtn.removeAttribute('aria-disabled');
-                    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                }
+            const clearValidity = () => {
+                requiredFields.forEach(el => el.setCustomValidity(''));
+                firstRowSets.flat().forEach(f => f?.setCustomValidity(''));
+                document.querySelectorAll('[name^="work_"]').forEach(el => el.setCustomValidity(''));
+                document.querySelectorAll('[name="eligibility[]"], [name="rating[]"], [name="date[]"], [name="place[]"], [name="license_no[]"], [name="validity[]"]').forEach(el => el.setCustomValidity(''));
             };
 
-            document.addEventListener('input', () => { refreshRows(); validateRequired(); }, true);
-            document.addEventListener('change', () => { refreshRows(); validateRequired(); }, true);
-            validateRequired();
+            const enforceRowCompleteness = (names, optionalNames = new Set()) => {
+                let invalidField = null;
+                const columns = names.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`)));
+                const maxRows = Math.max(...columns.map(c => c.length));
+
+                for (let row = 0; row < maxRows; row++) {
+                    const rowFields = columns.map(c => c[row]).filter(Boolean);
+                    if (!rowFields.length) continue;
+
+                    const first = columns[0][row];
+                    const firstVal = (first?.value || '').trim();
+                    if (!first || first.disabled || first.readOnly) continue;
+
+                    const firstHasData = firstVal !== '' && !isNA(firstVal);
+                    if (!firstHasData) continue;
+
+                    const missing = rowFields.slice(1).find(f => !optionalNames.has(f?.name) && !isFilled(f));
+                    if (missing) {
+                        missing.setCustomValidity('Complete all fields in this row or clear the first column.');
+                        if (!invalidField) invalidField = missing;
+                    }
+                }
+
+                return invalidField;
+            };
+
+            const hasMissingRequired = () => {
+                const hasMissingRequiredField = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
+
+                const firstRowsIncomplete = firstRowSets.some(set => firstRowState(set).incomplete);
+
+                const incompleteWorkRowField = enforceRowCompleteness(workRowNames);
+                const incompleteEligibilityRowField = enforceRowCompleteness(eligibilityRowNames);
+
+                return hasMissingRequiredField || firstRowsIncomplete || Boolean(incompleteWorkRowField) || Boolean(incompleteEligibilityRowField);
+            };
+
+            const focusFirstMissing = () => {
+                for (const el of requiredFields) {
+                    if (el.disabled || el.readOnly) continue;
+                    if (!isFilled(el)) {
+                        el.setCustomValidity('This field is required.');
+                        el.reportValidity();
+                        el.focus();
+                        scrollToField(el);
+                        return true;
+                    }
+                }
+
+                const sets = [eligibilityFirstRow, workFirstRow];
+                for (const set of sets) {
+                    const state = firstRowState(set);
+                    if (state.incomplete) {
+                        const firstMissing = set.find(f => f && !isFilled(f) && f.name !== 'rating[]');
+                        if (firstMissing) {
+                            firstMissing.setCustomValidity('Please complete the first row or mark N/A.');
+                            firstMissing.reportValidity();
+                            firstMissing.focus();
+                            scrollToField(firstMissing);
+                            return true;
+                        }
+                    }
+                }
+
+                const incompleteWork = enforceRowCompleteness(workRowNames);
+                if (incompleteWork) {
+                    incompleteWork.reportValidity();
+                    incompleteWork.focus();
+                    scrollToField(incompleteWork);
+                    return true;
+                }
+
+                const incompleteElig = enforceRowCompleteness(eligibilityRowNames);
+                if (incompleteElig) {
+                    incompleteElig.reportValidity();
+                    incompleteElig.focus();
+                    scrollToField(incompleteElig);
+                    return true;
+                }
+
+                return false;
+            };
+
+            document.addEventListener('input', () => { refreshRows(); clearValidity(); }, true);
+            document.addEventListener('change', () => { refreshRows(); clearValidity(); }, true);
 
             if (nextBtn) {
                 nextBtn.addEventListener('click', (e) => {
-                    if (nextBtn.getAttribute('aria-disabled') === 'true') {
+                    clearValidity();
+                    if (hasMissingRequired()) {
                         e.preventDefault();
                         e.stopPropagation();
-                        validateRequired();
+                        focusFirstMissing();
                     }
                 });
             }
@@ -319,13 +428,19 @@
                 }
 
                 if (overrideData) {
-                    data = { ...data, ...overrideData };
+                    // Prefer local cache; only backfill keys missing locally
+                    Object.entries(overrideData).forEach(([k, v]) => {
+                        if (data[k] === undefined) {
+                            data[k] = v;
+                        }
+                    });
                 }
 
-                if (overrideData?.signature_path && signaturePathInput2) {
+                // Only apply server/session signature if local value is missing
+                if (overrideData?.signature_path && signaturePathInput2 && !signaturePathInput2.value) {
                     signaturePathInput2.value = overrideData.signature_path;
                 }
-                if (overrideData?.signature_data && signatureDataInput2) {
+                if (overrideData?.signature_data && signatureDataInput2 && !signatureDataInput2.value) {
                     signatureDataInput2.value = overrideData.signature_data;
                 }
 
@@ -341,7 +456,7 @@
                             } else if (el.type === 'radio') {
                                 el.checked = val === el.value;
                             } else {
-                                if (!el.value) el.value = val;
+                                el.value = val;
                             }
                             if (el.tagName === 'TEXTAREA' || el.type === 'text') {
                                 el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -362,9 +477,7 @@
                             el.checked = stored === el.value;
                         }
                         else {
-                            if (!el.value) {
-                                el.value = stored;
-                            }
+                            el.value = stored;
                         }
 
                         if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -479,6 +592,8 @@
 
             loadCache();
             updateSignaturePreviewFromInputs2();
+            // Persist merged cache once so a fast refresh keeps latest values
+            saveCache();
 
             // If served via static view (no $data), fetch draft and hydrate once
             fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
@@ -487,6 +602,8 @@
                     if (!json || !json.data) return;
                     loadCache(json.data);
                     updateSignaturePreviewFromInputs2();
+                    // Persist merged cache once so a fast refresh keeps latest values
+                    saveCache();
                 })
                 .catch(() => {});
 
@@ -562,12 +679,12 @@
 
    @for ($i = 0; $i < 7; $i++)
       <tr>
-        <td class="border align-top"><textarea rows="1" placeholder="Eligibility" name="eligibility[]" ></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Rating" name="rating[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Date" name="date[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Place" name="place[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="License No." name="license_no[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="Validity" name="validity[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Eligibility' : '' }}" name="eligibility[]" ></textarea></td>
+        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Rating' : '' }}" name="rating[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Date' : '' }}" name="date[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Place' : '' }}" name="place[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'License No.' : '' }}" name="license_no[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Validity' : '' }}" name="validity[]"></textarea></td>
       </tr>
    @endfor
     </table>
@@ -617,12 +734,12 @@
 
     @for ($i = 0; $i < 27; $i++)
      <tr>
-      <td class="border align-top"><textarea rows="1" placeholder="From" name="work_from[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="To" name="work_to[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Position Title" name="work_position_title[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Department/Agency/Office/Company" name="work_department[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Status" name="work_status[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="Y/N" name="work_govt_service[]"></textarea></td>
+      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="work_from[]"></textarea></td>
+      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="work_to[]"></textarea></td>
+      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position Title' : '' }}" name="work_position_title[]"></textarea></td>
+      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Department/Agency/Office/Company' : '' }}" name="work_department[]"></textarea></td>
+      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Status' : '' }}" name="work_status[]"></textarea></td>
+      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Y/N' : '' }}" name="work_govt_service[]"></textarea></td>
      </tr>
     @endfor
     <tr>
@@ -655,9 +772,7 @@
             alt="Signature preview"
             class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
           >
-          <div id="signaturePlaceholder2" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
-            Upload signature here
-          </div>
+          <div id="signaturePlaceholder2" class="absolute inset-0" aria-hidden="true"></div>
         </label>
         <input type="hidden" name="signature_path" id="signature_path2" value="{{ $signaturePath ?? '' }}">
         <input type="hidden" name="signature_data" id="signature_data2">

@@ -20,7 +20,7 @@
     .pds-sheet { min-width: 980px; }
     .signature-box {
       position: relative;
-      background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+      background: transparent;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       overflow: hidden;
@@ -591,13 +591,19 @@
         }
 
         if (overrideData) {
-          data = { ...data, ...overrideData };
+          // Prefer local cache; only backfill keys missing locally
+          Object.entries(overrideData).forEach(([k, v]) => {
+            if (data[k] === undefined) {
+              data[k] = v;
+            }
+          });
         }
 
-        if (overrideData?.signature_path && signaturePathInput4) {
+        // Only apply server/session signature if local value is missing
+        if (overrideData?.signature_path && signaturePathInput4 && !signaturePathInput4.value) {
           signaturePathInput4.value = overrideData.signature_path;
         }
-        if (overrideData?.signature_data && signatureDataInput4) {
+        if (overrideData?.signature_data && signatureDataInput4 && !signatureDataInput4.value) {
           signatureDataInput4.value = overrideData.signature_data;
         }
 
@@ -625,7 +631,7 @@
               } else if (el.type === 'radio') {
                 el.checked = val === el.value;
               } else {
-                if (!el.value) el.value = val;
+                el.value = val;
               }
               if (el.tagName === 'TEXTAREA' || el.type === 'text') {
                 el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -646,9 +652,7 @@
               el.checked = stored === el.value;
             }
             else {
-              if (!el.value) {
-                el.value = stored;
-              }
+              el.value = stored;
             }
 
             if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -730,6 +734,8 @@
 
       loadCache();
       updateSignaturePreview4();
+      // Persist merged cache once so a fast refresh keeps latest values
+      saveCache();
 
       refreshSequential();
       validateRequired();
@@ -741,6 +747,8 @@
           if (!json || !json.data) return;
           loadCache(json.data);
           updateSignaturePreview4();
+          // Persist merged cache once so a fast refresh keeps latest values
+          saveCache();
           refreshSequential();
           validateRequired();
           loadCachedPhoto();
@@ -1130,14 +1138,14 @@
           <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
             <tr>
               <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative p-1">
-                <label id="signatureBox4a" class="signature-box block h-full w-full cursor-pointer relative">
+                <label id="signatureBox4a" class="signature-box block h-full w-full cursor-default relative">
                   <input
                     type="file"
                     name="signature_file"
                     id="signatureFileInput4"
                     accept="image/*"
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onchange="handleSignatureUpload4(this.files[0])"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+                    disabled
                   >
                   <img
                     id="signaturePreviewImg4a"
@@ -1145,9 +1153,7 @@
                     alt="Signature preview"
                     class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
                   >
-                  <div id="signaturePlaceholder4a" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
-                    Upload signature here
-                  </div>
+                  <div id="signaturePlaceholder4a" class="absolute inset-0" aria-hidden="true"></div>
                 </label>
                 <input type="hidden" name="signature_path" id="signature_path4" value="{{ $signaturePath ?? '' }}">
                 <input type="hidden" name="signature_data" id="signature_data4">
@@ -1189,14 +1195,14 @@
             <tr>
   <td class="border-black h-24 text-center align-middle italic text-red-600 relative overflow-hidden">
 
-    <label id="signatureBox4b" class="signature-box block h-full w-full cursor-pointer relative">
+    <label id="signatureBox4b" class="signature-box block h-full w-full cursor-default relative">
       <input
         type="file"
         name="signature_file"
         id="signatureFileInput4b"
         accept="image/*"
-        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        onchange="handleSignatureUpload4(this.files[0])"
+        class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+        disabled
       />
 
       <img
@@ -1206,9 +1212,7 @@
         class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
       >
 
-      <div id="signaturePlaceholder4b" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
-        Upload signature here
-      </div>
+      <div id="signaturePlaceholder4b" class="absolute inset-0" aria-hidden="true"></div>
     </label>
 
   </td>

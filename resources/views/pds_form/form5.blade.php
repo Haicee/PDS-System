@@ -19,7 +19,7 @@ body { margin: 0; }
 
 .signature-box {
   position: relative;
-  background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+  background: transparent;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   overflow: hidden;
@@ -230,7 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (overrideData) {
-      data = { ...data, ...overrideData };
+      if (overrideData.remarks && !overrideData['remarks[]']) {
+        overrideData['remarks[]'] = overrideData.remarks;
+      }
+      // Prefer locally cached values; use server/session as fallback
+      data = { ...overrideData, ...data };
     }
 
     if (overrideData?.signature_path && signaturePathInput5) {
@@ -439,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
   getRemarks().forEach(attachReactive);
   Array.from(form.querySelectorAll('input[type="text"], textarea')).forEach(attachReactive);
 
-  loadCache();
+  loadCache({ ...(draftData || {}), ...(sessionData || {}) });
   updateSignaturePreview5();
   validateRequired();
 
@@ -551,14 +555,14 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <!-- SIGNATURE -->
 <div class="w-full flex justify-end mt-[3cm] pr-6">
   <div class="w-[350px] text-center">
-    <label id="signatureBox5" class="signature-box block h-36 w-full cursor-pointer">
+    <label id="signatureBox5" data-signature-cell class="signature-box block h-36 w-full cursor-default">
       <input
         type="file"
         name="signature_file"
         id="signatureFileInput5"
         accept="image/*"
-        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        onchange="handleSignatureUpload5(this.files[0])"
+        class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+        disabled
       >
       <img
         id="signaturePreviewImg5"
@@ -566,9 +570,7 @@ placeholder="Sample: If applying to Supervising Administrative Officer
         alt="Signature preview"
         class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
       >
-      <div id="signaturePlaceholder5" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
-        Upload signature here
-      </div>
+      <div id="signaturePlaceholder5" class="absolute inset-0" aria-hidden="true"></div>
     </label>
     <input type="hidden" name="signature_path" id="signature_path5" value="{{ $signaturePath ?? '' }}">
     <input type="hidden" name="signature_data" id="signature_data5">

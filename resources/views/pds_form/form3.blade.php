@@ -18,7 +18,7 @@
         .border-2 { border: 2px solid #000 !important; }
         .signature-box {
             position: relative;
-            background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+            background: transparent;
             border: 1px solid #d1d5db;
             border-radius: 6px;
             overflow: hidden;
@@ -35,6 +35,7 @@
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
+        textarea:focus { outline: none; box-shadow: none; }
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         input[type="checkbox"] { width: 12px; height: 12px; }
         .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
@@ -308,13 +309,19 @@
                 }
 
                 if (overrideData) {
-                    data = { ...data, ...overrideData };
+                    // Prefer local cache; only backfill keys missing locally
+                    Object.entries(overrideData).forEach(([k, v]) => {
+                        if (data[k] === undefined) {
+                            data[k] = v;
+                        }
+                    });
                 }
 
-                if (overrideData?.signature_path && signaturePathInput3) {
+                // Only apply server/session signature if local value is missing
+                if (overrideData?.signature_path && signaturePathInput3 && !signaturePathInput3.value) {
                     signaturePathInput3.value = overrideData.signature_path;
                 }
-                if (overrideData?.signature_data && signatureDataInput3) {
+                if (overrideData?.signature_data && signatureDataInput3 && !signatureDataInput3.value) {
                     signatureDataInput3.value = overrideData.signature_data;
                 }
                 Object.entries(data).forEach(([name, stored]) => {
@@ -328,7 +335,7 @@
                             } else if (el.type === 'radio') {
                                 el.checked = val === el.value;
                             } else {
-                                if (!el.value) el.value = val;
+                                el.value = val;
                             }
                             if (el.tagName === 'TEXTAREA' || el.type === 'text') {
                                 el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -349,9 +356,7 @@
                             el.checked = stored === el.value;
                         }
                         else {
-                            if (!el.value) {
-                                el.value = stored;
-                            }
+                            el.value = stored;
                         }
 
                         if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -464,6 +469,8 @@
             };
 
             loadCache();
+            // Persist merged cache once so a fast refresh keeps latest values
+            saveCache();
 
             fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.ok ? r.json() : null)
@@ -471,6 +478,8 @@
                     if (!json || !json.data) return;
                     loadCache(json.data);
                     updateSignaturePreviewFromInputs3();
+                    // Persist merged cache once so a fast refresh keeps latest values
+                    saveCache();
                 })
                 .catch(() => {});
 
@@ -553,11 +562,11 @@
 
    @for ($i = 0; $i < 7; $i++)
       <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Organization" name="voluntary_organization[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="From" name="voluntary_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="To" name="voluntary_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Hours" name="voluntary_hours[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Position/Nature of Work" name="voluntary_position_nature_of_work[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Organization' : '' }}" name="voluntary_organization[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="voluntary_from[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="voluntary_to[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="voluntary_hours[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position/Nature of Work' : '' }}" name="voluntary_position_nature_of_work[]"></textarea></td>
       </tr>
    @endfor
 
@@ -608,12 +617,12 @@
 
     @for ($i = 0; $i < 27; $i++)
      <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Title of L&D / Training" name="learning_title_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="From" name="learning_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="To" name="learning_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Hours" name="learning_hours[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Type of L&D" name="learning_type_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Conducted/Sponsored By" name="learning_conducted_sponsored_by[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Title of L&D / Training' : '' }}" name="learning_title_of_ld[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="learning_from[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="learning_to[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="learning_hours[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Type of L&D' : '' }}" name="learning_type_of_ld[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Conducted/Sponsored By' : '' }}" name="learning_conducted_sponsored_by[]"></textarea></td>
      </tr>
     @endfor
 
@@ -648,9 +657,9 @@
 
     @for ($i = 0; $i < 7; $i++)
       <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Special Skills and Hobbies" name="special_skills_hobbies[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Non-Academic Distinctions/Recognition" name="non_academic_distinctions_recognition[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Membership in Association/Organization" name="membership_in_association_organization[]"></textarea></td> 
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Special Skills and Hobbies' : '' }}" name="special_skills_hobbies[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Non-Academic Distinctions/Recognition' : '' }}" name="non_academic_distinctions_recognition[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Membership in Association/Organization' : '' }}" name="membership_in_association_organization[]"></textarea></td> 
       </tr>
     @endfor
 
@@ -670,14 +679,14 @@
 
        <td class="border" colspan="2">
      <div class="h-full w-full p-2">
-        <label id="signatureBox3" data-signature-cell class="signature-box block h-36 w-full cursor-pointer">
+        <label id="signatureBox3" data-signature-cell class="signature-box block h-36 w-full cursor-default">
           <input
             type="file"
             name="signature_file"
             id="signatureFileInput3"
             accept="image/*"
-            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onchange="handleSignatureUpload3(this.files[0])"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+            disabled
           >
           <img
             id="signaturePreviewImg3"
@@ -685,9 +694,7 @@
             alt="Signature preview"
             class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
           >
-          <div id="signaturePlaceholder3" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
-            Upload signature here
-          </div>
+          <div id="signaturePlaceholder3" class="absolute inset-0" aria-hidden="true"></div>
         </label>
         <input type="hidden" name="signature_path" id="signature_path3" value="{{ $signaturePath ?? '' }}">
         <input type="hidden" name="signature_data" id="signature_data3">
