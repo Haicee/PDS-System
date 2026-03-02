@@ -132,9 +132,8 @@
      </tr>
 
    @php
-    $workRows = $workExperiences ?? collect();
+    $workRows = ($workExperiences ?? collect())->values(); // keep user-entered order
     $maxRows = max(27, $workRows->count());
-     $workRows = $workRows->sortBy('from')->values();
 @endphp
 
 @for ($i = 0; $i < $maxRows; $i++)

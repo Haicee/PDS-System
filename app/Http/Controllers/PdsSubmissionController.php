@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\PdsSubmission;
 use App\Models\User;
@@ -40,6 +41,13 @@ class PdsSubmissionController extends Controller
             return collect($row)->some(fn ($v) => strlen(trim((string) $v)) > 0);
         };
 
+        $ensureFirstRowNotBlank = function (array $fields, string $label) {
+            $hasValue = collect($fields)->contains(fn ($v) => strlen(trim((string) $v)) > 0);
+            if (!$hasValue) {
+                abort(422, "Please fill out at least the first row of {$label} (enter NA if not applicable).");
+            }
+        };
+
         $validateNa = function (array $fields, string $label) {
             $flat = collect($fields)->flatten()->map(fn ($v) => Str::upper(trim((string) $v)));
             if ($flat->filter()->isNotEmpty()) {
@@ -55,6 +63,24 @@ class PdsSubmissionController extends Controller
         $existingPhotoPath = $existingSignatureRow->photo_file_path ?? null;
         $existingSignaturePath = $existingSignatureRow->signature_file_path ?? null;
         $existingThumbmarkPath = $existingSignatureRow->thumbmark_file_path ?? null;
+
+        $ensureFirstRowNotBlank([
+            $req->input('eligibility.0'),
+            $req->input('rating.0'),
+            $req->input('date.0'),
+            $req->input('place.0'),
+            $req->input('license_no.0'),
+            $req->input('validity.0'),
+        ], 'Civil Service Eligibility');
+
+        $ensureFirstRowNotBlank([
+            $req->input('work_from.0'),
+            $req->input('work_to.0'),
+            $req->input('work_position_title.0'),
+            $req->input('work_department.0'),
+            $req->input('work_status.0'),
+            $req->input('work_govt_service.0'),
+        ], 'Work Experience');
 
         DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath, $existingPhotoPath, $existingSignaturePath, $existingThumbmarkPath) {
             DB::table('pds_personal_infos')->updateOrInsert(
@@ -171,6 +197,24 @@ class PdsSubmissionController extends Controller
             $childNames = collect($req->input('children_familybg', []));
             $childDob = collect($req->input('children_dateofbirth_familybg', []));
 
+            // Validation: when a child name exists (not NA/N/A/NONE), the matching DOB is required
+            $childNameDobValidator = Validator::make($req->all(), []);
+            $childNames->each(function ($name, $i) use ($childDob, $childNameDobValidator) {
+                $nameTrim = strtoupper(trim((string) $name));
+                if ($nameTrim === '' || in_array($nameTrim, ['NA', 'N/A', 'NONE'], true)) {
+                    return;
+                }
+
+                $dob = trim((string) $childDob->get($i));
+                if ($dob === '') {
+                    $childNameDobValidator->errors()->add("children_dateofbirth_familybg.$i", 'Date of birth is required for this child.');
+                }
+            });
+
+            if ($childNameDobValidator->errors()->isNotEmpty()) {
+                return redirect()->back()->withErrors($childNameDobValidator)->withInput();
+            }
+
             $children = $childNames->map(function ($name, $i) use ($childDob, $userId) {
                 return [
                     'user_id' => $userId,
@@ -252,8 +296,34 @@ class PdsSubmissionController extends Controller
                 $edu = collect([$edu->first()]);
             }
 
-            if ($edu->isNotEmpty()) {
-                DB::table('pds_education_records')->insert($edu->all());
+            // Dynamic education extras
+            $extraLevels = $req->input('education_extra_level', []);
+            $extraSchools = $req->input('education_extra_school_name', []);
+            $extraBasics = $req->input('education_extra_basic_education', []);
+            $extraFrom = $req->input('education_extra_from', []);
+            $extraTo = $req->input('education_extra_to', []);
+            $extraHighest = $req->input('education_extra_highest_level', []);
+            $extraYear = $req->input('education_extra_year_graduated', []);
+            $extraHonors = $req->input('education_extra_scholarship_acadhonors', []);
+
+            $extraEdu = collect($extraLevels)->map(function ($level, $i) use ($userId, $extraSchools, $extraBasics, $extraFrom, $extraTo, $extraHighest, $extraYear, $extraHonors) {
+                return [
+                    'user_id' => $userId,
+                    'level' => $level ?? null,
+                    'school_name' => $extraSchools[$i] ?? null,
+                    'degree_course' => $extraBasics[$i] ?? null,
+                    'from' => $extraFrom[$i] ?? null,
+                    'to' => $extraTo[$i] ?? null,
+                    'highest_level' => $extraHighest[$i] ?? null,
+                    'year_graduated' => $extraYear[$i] ?? null,
+                    'academic_honors' => $extraHonors[$i] ?? null,
+                ];
+            })->filter($rowHasData);
+
+            $allEdu = $edu->concat($extraEdu);
+
+            if ($allEdu->isNotEmpty()) {
+                DB::table('pds_education_records')->insert($allEdu->all());
             }
 
             DB::table('pds_eligibilities')->where('user_id', $userId)->delete();
@@ -414,6 +484,15 @@ class PdsSubmissionController extends Controller
             }
         };
 
+        $deleteUserPhotos = function (?string $exceptPath) use ($disk, $directory, $userId) {
+            $files = Storage::disk($disk)->files($directory);
+            foreach ($files as $file) {
+                if (str_starts_with(basename($file), "photo_{$userId}_") && $file !== $exceptPath) {
+                    Storage::disk($disk)->delete($file);
+                }
+            }
+        };
+
         $uploaded = $request->file('photo');
         if ($uploaded) {
             $filename = 'photo_' . $userId . '_' . time() . '.' . $uploaded->getClientOriginalExtension();
@@ -421,6 +500,7 @@ class PdsSubmissionController extends Controller
             if ($existingPath && $existingPath !== $path) {
                 $deleteExisting($existingPath);
             }
+            $deleteUserPhotos($path);
             return $path;
         }
 
@@ -442,6 +522,7 @@ class PdsSubmissionController extends Controller
                     if ($existingPath && $existingPath !== $path) {
                         $deleteExisting($existingPath);
                     }
+                    $deleteUserPhotos($path);
                     return $path;
                 }
             }

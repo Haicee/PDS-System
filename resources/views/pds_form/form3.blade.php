@@ -199,6 +199,49 @@
 
             const firstRowSets = [voluntaryFirstRow, learningFirstRow, otherInfoFirstRow];
 
+            const scrollToField = (el) => {
+                if (!el) return;
+                const nav = document.querySelector('nav');
+                const navHeight = nav?.getBoundingClientRect().height || 80;
+                const offset = navHeight + 540;
+                const anchor = el.closest('td, th') || el;
+                const targetY = Math.max(anchor.getBoundingClientRect().top + window.pageYOffset - offset, 0);
+                window.scrollTo({ top: targetY, behavior: 'auto' });
+            };
+
+            const voluntaryRowNames = ['voluntary_organization[]','voluntary_from[]','voluntary_to[]','voluntary_hours[]','voluntary_position_nature_of_work[]'];
+            const learningRowNames = ['learning_title_of_ld[]','learning_from[]','learning_to[]','learning_hours[]','learning_type_of_ld[]','learning_conducted_sponsored_by[]'];
+            const otherInfoRowNames = ['special_skills_hobbies[]','non_academic_distinctions_recognition[]','membership_in_association_organization[]'];
+
+            const enforceRowCompleteness = (names, optionalNames = new Set()) => {
+                let invalidField = null;
+                const columns = names.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`)));
+                const maxRows = Math.max(...columns.map(c => c.length));
+
+                for (let row = 0; row < maxRows; row++) {
+                    const rowFields = columns.map(c => c[row]).filter(Boolean);
+                    if (!rowFields.length) continue;
+
+                    const active = rowFields.filter(f => f && !f.disabled && !f.readOnly);
+                    if (!active.length) continue;
+
+                    const rowHasData = active.some(f => !optionalNames.has(f.name) && !isNA(f.value) && (f.value || '').trim() !== '');
+                    if (!rowHasData) continue;
+
+                    for (const f of active) {
+                        if (optionalNames.has(f.name)) continue;
+                        const val = (f.value || '').trim();
+                        const filled = val !== '' || isNA(val);
+                        if (!filled) {
+                            f.setCustomValidity('Complete all fields in this row or clear the entries.');
+                            if (!invalidField) invalidField = f;
+                        }
+                    }
+                }
+
+                return invalidField;
+            };
+
             const validateRequired = () => {
                 const hasMissingRequired = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
 
@@ -207,28 +250,63 @@
                     return !(state.allNA || state.anyData);
                 });
 
-                const hasMissing = hasMissingRequired || firstRowsIncomplete;
+                const incompleteVoluntary = enforceRowCompleteness(voluntaryRowNames);
+                const incompleteLearning = enforceRowCompleteness(learningRowNames);
+                const incompleteOther = enforceRowCompleteness(otherInfoRowNames);
 
-                if (!nextBtn) return;
-                if (hasMissing) {
-                    nextBtn.setAttribute('aria-disabled', 'true');
-                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                } else {
-                    nextBtn.removeAttribute('aria-disabled');
-                    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                }
+                return hasMissingRequired || firstRowsIncomplete || incompleteVoluntary || incompleteLearning || incompleteOther;
             };
 
-            document.addEventListener('input', () => { refreshRows(); validateRequired(); }, true);
-            document.addEventListener('change', () => { refreshRows(); validateRequired(); }, true);
-            validateRequired();
+            const focusFirstMissing = () => {
+                for (const el of requiredFields) {
+                    if (el.disabled || el.readOnly) continue;
+                    if (!isFilled(el)) {
+                        el.setCustomValidity('This field is required.');
+                        el.reportValidity();
+                        el.focus();
+                        scrollToField(el);
+                        return true;
+                    }
+                }
+
+                for (const set of firstRowSets) {
+                    const state = firstRowState(set);
+                    if (!(state.allNA || state.anyData)) {
+                        const missing = set.find(f => f && !isFilled(f));
+                        const target = missing || set[0];
+                        if (target) {
+                            target.setCustomValidity('Please complete the first row or mark N/A.');
+                            target.reportValidity();
+                            target.focus();
+                            scrollToField(target);
+                            setTimeout(() => target.setCustomValidity(''), 1200);
+                            return true;
+                        }
+                    }
+                }
+
+                const firstInvalid = enforceRowCompleteness(voluntaryRowNames) || enforceRowCompleteness(learningRowNames) || enforceRowCompleteness(otherInfoRowNames);
+                if (firstInvalid) {
+                    firstInvalid.reportValidity();
+                    firstInvalid.focus();
+                    scrollToField(firstInvalid);
+                    setTimeout(() => firstInvalid.setCustomValidity(''), 1200);
+                    return true;
+                }
+
+                return false;
+            };
+
+            document.addEventListener('input', () => { refreshRows(); }, true);
+            document.addEventListener('change', () => { refreshRows(); }, true);
 
             if (nextBtn) {
                 nextBtn.addEventListener('click', (e) => {
-                    if (nextBtn.getAttribute('aria-disabled') === 'true') {
+                    const hasMissing = validateRequired();
+                    if (hasMissing) {
                         e.preventDefault();
                         e.stopPropagation();
-                        validateRequired();
+                        focusFirstMissing();
                     }
                 });
             }
@@ -420,7 +498,9 @@
 
             const autoSaveToServer = (() => {
                 let timer;
+                let failureCount = 0;
                 const retryDelay = 1200;
+                const maxRetries = 3;
                 const showOverlay = (flag) => {
                     if (!autosaveOverlay) return;
                     autosaveOverlay.classList.toggle('hidden', !flag);
@@ -430,30 +510,39 @@
                     fetch('{{ route('pds.autosave') }}', {
                         method: 'POST',
                         headers: {
-                            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
+                        credentials: 'same-origin',
                         body: formData
                     })
                     .then(response => {
+                        if (response.status === 401 || response.status === 419) {
+                            showOverlay(true);
+                            throw new Error('Auto-save unauthorized');
+                        }
                         if (!response.ok) {
                             showOverlay(true);
-                            setTimeout(send, retryDelay);
                             throw new Error('Auto-save failed');
                         }
-                        return response.json();
+                        return response.json().catch(() => {
+                            throw new Error('Auto-save invalid JSON');
+                        });
                     })
                     .then(data => {
                         const ok = data && data.status === 'ok';
                         if (ok) {
+                            failureCount = 0;
                             showOverlay(false);
                         } else {
-                            showOverlay(true);
-                            setTimeout(send, retryDelay);
+                            throw new Error('Auto-save response not ok');
                         }
                     })
                     .catch(() => {
                         showOverlay(true);
-                        setTimeout(send, retryDelay);
+                        if (failureCount < maxRetries) {
+                            failureCount += 1;
+                            setTimeout(send, retryDelay);
+                        }
                     });
                 };
 

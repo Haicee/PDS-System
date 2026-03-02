@@ -385,6 +385,23 @@
         disableFollowingRows(['reference_name[]','reference_address[]','reference_contact[]'], refState.allNA);
       };
 
+      const scrollToField = (el) => {
+        if (!el) return;
+        const nav = document.querySelector('nav');
+        const navHeight = nav?.getBoundingClientRect().height || 80;
+        const offset = navHeight + 200;
+        const anchor = el.closest('td, th, label, div') || el;
+        const applyOffset = () => {
+          const rect = anchor.getBoundingClientRect();
+          const targetY = Math.max(rect.top + window.pageYOffset - offset, 0);
+          window.scrollTo({ top: targetY, behavior: 'auto' });
+        };
+        applyOffset();
+        requestAnimationFrame(applyOffset);
+        setTimeout(applyOffset, 140);
+        setTimeout(applyOffset, 320);
+      };
+
       referenceFirstRow.forEach(f => f?.addEventListener('input', refreshRows));
       refreshRows();
 
@@ -481,12 +498,17 @@
         .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
 
       window.validateRequired = validateRequired = () => {
-        let hasMissing = false;
+        let firstMissing = null;
 
-        const hasMissingRequired = requiredFields.some(el => {
-          if (el.disabled || el.readOnly) return false;
-          if (el.offsetParent === null) return false; // ignore hidden required controls (e.g., camera file input)
-          return !isFilled(el);
+        // Clear old custom validity to avoid stale errors
+        document.querySelectorAll('input, textarea, select').forEach(el => el.setCustomValidity(''));
+
+        requiredFields.forEach(el => {
+          if (firstMissing || el.disabled || el.readOnly) return;
+          if (el.offsetParent === null) return; // ignore hidden required controls (e.g., camera file input)
+          if (!isFilled(el)) {
+            firstMissing = el;
+          }
         });
 
         for (const group of conditionalGroups) {
@@ -504,74 +526,67 @@
             const wasDisabled = group.detailDisabledState[cacheKey] ?? false;
             group.detailDisabledState[cacheKey] = disable;
 
-            // Restore only on transition from disabled -> enabled
             if (!disable && wasDisabled) {
               if (typeof group.detailCache[cacheKey] === 'string' && el.value === '') {
                 el.value = group.detailCache[cacheKey];
               }
             }
 
-            // While enabled, keep cache in sync with current value (including empty)
             if (!disable) {
               group.detailCache[cacheKey] = el.value;
             }
 
-            // When disabling (NO), store current then clear so it won't submit
             if (disable) {
               group.detailCache[cacheKey] = el.value;
               el.value = '';
             }
           });
 
-          if (!yesChecked && !noChecked) {
-            hasMissing = true;
-            break;
+          if (!firstMissing && !yesChecked && !noChecked) {
+            firstMissing = yesBox || noBox;
           }
 
-          if (yesChecked) {
-            const detailMissing = group.details.some(el => {
+          if (!firstMissing && yesChecked) {
+            const detailMissingEl = group.details.find(el => {
               if (el.disabled || el.readOnly || el.offsetParent === null) return false;
               return !isFilled(el);
             });
-            if (detailMissing) {
-              hasMissing = true;
+            if (detailMissingEl) {
+              firstMissing = detailMissingEl;
+            }
+          }
+        }
+
+        if (!firstMissing) {
+          for (const set of firstRowSets) {
+            const state = firstRowState(set);
+            if (!(state.allNA || state.anyData)) {
+              firstMissing = set.find(f => f && !isFilled(f)) || set[0];
               break;
             }
           }
         }
 
-        const firstRowsIncomplete = firstRowSets.some(set => {
-          const state = firstRowState(set);
-          return !(state.allNA || state.anyData);
-        });
-
-        hasMissing = hasMissing || hasMissingRequired || firstRowsIncomplete;
-
-        if (!nextBtn) return;
-        if (hasMissing) {
-          nextBtn.setAttribute('aria-disabled', 'true');
-          nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        } else {
-          nextBtn.removeAttribute('aria-disabled');
-          nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        }
+        if (!nextBtn) return null;
+        nextBtn.removeAttribute('aria-disabled');
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        return firstMissing;
       };
 
       document.addEventListener('input', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
       document.addEventListener('change', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
-      // Initialize disabled until validated
-      if (nextBtn) {
-        nextBtn.setAttribute('aria-disabled', 'true');
-        nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-      }
       validateRequired();
 
       if (nextBtn) {
         nextBtn.addEventListener('click', (e) => {
-          if (nextBtn.getAttribute('aria-disabled') === 'true') {
+          const firstMissing = validateRequired();
+          if (firstMissing) {
             e.preventDefault();
             e.stopPropagation();
-            validateRequired();
+            firstMissing.setCustomValidity('Please complete this field.');
+            firstMissing.reportValidity();
+            firstMissing.focus({ preventScroll: true });
+            scrollToField(firstMissing);
           }
         });
       }
@@ -713,6 +728,9 @@
 
       const autoSaveToServer = (() => {
         let timer;
+        let failureCount = 0;
+        const retryDelay = 1200;
+        const maxRetries = 3;
         return () => {
           clearTimeout(timer);
           timer = setTimeout(() => {
@@ -720,10 +738,36 @@
             fetch('{{ route('pds.autosave') }}', {
               method: 'POST',
               headers: {
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
               },
+              credentials: 'same-origin',
               body: formData
-            }).catch(() => {});
+            })
+            .then(response => {
+              if (response.status === 401 || response.status === 419) {
+                throw new Error('Auto-save unauthorized');
+              }
+              if (!response.ok) {
+                throw new Error('Auto-save failed');
+              }
+              return response.json().catch(() => {
+                throw new Error('Auto-save invalid JSON');
+              });
+            })
+            .then(data => {
+              const ok = data && data.status === 'ok';
+              if (ok) {
+                failureCount = 0;
+              } else {
+                throw new Error('Auto-save response not ok');
+              }
+            })
+            .catch(() => {
+              if (failureCount < maxRetries) {
+                failureCount += 1;
+                setTimeout(() => autoSaveToServer(), retryDelay);
+              }
+            });
           }, 800);
         };
       })();

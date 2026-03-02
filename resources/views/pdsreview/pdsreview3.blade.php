@@ -24,7 +24,7 @@
         }
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
-        td { height: auto; min-height: 30px; }
+        td { height: 38px; min-height: 38px; vertical-align: middle; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -197,7 +197,7 @@
    </tr>
 
     @php
-    $volRows = $voluntaryWorks ?? collect();
+    $volRows = ($voluntaryWorks ?? collect())->values();
     $maxRows = max(7, $volRows->count());
 @endphp
 
@@ -223,6 +223,7 @@
         <col style="width: 7.5%;">
         <col style="width: 8%;">
         <col style="width: 12%;">
+        <col style="width: 19%;">
       </colgroup>
 
       <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
@@ -258,9 +259,8 @@
      </tr>
 
       @php
-    $trainingRows = $training ?? collect();
+    $trainingRows = ($training ?? collect())->values(); // keep user-entered order
     $maxTraining = max(21, $trainingRows->count());
-      $trainingRows = $trainingRows->sortBy('from')->values();
 @endphp
 
 @for ($i = 0; $i < $maxTraining; $i++)

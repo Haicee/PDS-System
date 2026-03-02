@@ -212,17 +212,23 @@
                     const rowFields = columns.map(c => c[row]).filter(Boolean);
                     if (!rowFields.length) continue;
 
-                    const first = columns[0][row];
-                    const firstVal = (first?.value || '').trim();
-                    if (!first || first.disabled || first.readOnly) continue;
+                    // Skip disabled/readOnly rows
+                    const activeRow = rowFields.filter(f => f && !f.disabled && !f.readOnly);
+                    if (!activeRow.length) continue;
 
-                    const firstHasData = firstVal !== '' && !isNA(firstVal);
-                    if (!firstHasData) continue;
+                    // Trigger completeness if ANY non-optional field in the row has data (not blank/NA)
+                    const rowHasData = activeRow.some(f => !optionalNames.has(f.name) && !isNA(f.value) && (f.value || '').trim() !== '');
+                    if (!rowHasData) continue;
 
-                    const missing = rowFields.slice(1).find(f => !optionalNames.has(f?.name) && !isFilled(f));
-                    if (missing) {
-                        missing.setCustomValidity('Complete all fields in this row or clear the first column.');
-                        if (!invalidField) invalidField = missing;
+                    // All non-optional columns must be filled or NA
+                    for (const f of activeRow) {
+                        if (optionalNames.has(f.name)) continue;
+                        const val = (f.value || '').trim();
+                        const filled = val !== '' || isNA(val);
+                        if (!filled) {
+                            f.setCustomValidity('Complete all fields in this row or clear the first column.');
+                            if (!invalidField) invalidField = f;
+                        }
                     }
                 }
 
@@ -232,7 +238,10 @@
             const hasMissingRequired = () => {
                 const hasMissingRequiredField = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
 
-                const firstRowsIncomplete = firstRowSets.some(set => firstRowState(set).incomplete);
+                const firstRowsIncomplete = firstRowSets.some(set => {
+                    const state = firstRowState(set);
+                    return state.incomplete || state.allBlank;
+                });
 
                 const incompleteWorkRowField = enforceRowCompleteness(workRowNames);
                 const incompleteEligibilityRowField = enforceRowCompleteness(eligibilityRowNames);
@@ -255,8 +264,8 @@
                 const sets = [eligibilityFirstRow, workFirstRow];
                 for (const set of sets) {
                     const state = firstRowState(set);
-                    if (state.incomplete) {
-                        const firstMissing = set.find(f => f && !isFilled(f) && f.name !== 'rating[]');
+                    if (state.incomplete || state.allBlank) {
+                        const firstMissing = set.find(f => f && !isFilled(f)) || set[0];
                         if (firstMissing) {
                             firstMissing.setCustomValidity('Please complete the first row or mark N/A.');
                             firstMissing.reportValidity();
@@ -552,8 +561,9 @@
                     fetch('{{ route('pds.autosave') }}', {
                         method: 'POST',
                         headers: {
-                            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
+                        credentials: 'same-origin',
                         body: formData
                     })
                     .then(response => {

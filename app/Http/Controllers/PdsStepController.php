@@ -7,6 +7,7 @@ use App\Models\PdsDraft;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 
@@ -26,13 +27,110 @@ class PdsStepController extends Controller
             $data['signature_path'] = $signaturePath;
         }
 
+        if ($step === 1) {
+            $names = collect($data['children_familybg'] ?? []);
+            $dobs = collect($data['children_dateofbirth_familybg'] ?? []);
+
+            $childValidator = Validator::make($data, []);
+            $names->each(function ($name, $i) use ($dobs, $childValidator) {
+                $nameTrim = strtoupper(trim((string) $name));
+                if ($nameTrim === '' || in_array($nameTrim, ['NA', 'N/A', 'NONE'], true)) {
+                    return;
+                }
+
+                $dob = trim((string) $dobs->get($i));
+                if ($dob === '') {
+                    $childValidator->errors()->add("children_dateofbirth_familybg.$i", 'Date of birth is required for this child.');
+                }
+            });
+
+            if ($childValidator->errors()->isNotEmpty()) {
+                return redirect()->back()->withErrors($childValidator)->withInput();
+            }
+        }
+
+        if ($step === 2) {
+            $rowValidator = Validator::make($data, []);
+
+            $checkRows = function (array $columns) use ($data, $rowValidator) {
+                $cols = array_map(fn ($key) => collect($data[$key] ?? []), $columns);
+                $max = collect($cols)->map->count()->max();
+                for ($i = 0; $i < $max; $i++) {
+                    $rowVals = array_map(fn ($col) => trim((string) $col->get($i)), $cols);
+                    $rowHasData = collect($rowVals)->some(function ($val) {
+                        $upper = strtoupper($val);
+                        return $val !== '' && !in_array($upper, ['NA', 'N/A', 'NONE'], true);
+                    });
+                    if (!$rowHasData) {
+                        continue;
+                    }
+
+                    foreach ($columns as $idx => $key) {
+                        $val = $rowVals[$idx] ?? '';
+                        $upper = strtoupper($val);
+                        $isNa = in_array($upper, ['NA', 'N/A', 'NONE'], true);
+                        if ($val === '' || $isNa) {
+                            if (!$isNa) {
+                                $rowValidator->errors()->add("{$key}.{$i}", 'Complete all fields in this row or clear the first column.');
+                            }
+                        }
+                    }
+                }
+            };
+
+            $checkRows(['eligibility', 'rating', 'date', 'place', 'license_no', 'validity']);
+            $checkRows(['work_from', 'work_to', 'work_position_title', 'work_department', 'work_status', 'work_govt_service']);
+
+            if ($rowValidator->errors()->isNotEmpty()) {
+                return redirect()->back()->withErrors($rowValidator)->withInput();
+            }
+        }
+
+        if ($step === 3) {
+            $rowValidator = Validator::make($data, []);
+
+            $checkRows = function (array $columns) use ($data, $rowValidator) {
+                $cols = array_map(fn ($key) => collect($data[$key] ?? []), $columns);
+                $max = collect($cols)->map->count()->max();
+                for ($i = 0; $i < $max; $i++) {
+                    $rowVals = array_map(fn ($col) => trim((string) $col->get($i)), $cols);
+                    $rowHasData = collect($rowVals)->some(function ($val) {
+                        $upper = strtoupper($val);
+                        return $val !== '' && !in_array($upper, ['NA', 'N/A', 'NONE'], true);
+                    });
+                    if (!$rowHasData) {
+                        continue;
+                    }
+
+                    foreach ($columns as $idx => $key) {
+                        $val = $rowVals[$idx] ?? '';
+                        $upper = strtoupper($val);
+                        $isNa = in_array($upper, ['NA', 'N/A', 'NONE'], true);
+                        if ($val === '' || $isNa) {
+                            if (!$isNa) {
+                                $rowValidator->errors()->add("{$key}.{$i}", 'Complete all fields in this row or clear the entries.');
+                            }
+                        }
+                    }
+                }
+            };
+
+            $checkRows(['learning_title_of_ld', 'learning_from', 'learning_to', 'learning_hours', 'learning_type_of_ld', 'learning_conducted_sponsored_by']);
+            $checkRows(['voluntary_organization', 'voluntary_from', 'voluntary_to', 'voluntary_hours', 'voluntary_position_nature_of_work']);
+            $checkRows(['special_skills_hobbies', 'non_academic_distinctions_recognition', 'membership_in_association_organization']);
+
+            if ($rowValidator->errors()->isNotEmpty()) {
+                return redirect()->back()->withErrors($rowValidator)->withInput();
+            }
+        }
+
         $draft = PdsDraft::firstOrCreate(
             ['user_id' => $userId]
         );
 
         $existingData = $draft->data ?? [];
 
-        $draft->data = array_replace_recursive($existingData, $data);
+        $draft->data = $this->replaceArrays($existingData, $data);
         $draft->save();
 
         // keep session cache in sync per user
@@ -73,7 +171,7 @@ class PdsStepController extends Controller
         $draft = PdsDraft::firstOrCreate(['user_id' => $userId]);
         $existingData = $draft->data ?? [];
 
-        $draft->data = array_replace_recursive($existingData, $data);
+        $draft->data = $this->replaceArrays($existingData, $data);
         $draft->save();
 
         // keep session cache in sync per user
@@ -171,7 +269,24 @@ class PdsStepController extends Controller
     {
         $singleSelectCheckboxes = ['sex', 'civilstatus', 'citizenship'];
 
+        $educationExtraKeys = [
+            'education_extra_level',
+            'education_extra_school_name',
+            'education_extra_basic_education',
+            'education_extra_from',
+            'education_extra_to',
+            'education_extra_highest_level',
+            'education_extra_year_graduated',
+            'education_extra_scholarship_acadhonors',
+        ];
+
         foreach ($singleSelectCheckboxes as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = Arr::wrap($data[$key]);
+            }
+        }
+
+        foreach ($educationExtraKeys as $key) {
             if (array_key_exists($key, $data)) {
                 $data[$key] = Arr::wrap($data[$key]);
             }
@@ -182,6 +297,21 @@ class PdsStepController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * When auto-saving, ensure provided arrays fully replace existing ones (so removed rows don't reappear).
+     */
+    private function replaceArrays(array $existing, array $incoming): array
+    {
+        foreach ($incoming as $key => $val) {
+            if (is_array($val)) {
+                // Reset existing array so replacement does not merge old indexes
+                $existing[$key] = [];
+            }
+        }
+
+        return array_replace_recursive($existing, $incoming);
     }
 
     private function storeSignature(Request $request, int $userId): ?string

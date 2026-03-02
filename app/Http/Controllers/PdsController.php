@@ -30,7 +30,60 @@ class PdsController extends Controller
         $mother = DB::table('pds_family_members')->where('user_id', $userId)->where('type', 'mother')->first();
         $children = DB::table('pds_family_members')->where('user_id', $userId)->where('type', 'child')->get();
 
-        $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
+        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+
+        $education = collect();
+        if ($draft && !empty($draft->data)) {
+            $data = $draft->data;
+
+            $baseLevels = [
+                'elementary' => 'ELEMENTARY',
+                'secondary' => 'SECONDARY',
+                'vocational' => 'VOCATIONAL / TRADE COURSE',
+                'college' => 'COLLEGE',
+                'graduate_studies' => 'GRADUATE STUDIES',
+            ];
+
+            foreach ($baseLevels as $key => $label) {
+                if (!empty($data['education'][$key])) {
+                    $row = $data['education'][$key];
+                    $education->push([
+                        'level' => $label,
+                        'school_name' => $row['school_name'] ?? null,
+                        'degree_course' => $row['basic_education'] ?? null,
+                        'from' => $row['from'] ?? null,
+                        'to' => $row['to'] ?? null,
+                        'highest_level' => $row['highest_level'] ?? null,
+                        'year_graduated' => $row['year_graduated'] ?? null,
+                        'academic_honors' => $row['scholarship_acadhonors'] ?? null,
+                    ]);
+                }
+            }
+
+            $extras = collect($data['education_extra_level'] ?? [])->map(function ($level, $i) use ($data) {
+                return [
+                    'level' => $level ?? null,
+                    'school_name' => $data['education_extra_school_name'][$i] ?? null,
+                    'degree_course' => $data['education_extra_basic_education'][$i] ?? null,
+                    'from' => $data['education_extra_from'][$i] ?? null,
+                    'to' => $data['education_extra_to'][$i] ?? null,
+                    'highest_level' => $data['education_extra_highest_level'][$i] ?? null,
+                    'year_graduated' => $data['education_extra_year_graduated'][$i] ?? null,
+                    'academic_honors' => $data['education_extra_scholarship_acadhonors'][$i] ?? null,
+                ];
+            })->filter(function ($row) {
+                return collect($row)->some(function ($val) {
+                    $v = trim((string) ($val ?? ''));
+                    return $v !== '' && !in_array(strtoupper($v), ['NA', 'N/A', 'NONE'], true);
+                });
+            });
+
+            $education = $education->concat($extras)->values();
+        }
+
+        if ($education->isEmpty()) {
+            $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
+        }
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
         $work = DB::table('pds_work_experiences')->where('user_id', $userId)->orderByDesc('from')->get();
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->orderByDesc('from')->get();
@@ -67,7 +120,8 @@ class PdsController extends Controller
         $photoPath = $signatureFiles->photo_file_path ?? null;
 
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
-        $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->orderBy('from')->get();
+        // Keep user-entered order (insertion sequence)
+        $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->get();
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
         return view('pdsreview.pdsreview2', compact('eligibilities', 'workExperiences', 'declaration', 'signaturePath', 'photoPath'));
@@ -84,14 +138,13 @@ class PdsController extends Controller
         $signaturePath = $signatureFiles->signature_file_path ?? null;
         $photoPath = $signatureFiles->photo_file_path ?? null;
 
+        // Keep user-entered order (insertion sequence) for voluntary work and training
         $voluntaryWorks = DB::table('pds_voluntary_work')
             ->where('user_id', $userId)
-            ->orderBy('from')
             ->get();
 
         $training = DB::table('pds_training_programs')
             ->where('user_id', $userId)
-            ->orderBy('from')
             ->get();
         
         $other = DB::table('pds_other_info')

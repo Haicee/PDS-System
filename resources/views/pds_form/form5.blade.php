@@ -351,7 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const autoSaveToServer = (() => {
     let timer;
+    let failureCount = 0;
     const retryDelay = 1200;
+    const maxRetries = 3;
     const showOverlay = (flag) => {
       if (!autosaveOverlay) return;
       autosaveOverlay.classList.toggle('hidden', !flag);
@@ -361,30 +363,39 @@ document.addEventListener('DOMContentLoaded', () => {
       fetch('{{ route('pds.autosave') }}', {
         method: 'POST',
         headers: {
-          'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
+        credentials: 'same-origin',
         body: formData
       })
       .then(response => {
+        if (response.status === 401 || response.status === 419) {
+          showOverlay(true);
+          throw new Error('Auto-save unauthorized');
+        }
         if (!response.ok) {
           showOverlay(true);
-          setTimeout(send, retryDelay);
           throw new Error('Auto-save failed');
         }
-        return response.json();
+        return response.json().catch(() => {
+          throw new Error('Auto-save invalid JSON');
+        });
       })
       .then(data => {
         const ok = data && data.status === 'ok';
         if (ok) {
+          failureCount = 0;
           showOverlay(false);
         } else {
-          showOverlay(true);
-          setTimeout(send, retryDelay);
+          throw new Error('Auto-save response not ok');
         }
       })
       .catch(() => {
         showOverlay(true);
-        setTimeout(send, retryDelay);
+        if (failureCount < maxRetries) {
+          failureCount += 1;
+          setTimeout(send, retryDelay);
+        }
       });
     };
 

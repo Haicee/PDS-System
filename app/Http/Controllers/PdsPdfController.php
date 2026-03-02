@@ -87,10 +87,9 @@ class PdsPdfController extends Controller
         $children = $family->where('type', 'child')->values();
         $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
+        // Keep user-entered order (insertion sequence) for work experiences
         $work = DB::table('pds_work_experiences')
             ->where('user_id', $userId)
-            ->orderByDesc('from')
-            ->orderByDesc('to')
             ->get();
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->get();
         $training = DB::table('pds_training_programs')->where('user_id', $userId)->get();

@@ -931,10 +931,42 @@
 <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
 
   @php
-      $eduByLevel = $education->keyBy('level');
-      $eduVal = function(string $level, string $field) use ($eduByLevel) {
-          $rec = $eduByLevel->get($level);
-          return ($rec && isset($rec->$field)) ? $rec->$field : '';
+      $normalizeLevel = function($level) {
+          if (!$level) return '';
+          $map = [
+              'elementary' => 'ELEMENTARY',
+              'secondary' => 'SECONDARY',
+              'vocational' => 'VOCATIONAL / TRADE COURSE',
+              'vocational / trade course' => 'VOCATIONAL / TRADE COURSE',
+              'vocational/trade course' => 'VOCATIONAL / TRADE COURSE',
+              'college' => 'COLLEGE',
+              'graduate_studies' => 'GRADUATE STUDIES',
+              'graduate studies' => 'GRADUATE STUDIES',
+          ];
+          $key = strtolower(trim($level));
+          return $map[$key] ?? strtoupper($level);
+      };
+
+      $normalizedEdu = $education->map(function($rec) use ($normalizeLevel) {
+          if (is_array($rec)) {
+              $rec['level'] = $normalizeLevel($rec['level'] ?? '');
+              return $rec;
+          }
+          $rec->level = $normalizeLevel($rec->level ?? '');
+          return $rec;
+      });
+
+      $eduByLevel = $normalizedEdu->groupBy('level');
+
+      $getField = function($rec, string $field) {
+          if (!$rec) return '';
+          if (is_array($rec)) return $rec[$field] ?? '';
+          return $rec->$field ?? '';
+      };
+
+      $eduVal = function(string $level, string $field) use ($eduByLevel, $getField, $normalizeLevel) {
+          $rec = optional($eduByLevel->get($normalizeLevel($level)))->first();
+          return $getField($rec, $field);
       };
       $eduCourse = function(string $level) use ($eduVal) {
           $course = $eduVal($level, 'degree_course');
@@ -949,6 +981,10 @@
               $honors = $eduVal($level, 'scholarship_acadhonors');
           }
           return $honors;
+      };
+
+      $extraRows = function(string $level) use ($eduByLevel, $getField, $normalizeLevel) {
+          return optional($eduByLevel->get($normalizeLevel($level)))->slice(1) ?? collect();
       };
   @endphp
 
@@ -1039,6 +1075,18 @@
             {{ $eduHonors('elementary') }}
       </td>
   </tr>
+  @foreach($extraRows('ELEMENTARY') as $rec)
+    <tr class="min-h-[20]" style="width: 20%;">
+      <td class="border text-center align-middle h-20">ELEMENTARY</td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
+    </tr>
+  @endforeach
 
 
    <tr class="min-h-[20]" style="width: 20%;">
@@ -1087,6 +1135,18 @@
             {{ $eduHonors('secondary') }}
       </td>
   </tr>
+  @foreach($extraRows('SECONDARY') as $rec)
+    <tr class="min-h-[20]" style="width: 20%;">
+      <td class="border text-center align-middle h-20">SECONDARY</td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
+    </tr>
+  @endforeach
 
    <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
@@ -1134,6 +1194,18 @@
             {{ $eduHonors('vocational') }}
       </td>
   </tr>
+  @foreach($extraRows('VOCATIONAL / TRADE COURSE') as $rec)
+    <tr class="min-h-[20]" style="width: 20%;">
+      <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
+    </tr>
+  @endforeach
 
    <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">COLLEGE</td>
@@ -1181,6 +1253,18 @@
             {{ $eduHonors('college') }}
       </td>
   </tr>
+  @foreach($extraRows('COLLEGE') as $rec)
+    <tr class="min-h-[20]" style="width: 20%;">
+      <td class="border text-center align-middle h-20">COLLEGE</td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
+    </tr>
+  @endforeach
 
   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
@@ -1228,6 +1312,18 @@
             {{ $eduHonors('graduate_studies') }}
       </td>
   </tr>
+  @foreach($extraRows('GRADUATE STUDIES') as $rec)
+    <tr class="min-h-[20]" style="width: 20%;">
+      <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
+    </tr>
+  @endforeach
 
  
 
