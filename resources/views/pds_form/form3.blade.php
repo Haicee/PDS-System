@@ -1,4 +1,5 @@
 <x-app-layout>
+<div id="autosaveOverlay3" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form3" method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
@@ -17,7 +18,7 @@
         .border-2 { border: 2px solid #000 !important; }
         .signature-box {
             position: relative;
-            background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+            background: transparent;
             border: 1px solid #d1d5db;
             border-radius: 6px;
             overflow: hidden;
@@ -34,8 +35,11 @@
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
-        textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
+        textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
+        input[type="checkbox"] { width: 12px; height: 12px; }
+        .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
+        .autosave-overlay.hidden { display: none; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -195,6 +199,49 @@
 
             const firstRowSets = [voluntaryFirstRow, learningFirstRow, otherInfoFirstRow];
 
+            const scrollToField = (el) => {
+                if (!el) return;
+                const nav = document.querySelector('nav');
+                const navHeight = nav?.getBoundingClientRect().height || 80;
+                const offset = navHeight + 540;
+                const anchor = el.closest('td, th') || el;
+                const targetY = Math.max(anchor.getBoundingClientRect().top + window.pageYOffset - offset, 0);
+                window.scrollTo({ top: targetY, behavior: 'auto' });
+            };
+
+            const voluntaryRowNames = ['voluntary_organization[]','voluntary_from[]','voluntary_to[]','voluntary_hours[]','voluntary_position_nature_of_work[]'];
+            const learningRowNames = ['learning_title_of_ld[]','learning_from[]','learning_to[]','learning_hours[]','learning_type_of_ld[]','learning_conducted_sponsored_by[]'];
+            const otherInfoRowNames = ['special_skills_hobbies[]','non_academic_distinctions_recognition[]','membership_in_association_organization[]'];
+
+            const enforceRowCompleteness = (names, optionalNames = new Set()) => {
+                let invalidField = null;
+                const columns = names.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`)));
+                const maxRows = Math.max(...columns.map(c => c.length));
+
+                for (let row = 0; row < maxRows; row++) {
+                    const rowFields = columns.map(c => c[row]).filter(Boolean);
+                    if (!rowFields.length) continue;
+
+                    const active = rowFields.filter(f => f && !f.disabled && !f.readOnly);
+                    if (!active.length) continue;
+
+                    const rowHasData = active.some(f => !optionalNames.has(f.name) && !isNA(f.value) && (f.value || '').trim() !== '');
+                    if (!rowHasData) continue;
+
+                    for (const f of active) {
+                        if (optionalNames.has(f.name)) continue;
+                        const val = (f.value || '').trim();
+                        const filled = val !== '' || isNA(val);
+                        if (!filled) {
+                            f.setCustomValidity('Complete all fields in this row or clear the entries.');
+                            if (!invalidField) invalidField = f;
+                        }
+                    }
+                }
+
+                return invalidField;
+            };
+
             const validateRequired = () => {
                 const hasMissingRequired = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
 
@@ -203,28 +250,63 @@
                     return !(state.allNA || state.anyData);
                 });
 
-                const hasMissing = hasMissingRequired || firstRowsIncomplete;
+                const incompleteVoluntary = enforceRowCompleteness(voluntaryRowNames);
+                const incompleteLearning = enforceRowCompleteness(learningRowNames);
+                const incompleteOther = enforceRowCompleteness(otherInfoRowNames);
 
-                if (!nextBtn) return;
-                if (hasMissing) {
-                    nextBtn.setAttribute('aria-disabled', 'true');
-                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                } else {
-                    nextBtn.removeAttribute('aria-disabled');
-                    nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-                }
+                return hasMissingRequired || firstRowsIncomplete || incompleteVoluntary || incompleteLearning || incompleteOther;
             };
 
-            document.addEventListener('input', () => { refreshRows(); validateRequired(); }, true);
-            document.addEventListener('change', () => { refreshRows(); validateRequired(); }, true);
-            validateRequired();
+            const focusFirstMissing = () => {
+                for (const el of requiredFields) {
+                    if (el.disabled || el.readOnly) continue;
+                    if (!isFilled(el)) {
+                        el.setCustomValidity('This field is required.');
+                        el.reportValidity();
+                        el.focus();
+                        scrollToField(el);
+                        return true;
+                    }
+                }
+
+                for (const set of firstRowSets) {
+                    const state = firstRowState(set);
+                    if (!(state.allNA || state.anyData)) {
+                        const missing = set.find(f => f && !isFilled(f));
+                        const target = missing || set[0];
+                        if (target) {
+                            target.setCustomValidity('Please complete the first row or mark N/A.');
+                            target.reportValidity();
+                            target.focus();
+                            scrollToField(target);
+                            setTimeout(() => target.setCustomValidity(''), 1200);
+                            return true;
+                        }
+                    }
+                }
+
+                const firstInvalid = enforceRowCompleteness(voluntaryRowNames) || enforceRowCompleteness(learningRowNames) || enforceRowCompleteness(otherInfoRowNames);
+                if (firstInvalid) {
+                    firstInvalid.reportValidity();
+                    firstInvalid.focus();
+                    scrollToField(firstInvalid);
+                    setTimeout(() => firstInvalid.setCustomValidity(''), 1200);
+                    return true;
+                }
+
+                return false;
+            };
+
+            document.addEventListener('input', () => { refreshRows(); }, true);
+            document.addEventListener('change', () => { refreshRows(); }, true);
 
             if (nextBtn) {
                 nextBtn.addEventListener('click', (e) => {
-                    if (nextBtn.getAttribute('aria-disabled') === 'true') {
+                    const hasMissing = validateRequired();
+                    if (hasMissing) {
                         e.preventDefault();
                         e.stopPropagation();
-                        validateRequired();
+                        focusFirstMissing();
                     }
                 });
             }
@@ -305,13 +387,19 @@
                 }
 
                 if (overrideData) {
-                    data = { ...data, ...overrideData };
+                    // Prefer local cache; only backfill keys missing locally
+                    Object.entries(overrideData).forEach(([k, v]) => {
+                        if (data[k] === undefined) {
+                            data[k] = v;
+                        }
+                    });
                 }
 
-                if (overrideData?.signature_path && signaturePathInput3) {
+                // Only apply server/session signature if local value is missing
+                if (overrideData?.signature_path && signaturePathInput3 && !signaturePathInput3.value) {
                     signaturePathInput3.value = overrideData.signature_path;
                 }
-                if (overrideData?.signature_data && signatureDataInput3) {
+                if (overrideData?.signature_data && signatureDataInput3 && !signatureDataInput3.value) {
                     signatureDataInput3.value = overrideData.signature_data;
                 }
                 Object.entries(data).forEach(([name, stored]) => {
@@ -325,7 +413,7 @@
                             } else if (el.type === 'radio') {
                                 el.checked = val === el.value;
                             } else {
-                                if (!el.value) el.value = val;
+                                el.value = val;
                             }
                             if (el.tagName === 'TEXTAREA' || el.type === 'text') {
                                 el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -346,9 +434,7 @@
                             el.checked = stored === el.value;
                         }
                         else {
-                            if (!el.value) {
-                                el.value = stored;
-                            }
+                            el.value = stored;
                         }
 
                         if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -408,20 +494,61 @@
                 }
             };
 
+            const autosaveOverlay = document.getElementById('autosaveOverlay3');
+
             const autoSaveToServer = (() => {
                 let timer;
+                let failureCount = 0;
+                const retryDelay = 1200;
+                const maxRetries = 3;
+                const showOverlay = (flag) => {
+                    if (!autosaveOverlay) return;
+                    autosaveOverlay.classList.toggle('hidden', !flag);
+                };
+                const send = () => {
+                    const formData = new FormData(form);
+                    fetch('{{ route('pds.autosave') }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        credentials: 'same-origin',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (response.status === 401 || response.status === 419) {
+                            showOverlay(true);
+                            throw new Error('Auto-save unauthorized');
+                        }
+                        if (!response.ok) {
+                            showOverlay(true);
+                            throw new Error('Auto-save failed');
+                        }
+                        return response.json().catch(() => {
+                            throw new Error('Auto-save invalid JSON');
+                        });
+                    })
+                    .then(data => {
+                        const ok = data && data.status === 'ok';
+                        if (ok) {
+                            failureCount = 0;
+                            showOverlay(false);
+                        } else {
+                            throw new Error('Auto-save response not ok');
+                        }
+                    })
+                    .catch(() => {
+                        showOverlay(true);
+                        if (failureCount < maxRetries) {
+                            failureCount += 1;
+                            setTimeout(send, retryDelay);
+                        }
+                    });
+                };
+
                 return () => {
                     clearTimeout(timer);
-                    timer = setTimeout(() => {
-                        const formData = new FormData(form);
-                        fetch('{{ route('pds.autosave') }}', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-                            },
-                            body: formData
-                        }).catch(() => {});
-                    }, 800);
+                    timer = setTimeout(send, 800);
                 };
             })();
 
@@ -431,6 +558,8 @@
             };
 
             loadCache();
+            // Persist merged cache once so a fast refresh keeps latest values
+            saveCache();
 
             fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.ok ? r.json() : null)
@@ -438,12 +567,46 @@
                     if (!json || !json.data) return;
                     loadCache(json.data);
                     updateSignaturePreviewFromInputs3();
+                    // Persist merged cache once so a fast refresh keeps latest values
+                    saveCache();
                 })
                 .catch(() => {});
 
             form.addEventListener('input', () => { persist(); });
             form.addEventListener('change', () => { persist(); });
         });
+
+        // Check for master date from form1 and apply it
+        function ensureMasterDateSeed() {
+            const date3Input = document.querySelector('input[name="date3"]');
+            const existing = localStorage.getItem('pds_master_date');
+            const candidate = existing || date3Input?.value;
+            if (candidate && !existing) {
+                console.log('Seeding master date from form3/input value:', candidate);
+                localStorage.setItem('pds_master_date', candidate);
+            }
+            return candidate || null;
+        }
+
+        function syncFromForm1() {
+            const masterDate = ensureMasterDateSeed();
+            if (masterDate) {
+                console.log('Using master date:', masterDate);
+                const date3Input = document.querySelector('input[name="date3"]');
+                if (date3Input && date3Input.value !== masterDate) {
+                    console.log('Updating form3 date to:', masterDate);
+                    date3Input.value = masterDate;
+                    // Trigger change event to save to cache
+                    date3Input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        }
+
+        // Check for master date when page loads
+        syncFromForm1();
+
+        // Also check periodically in case user navigates back from form1
+        setInterval(syncFromForm1, 1000);
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
@@ -488,11 +651,11 @@
 
    @for ($i = 0; $i < 7; $i++)
       <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Organization" name="voluntary_organization[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="From" name="voluntary_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="To" name="voluntary_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Hours" name="voluntary_hours[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Position/Nature of Work" name="voluntary_position_nature_of_work[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Organization' : '' }}" name="voluntary_organization[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="voluntary_from[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="voluntary_to[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="voluntary_hours[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position/Nature of Work' : '' }}" name="voluntary_position_nature_of_work[]"></textarea></td>
       </tr>
    @endfor
 
@@ -543,12 +706,12 @@
 
     @for ($i = 0; $i < 27; $i++)
      <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Title of L&D / Training" name="learning_title_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="From" name="learning_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="To" name="learning_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Hours" name="learning_hours[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Type of L&D" name="learning_type_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Conducted/Sponsored By" name="learning_conducted_sponsored_by[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Title of L&D / Training' : '' }}" name="learning_title_of_ld[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="learning_from[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="learning_to[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="learning_hours[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Type of L&D' : '' }}" name="learning_type_of_ld[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Conducted/Sponsored By' : '' }}" name="learning_conducted_sponsored_by[]"></textarea></td>
      </tr>
     @endfor
 
@@ -583,9 +746,9 @@
 
     @for ($i = 0; $i < 7; $i++)
       <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="Special Skills and Hobbies" name="special_skills_hobbies[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Non-Academic Distinctions/Recognition" name="non_academic_distinctions_recognition[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="Membership in Association/Organization" name="membership_in_association_organization[]"></textarea></td> 
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Special Skills and Hobbies' : '' }}" name="special_skills_hobbies[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Non-Academic Distinctions/Recognition' : '' }}" name="non_academic_distinctions_recognition[]"></textarea></td>
+      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Membership in Association/Organization' : '' }}" name="membership_in_association_organization[]"></textarea></td> 
       </tr>
     @endfor
 
@@ -593,10 +756,10 @@
 
     <table class="border border-black w-full h-15 font-['Arial_Narrow','sans-serif']">
         <colgroup>
-          <col style="width: 30.3%;">
-           <col style="width: 20%;">
-            <col style="width: 19.7%;">
-             <col style="width: 10%;">
+          <col style="width: 30.5%;">
+           <col style="width: 20.5%;">
+            <col style="width: 19.3%;">
+             <col style="width: 9.5%;">
         </colgroup>
       <tr>
       <td class="border h-2 text-center text-xl font-bold italic align-middle">
@@ -605,14 +768,14 @@
 
        <td class="border" colspan="2">
      <div class="h-full w-full p-2">
-        <label id="signatureBox3" data-signature-cell class="signature-box block h-36 w-full cursor-pointer">
+        <label id="signatureBox3" data-signature-cell class="signature-box block h-36 w-full cursor-default">
           <input
             type="file"
             name="signature_file"
             id="signatureFileInput3"
             accept="image/*"
-            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onchange="handleSignatureUpload3(this.files[0])"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+            disabled
           >
           <img
             id="signaturePreviewImg3"
@@ -620,9 +783,7 @@
             alt="Signature preview"
             class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
           >
-          <div id="signaturePlaceholder3" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
-            Upload signature here
-          </div>
+          <div id="signaturePlaceholder3" class="absolute inset-0" aria-hidden="true"></div>
         </label>
         <input type="hidden" name="signature_path" id="signature_path3" value="{{ $signaturePath ?? '' }}">
         <input type="hidden" name="signature_data" id="signature_data3">
@@ -635,17 +796,16 @@
     </td>
 
         <td colspan="2"
-          class="border">
-          <div class="h-full w-full">
-         <textarea
+          class="border h-10">
+          <div class="h-full w-full flex items-center justify-center">
+         <input
+      type="date"
       name="date3"
       required
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+             px-2 py-1 text-center bg-transparent border-none"
+    ></input>
       </td>
       </tr>
     </table>
@@ -659,4 +819,77 @@
     </div>
     </div>
 </form>
+
+<style>
+/* Custom styling for date inputs - bigger calendar icon and middle text alignment */
+input[type="date"] {
+  color-scheme: light dark;
+  font-size: 30px;
+  text-align: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin-left: 50px;
+}
+
+/* Hide calendar icon since date is synced from form1 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* Ensure text is vertically centered and black */
+input[type="date"]::-webkit-datetime-edit-text {
+  vertical-align: middle;
+  color: #000000;
+  font-size: 16px;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+/* Firefox date input text color and centering */
+input[type="date"]::-moz-datetime-edit-text {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-month-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-day-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-year-field {
+  color: #000000;
+  text-align: center !important;
+}
+</style>
 </x-app-layout>

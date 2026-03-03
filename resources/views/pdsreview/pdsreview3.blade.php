@@ -24,7 +24,7 @@
         }
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
-        td { height: auto; min-height: 30px; }
+        td { height: 38px; min-height: 38px; vertical-align: middle; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -197,18 +197,18 @@
    </tr>
 
     @php
-    $volRows = $voluntaryWorks ?? collect();
+    $volRows = ($voluntaryWorks ?? collect())->values();
     $maxRows = max(7, $volRows->count());
 @endphp
 
 @for ($i = 0; $i < $maxRows; $i++)
   @php $row = $volRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $row->organization ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->from ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->to ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->hours ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $row->position ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->organization ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->from ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->to ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->hours ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->position ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -223,6 +223,7 @@
         <col style="width: 7.5%;">
         <col style="width: 8%;">
         <col style="width: 12%;">
+        <col style="width: 19%;">
       </colgroup>
 
       <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
@@ -258,19 +259,19 @@
      </tr>
 
       @php
-    $trainingRows = $training ?? collect();
+    $trainingRows = ($training ?? collect())->values(); // keep user-entered order
     $maxTraining = max(21, $trainingRows->count());
 @endphp
 
 @for ($i = 0; $i < $maxTraining; $i++)
   @php $trow = $trainingRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-top text-center">{{ $trow->title ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->from ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->to ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->hours ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $trow->conducted_by ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->title ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->from ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->to ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->hours ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow->conducted_by ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -313,9 +314,9 @@
 
 @for ($i = 0; $i < $maxOther; $i++)
   <tr>
-    <td class="border align-top text-center">{{ $skills[$i] ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $recognition[$i] ?? ' ' }}</td>
-    <td class="border align-top text-center">{{ $assoc[$i] ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $skills[$i] ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $recognition[$i] ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $assoc[$i] ?? ' ' }}</td>
   </tr>
 @endfor
 
@@ -323,8 +324,8 @@
 
     <table class="border border-black w-full h-15 font-['Arial_Narrow','sans-serif'] italic">
         <colgroup>
-          <col style="width: 30.3%;">
-           <col style="width: 20%;">
+          <col style="width: 31.95%;">
+           <col style="width: 20.9%;">
             <col style="width: 19.7%;">
              <col style="width: 10%;">
         </colgroup>
@@ -337,7 +338,12 @@
       <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
         @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
         @if($signatureUrl)
-          <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-28 object-contain">
+          <img src="{{ $signatureUrl }}"
+     alt="Signature"
+     class="object-contain"
+     style="max-height: 150px;
+            mix-blend-mode: multiply;
+            filter: contrast(1.2) brightness(1.1);">
         @else
           <div class="text-xs text-gray-600">No signature on file</div>
         @endif
@@ -351,16 +357,8 @@
 
         <td colspan="2"
           class="border">
-          <div class="h-full w-full">
-         <textarea
-      name="date3"
-      required
-      rows="1"
-      class="w-full h-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+          <div class="h-full w-full flex items-center justify-center">
+         <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
       </td>
       </tr>
     </table>

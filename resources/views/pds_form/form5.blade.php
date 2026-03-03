@@ -1,4 +1,5 @@
 <x-app-layout>
+<div id="autosaveOverlay5" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form5" method="POST" action="{{ route('pds.submit') }}" class="w-full" enctype="multipart/form-data">
 @csrf
 
@@ -12,9 +13,13 @@
 textarea:focus { outline: none; box-shadow: none; }
 [contenteditable]:focus { outline: none; margin: 0; padding: 0; }
 
+body { margin: 0; }
+.autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
+.autosave-overlay.hidden { display: none; }
+
 .signature-box {
   position: relative;
-  background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+  background: transparent;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   overflow: hidden;
@@ -40,6 +45,7 @@ textarea:focus { outline: none; box-shadow: none; }
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('pds-form5');
+  const autosaveOverlay = document.getElementById('autosaveOverlay5');
   const submitBtn = document.getElementById('submit-pds-btn');
   if (!form || !submitBtn) return;
 
@@ -224,7 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (overrideData) {
-      data = { ...data, ...overrideData };
+      if (overrideData.remarks && !overrideData['remarks[]']) {
+        overrideData['remarks[]'] = overrideData.remarks;
+      }
+      // Prefer locally cached values; use server/session as fallback
+      data = { ...overrideData, ...data };
     }
 
     if (overrideData?.signature_path && signaturePathInput5) {
@@ -341,18 +351,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const autoSaveToServer = (() => {
     let timer;
+    let failureCount = 0;
+    const retryDelay = 1200;
+    const maxRetries = 3;
+    const showOverlay = (flag) => {
+      if (!autosaveOverlay) return;
+      autosaveOverlay.classList.toggle('hidden', !flag);
+    };
+    const send = () => {
+      const formData = new FormData(form);
+      fetch('{{ route('pds.autosave') }}', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        credentials: 'same-origin',
+        body: formData
+      })
+      .then(response => {
+        if (response.status === 401 || response.status === 419) {
+          showOverlay(true);
+          throw new Error('Auto-save unauthorized');
+        }
+        if (!response.ok) {
+          showOverlay(true);
+          throw new Error('Auto-save failed');
+        }
+        return response.json().catch(() => {
+          throw new Error('Auto-save invalid JSON');
+        });
+      })
+      .then(data => {
+        const ok = data && data.status === 'ok';
+        if (ok) {
+          failureCount = 0;
+          showOverlay(false);
+        } else {
+          throw new Error('Auto-save response not ok');
+        }
+      })
+      .catch(() => {
+        showOverlay(true);
+        if (failureCount < maxRetries) {
+          failureCount += 1;
+          setTimeout(send, retryDelay);
+        }
+      });
+    };
+
     return () => {
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const formData = new FormData(form);
-        fetch('{{ route('pds.autosave') }}', {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-          },
-          body: formData
-        }).catch(() => {});
-      }, 800);
+      timer = setTimeout(send, 800);
     };
   })();
 
@@ -405,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
   getRemarks().forEach(attachReactive);
   Array.from(form.querySelectorAll('input[type="text"], textarea')).forEach(attachReactive);
 
-  loadCache();
+  loadCache({ ...(draftData || {}), ...(sessionData || {}) });
   updateSignaturePreview5();
   validateRequired();
 
@@ -418,6 +467,38 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Check for master date from form1 and apply it
+  function ensureMasterDateSeed() {
+    const date5Input = document.querySelector('input[name="date5"]');
+    const existing = localStorage.getItem('pds_master_date');
+    const candidate = existing || date5Input?.value;
+    if (candidate && !existing) {
+      console.log('Seeding master date from form5/input value:', candidate);
+      localStorage.setItem('pds_master_date', candidate);
+    }
+    return candidate || null;
+  }
+
+  function syncFromForm1() {
+    const masterDate = ensureMasterDateSeed();
+    if (masterDate) {
+      console.log('Using master date:', masterDate);
+      const date5Input = document.querySelector('input[name="date5"]');
+      if (date5Input && date5Input.value !== masterDate) {
+        console.log('Updating form5 date to:', masterDate);
+        date5Input.value = masterDate;
+        // Trigger change event to save to cache
+        date5Input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }
+
+  // Check for master date when page loads
+  syncFromForm1();
+
+  // Also check periodically in case user navigates back from form1
+  setInterval(syncFromForm1, 1000);
 });
 </script>
 
@@ -485,14 +566,14 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <!-- SIGNATURE -->
 <div class="w-full flex justify-end mt-[3cm] pr-6">
   <div class="w-[350px] text-center">
-    <label id="signatureBox5" class="signature-box block h-36 w-full cursor-pointer">
+    <label id="signatureBox5" data-signature-cell class="signature-box block h-36 w-full cursor-default">
       <input
         type="file"
         name="signature_file"
         id="signatureFileInput5"
         accept="image/*"
-        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        onchange="handleSignatureUpload5(this.files[0])"
+        class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+        disabled
       >
       <img
         id="signaturePreviewImg5"
@@ -500,9 +581,7 @@ placeholder="Sample: If applying to Supervising Administrative Officer
         alt="Signature preview"
         class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
       >
-      <div id="signaturePlaceholder5" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
-        Upload signature here
-      </div>
+      <div id="signaturePlaceholder5" class="absolute inset-0" aria-hidden="true"></div>
     </label>
     <input type="hidden" name="signature_path" id="signature_path5" value="{{ $signaturePath ?? '' }}">
     <input type="hidden" name="signature_data" id="signature_data5">
@@ -517,12 +596,8 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 
 <div class="border-b-2 border-black w-full absolute bottom-6 left-0"></div>
 
-<div class="flex justify-center space-x-1 relative">
-<input type="text" name="month" maxlength="2" placeholder="MM" class="w-12 text-center bg-transparent border-none text-base">
-<span class="mt-2">/</span>
-<input type="text" name="day" maxlength="2" placeholder="DD" class="w-12 text-center bg-transparent border-none">
-<span class="mt-2">/</span>
-<input type="text" name="year" maxlength="4" placeholder="YYYY" class="w-20 text-center bg-transparent border-none">
+<div class="flex justify-center items-center h-10 relative">
+<input type="date" name="date5" required class="w-full h-full text-center bg-transparent border-none text-base px-2 py-1 focus:outline-none focus:ring-0">
 </div>
 
 <div class="text-sm">DATE</div>
@@ -560,4 +635,77 @@ Add Row
 </div>
 </form>
 <x-submitpds />
+
+<style>
+/* Custom styling for date inputs - bigger calendar icon and middle text alignment */
+input[type="date"] {
+  color-scheme: light dark;
+  font-size: 30px;
+  text-align: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin-left: 50px;
+}
+
+/* Hide calendar icon since date is synced from form1 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* Ensure text is vertically centered and black */
+input[type="date"]::-webkit-datetime-edit-text {
+  vertical-align: middle;
+  color: #000000;
+  font-size: 16px;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+/* Firefox date input text color and centering */
+input[type="date"]::-moz-datetime-edit-text {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-month-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-day-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-year-field {
+  color: #000000;
+  text-align: center !important;
+}
+</style>
 </x-app-layout>

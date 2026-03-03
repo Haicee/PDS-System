@@ -1,5 +1,6 @@
 <x-app-layout>
  <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">    
+<div id="autosaveOverlay" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
     @csrf
     <style>
@@ -28,17 +29,35 @@
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
+        /* Offset native scroll positioning to account for sticky navbar */
+        html, body { scroll-padding-top: 240px; }
+
         /* Form controls styled as lined cells */
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
         input[type="checkbox"] { width: 12px; height: 12px; }
+        /* Prevent focused fields from hiding under sticky header when scrolled into view */
+        input, textarea, select { scroll-margin-top: 240px; }
+        .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
+        .autosave-overlay.hidden { display: none; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
    <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('pds-form1');
     // Prefill from session cache (pds) so going back restores values
     const sessionData = @json(session('pds', []));
     const draftData = @json($data ?? []);
+    // Shared cache key for all form1 scripts (avoid double-const redeclare across script tags)
+    window.storageKey = window.storageKey || ('pds_form_step1_' + ({{ auth()->id() ?? 0 }}));
+    const storageKey = window.storageKey;
+    const triggerPersist = () => {
+        if (typeof window.persist === 'function') {
+            window.persist();
+        } else if (typeof window.saveCache === 'function') {
+            window.saveCache();
+        }
+    };
     const flat = {};
 
     const walk = (obj, prefix = '') => {
@@ -116,6 +135,146 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = el.getAttribute('name');
         if (name) names.add(name);
     });
+
+    // Education dynamic extra rows
+    const extraPrototype = document.getElementById('education-extra-prototype');
+    const addButtons = Array.from(document.querySelectorAll('[data-education-add]'));
+
+    const autoHeight = (ta) => {
+        ta.addEventListener('input', () => {
+            ta.style.height = 'auto';
+            ta.style.height = ta.scrollHeight + 'px';
+        });
+    };
+
+    const addEducationRow = (level = '', values = {}, baseRowHint = null) => {
+        if (!extraPrototype) return;
+        const levelKey = (level || '').trim();
+        const fragment = extraPrototype.content.cloneNode(true);
+        const row = fragment.querySelector('tr');
+        row.dataset.educationExtra = '1';
+        row.dataset.educationLevel = levelKey;
+
+        const textareas = Array.from(fragment.querySelectorAll('textarea'));
+        textareas.forEach((ta, idx) => {
+            const name = ta.getAttribute('name');
+            if (idx === 0) {
+                if (levelKey) {
+                    ta.value = levelKey;
+                }
+                ta.readOnly = true;
+                ta.classList.add('pointer-events-none', 'bg-gray-100');
+            }
+            if (name && values[name] !== undefined) {
+                ta.value = values[name] ?? '';
+            }
+            ta.required = true;
+            autoHeight(ta);
+        });
+
+        // Register required validation on newly added fields
+        textareas.forEach(ta => {
+            if (!requiredFields.includes(ta)) {
+                requiredFields.push(ta);
+                ta.addEventListener('input', validateRequired);
+                ta.addEventListener('change', validateRequired);
+            }
+        });
+
+        validateRequired();
+
+        const removeBtn = fragment.querySelector('[data-education-remove]');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+                triggerPersist();
+            });
+        }
+
+        const baseRow = baseRowHint || document.querySelector(`tr[data-education-base="${CSS.escape(levelKey)}"]`);
+        if (baseRow) {
+            let insertAfter = baseRow;
+            while (
+                insertAfter.nextElementSibling &&
+                insertAfter.nextElementSibling.dataset.educationExtra === '1' &&
+                insertAfter.nextElementSibling.dataset.educationLevel === levelKey
+            ) {
+                insertAfter = insertAfter.nextElementSibling;
+            }
+            insertAfter.insertAdjacentElement('afterend', row);
+        } else {
+            extraPrototype.parentElement.insertBefore(row, extraPrototype);
+        }
+
+        triggerPersist();
+    };
+
+    addButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const level = (btn.getAttribute('data-education-add') || '').trim();
+            const baseRow = btn.closest('tr');
+            addEducationRow(level, {}, baseRow);
+        });
+    });
+
+    // Restore dynamic education rows from cache/draft so refresh keeps added rows
+    const hydrateExistingExtras = () => {
+        // Prefer local cache (captures unsent changes)
+        let source = {};
+        try {
+            source = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
+        } catch (e) {
+            source = {};
+        }
+
+        const hasLocalCache = Object.keys(source).length > 0;
+        // Backfill missing keys from server-provided draft/session only if no local cache
+        if (!hasLocalCache) {
+            const serverSource = (draftData && Object.keys(draftData).length) ? draftData : sessionData;
+            if (serverSource) {
+                Object.entries(serverSource).forEach(([k, v]) => {
+                    if (source[k] === undefined) source[k] = v;
+                });
+            }
+        }
+
+        if (!Object.keys(source).length) return;
+
+        const keys = [
+            'education_extra_level',
+            'education_extra_school_name',
+            'education_extra_basic_education',
+            'education_extra_from',
+            'education_extra_to',
+            'education_extra_highest_level',
+            'education_extra_year_graduated',
+            'education_extra_scholarship_acadhonors'
+        ];
+
+        const getArray = (obj, key) => {
+            if (Array.isArray(obj[key])) return obj[key];
+            const bracketKey = `${key}[]`;
+            if (Array.isArray(obj[bracketKey])) return obj[bracketKey];
+            return [];
+        };
+
+        const arrays = Object.fromEntries(keys.map(k => [k, getArray(source, k)]));
+        const maxLen = Math.max(0, ...Object.values(arrays).map(arr => arr.length));
+
+        for (let i = 0; i < maxLen; i++) {
+            const level = arrays.education_extra_level[i] || '';
+            const values = {};
+            let hasData = (level || '').trim().length > 0;
+            keys.forEach(k => {
+                values[`${k}[]`] = arrays[k][i] ?? '';
+                if (!hasData && (arrays[k][i] ?? '').toString().trim().length > 0) {
+                    hasData = true;
+                }
+            });
+            if (!hasData) continue; // skip empty cached rows
+            addEducationRow(level, values);
+        }
+    };
 
     // Special handling: children rows
     const childrenNameFields = Array.from(document.querySelectorAll('textarea[name="children_familybg[]"]'));
@@ -216,10 +375,72 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshArray();
     });
 
-    // Next button validation
+    // Next button validation (required fields + first-row completeness for array tables)
     const nextBtn = document.getElementById('next-btn');
     const requiredFields = Array.from(document.querySelectorAll('input[required], textarea[required], select[required]'));
     const checkboxGroups = ['sex[]', 'civilstatus[]', 'citizenship[]'];
+
+    // First-row completeness: children table (first row must be fully filled or all N/A)
+    const firstRowFields = [
+        document.querySelector('textarea[name="children_familybg[]"]'),
+        document.querySelector('textarea[name="children_dateofbirth_familybg[]"]')
+    ].filter(Boolean);
+
+    const firstRowState = (fields) => {
+        const values = fields.map(f => (f?.value || '').trim());
+        const allNA = values.length && values.every(v => isNA(v));
+        const allBlank = values.every(v => v === '');
+        const anyBlank = values.some(v => v === '');
+        const anyData = values.some(v => v !== '' && !isNA(v));
+        const allFilledNoBlank = values.length > 0 && !anyBlank;
+        return { allNA, allBlank, anyData, allFilledNoBlank };
+    };
+
+    const scrollToField = (el) => {
+        if (!el) return;
+        const nav = document.querySelector('nav');
+        const navHeight = nav?.getBoundingClientRect().height || 80;
+        const offset = navHeight + 540; // generous buffer so field lands well below navbar
+        const anchor = el.closest('td, th') || el; // use table cell as anchor when possible
+
+        const applyOffset = () => {
+            const targetY = Math.max(anchor.getBoundingClientRect().top + window.pageYOffset - offset, 0);
+            window.scrollTo({ top: targetY, behavior: 'auto' });
+        };
+
+        // Immediate scroll, then re-apply for stability
+        applyOffset();
+        requestAnimationFrame(applyOffset);
+        setTimeout(applyOffset, 140);
+        setTimeout(applyOffset, 300);
+    };
+
+    const findMissingChildDob = () => {
+        for (let i = 0; i < childrenNameFields.length; i++) {
+            const nameField = childrenNameFields[i];
+            const dobField = childrenDobFields[i];
+            if (!nameField || !dobField) continue;
+
+            const disabled = nameField.disabled || dobField.disabled || nameField.readOnly || dobField.readOnly;
+            if (disabled) {
+                dobField.setCustomValidity('');
+                continue;
+            }
+
+            const nameVal = (nameField.value || '').trim();
+            const dobVal = (dobField.value || '').trim();
+            const hasName = nameVal !== '' && !isNA(nameVal);
+            const dobBlank = dobVal === '';
+
+            if (hasName && dobBlank) {
+                dobField.setCustomValidity('Date of birth is required for this child.');
+                return dobField;
+            }
+
+            dobField.setCustomValidity('');
+        }
+        return null;
+    };
 
     const validateRequired = () => {
         const missingRequiredInputs = requiredFields.some(el => {
@@ -231,19 +452,74 @@ document.addEventListener('DOMContentLoaded', () => {
         const missingCheckboxGroup = checkboxGroups.some(name => {
             const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
             if (!boxes.length) return false;
-            return !boxes.some(b => b.checked);
+            const noneChecked = !boxes.some(b => b.checked);
+
+            // Surface native message and clear it for the whole group
+            boxes.forEach(box => box.setCustomValidity(noneChecked ? 'Please select an option in this group.' : ''));
+
+            return noneChecked;
         });
 
-        const hasMissing = missingRequiredInputs || missingCheckboxGroup;
+        const missingChildDobField = findMissingChildDob();
 
-        if (!nextBtn) return;
-        if (hasMissing) {
-            nextBtn.setAttribute('aria-disabled', 'true');
-            nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        } else {
-            nextBtn.removeAttribute('aria-disabled');
-            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        const firstRowStateResult = firstRowState(firstRowFields);
+        const firstRowIncomplete = !(firstRowStateResult.allNA || firstRowStateResult.allBlank || firstRowStateResult.allFilledNoBlank);
+
+        return missingRequiredInputs || missingCheckboxGroup || firstRowIncomplete || !!missingChildDobField;
+    };
+
+    const focusFirstMissing = () => {
+        for (const el of requiredFields) {
+            if (el.disabled || el.readOnly) continue;
+            if (el.type === 'file') {
+                if (!(el.files && el.files.length > 0)) {
+                    el.focus();
+                    scrollToField(el);
+                    return true;
+                }
+                continue;
+            }
+            if (!((el.value || '').trim())) {
+                el.focus();
+                scrollToField(el);
+                return true;
+            }
         }
+
+        for (const name of checkboxGroups) {
+            const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
+            if (!boxes.length) continue;
+            if (!boxes.some(b => b.checked)) {
+                boxes[0].focus();
+                scrollToField(boxes[0]);
+                return true;
+            }
+        }
+
+        const missingChildDobField = findMissingChildDob();
+        if (missingChildDobField) {
+            missingChildDobField.reportValidity();
+            missingChildDobField.focus();
+            scrollToField(missingChildDobField);
+            setTimeout(() => missingChildDobField.setCustomValidity(''), 1200);
+            return true;
+        }
+
+        const firstState = firstRowState(firstRowFields);
+        if (!(firstState.allNA || firstState.allBlank || firstState.allFilledNoBlank)) {
+            const firstMissing = firstRowFields.find(f => f && !(f.value || '').trim());
+            const target = firstMissing || firstRowFields[0];
+            if (target) {
+                target.setCustomValidity('Please complete the first row or mark N/A.');
+                target.reportValidity();
+                target.focus();
+                scrollToField(target);
+                setTimeout(() => target.setCustomValidity(''), 1200);
+            }
+            return true;
+        }
+
+        return false;
     };
 
     requiredFields.forEach(el => {
@@ -259,12 +535,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     validateRequired();
 
-    if (nextBtn) {
-        nextBtn.addEventListener('click', (e) => {
-            if (nextBtn.getAttribute('aria-disabled') === 'true') {
+    // Hydrate any cached/auto-saved dynamic education rows on load (requires validateRequired/requiredFields)
+    hydrateExistingExtras();
+
+    if (form && nextBtn) {
+        form.addEventListener('submit', (e) => {
+            const middleNameInput = document.getElementById('middlename');
+            if (middleNameInput && !middleNameInput.value.trim()) {
                 e.preventDefault();
                 e.stopPropagation();
-                validateRequired();
+                alert('Middle name is required.');
+                middleNameInput.focus();
+                scrollToField(middleNameInput);
+                return;
+            }
+
+            const hasMissing = validateRequired();
+            if (hasMissing) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Trigger native validity UI for checkbox groups
+                for (const name of checkboxGroups) {
+                    const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
+                    if (boxes.length && !boxes.some(b => b.checked)) {
+                        boxes[0].reportValidity();
+                        break;
+                    }
+                }
+
+                focusFirstMissing();
             }
         });
     }
@@ -296,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </p>
 
   <p class="  font-['Arial_Narrow','sans-serif'] text-base mb-3">
-    Print legibly if accomplished through own handwriting. Tick appropriate boxes and use separate sheet if necessary. Indicate <span class="font-bold">N/A</span> if not applicable. <span class="font-bold">DO NOT ABBREVIATE.</span>
+    Print legibly if accomplished through own handwriting. Tick appropriate boxes <span style="font-style:normal;">&#x2610;</span> and use separate sheet if necessary. Indicate <span class="font-bold">N/A</span> if not applicable. <span class="font-bold">DO NOT ABBREVIATE.</span>
   </p>
 
   <!-- MAIN TABLE -->
@@ -385,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- MIDDLE NAME -->
     <tr>
-      <td class="bg-[#e7e7e7] align-middle px-7 border-b-2"> 
+      <td class="bg-[#e7e7e7] align-middle px-5 border-b-2"> 
         MIDDLE NAME
       </td>
       <td colspan="3" class="border border-b-2 h-10 align-middle">
@@ -397,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
            <textarea
       name="middlename"
       id="middlename"
+      required
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -424,6 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
            text-lg">
            <textarea
       name="date_of_birth"
+      required
       rows="1"
       class="w-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -1858,7 +2160,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </tr>
 
   <!-- DATA ROW -->
-  <tr class="min-h-[20]" style="width: 20%;">
+  <tr class="min-h-[20]" style="width: 20%;" data-education-base="ELEMENTARY">
     <td class="border text-center align-middle h-20">ELEMENTARY</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -1947,7 +2249,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10">
+          class="border h-10 relative">
           <div class="h-full w-full">
          <textarea
       name="education[elementary][scholarship_acadhonors]"
@@ -1958,11 +2260,12 @@ document.addEventListener('DOMContentLoaded', () => {
              whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
+      </div>
       </td>
   </tr>
 
 
-   <tr class="min-h-[20]" style="width: 20%;">
+   <tr class="min-h-[20]" style="width: 20%;" data-education-base="SECONDARY">
     <td class="border text-center align-middle h-20">SECONDARY</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2051,7 +2354,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10">
+          class="border h-10 relative">
           <div class="h-full w-full">
          <textarea
       name="education[secondary][scholarship_acadhonors]"
@@ -2062,10 +2365,12 @@ document.addEventListener('DOMContentLoaded', () => {
              whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
+      </div>
+      <button type="button" class="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700 whitespace-nowrap" data-education-add="SECONDARY">Add Secondary Row</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;">
+   <tr class="min-h-[20]" style="width: 20%;" data-education-base="VOCATIONAL / TRADE COURSE">
     <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2154,7 +2459,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10">
+          class="border h-10 relative">
           <div class="h-full w-full">
          <textarea
       name="education[vocational][scholarship_acadhonors]"
@@ -2165,10 +2470,12 @@ document.addEventListener('DOMContentLoaded', () => {
              whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
+      </div>
+      <button type="button" class="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700 whitespace-nowrap" data-education-add="VOCATIONAL / TRADE COURSE">Add Vocational Row</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;">
+   <tr class="min-h-[20]" style="width: 20%;" data-education-base="COLLEGE">
     <td class="border text-center align-middle h-20">COLLEGE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2257,7 +2564,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10">
+          class="border h-10 relative">
           <div class="h-full w-full">
          <textarea
       name="education[college][scholarship_acadhonors]"
@@ -2268,10 +2575,11 @@ document.addEventListener('DOMContentLoaded', () => {
              whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
+      </div>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;">
+   <tr class="min-h-[20]" style="width: 20%;" data-education-base="GRADUATE STUDIES">
     <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2360,7 +2668,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10">
+          class="border h-10 relative">
           <div class="h-full w-full">
          <textarea
       name="education[graduate_studies][scholarship_acadhonors]"
@@ -2371,8 +2679,81 @@ document.addEventListener('DOMContentLoaded', () => {
              whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
+      </div>
+      <button type="button" class="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700 whitespace-nowrap" data-education-add="GRADUATE STUDIES">Add Graduate Row</button>
       </td>
   </tr>
+
+  <!-- Dynamic extra education rows -->
+  <tbody id="education-extra-rows"></tbody>
+
+  <!-- Prototype for dynamic education row -->
+  <template id="education-extra-prototype">
+    <tr data-education-extra-row>
+      <td class="border text-center align-middle h-20">
+        <textarea name="education_extra_level[]" rows="1"
+          class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+          oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+      </td>
+
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <textarea name="education_extra_school_name[]" rows="1"
+            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+        </div>
+      </td>
+
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <textarea name="education_extra_basic_education[]" rows="1"
+            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+        </div>
+      </td>
+
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <textarea name="education_extra_from[]" rows="1"
+            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+        </div>
+      </td>
+
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <textarea name="education_extra_to[]" rows="1"
+            class="w-full h-full text-lg resize-none focus:outline-none focus-ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+        </div>
+      </td>
+
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <textarea name="education_extra_highest_level[]" rows="1"
+            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+        </div>
+      </td>
+
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <textarea name="education_extra_year_graduated[]" rows="1"
+            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+        </div>
+      </td>
+
+      <td class="border h-10 relative">
+        <div class="h-full w-full">
+          <textarea name="education_extra_scholarship_acadhonors[]" rows="1"
+            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
+        </div>
+        <button type="button" data-education-remove class="absolute -right-7 top-2 text-red-600 font-bold text-lg px-1">✕</button>
+      </td>
+    </tr>
+  </template>
 
  
 
@@ -2414,16 +2795,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <td colspan="3"
           class="border h-10">
-          <div class="h-full w-full">
-         <textarea
+          <div class="h-full w-full flex items-center justify-center">
+         <input
+      type="date"
       name="date1"
       required
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
+             px-2 py-1 text-center bg-transparent border-none"
+    ></input>
       </td>
 </table>
 
@@ -2442,13 +2822,33 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('DOMContentLoaded', () => {
 
   const form = document.querySelector('#pds-form1');
+  const autosaveOverlay = document.getElementById('autosaveOverlay');
   if (!form) {
     console.error('Form element #pds-form1 not found!');
     return;
   }
   console.log('Form element found:', form);
 
-  const storageKey = 'pds_form_step1_' + ({{ auth()->id() ?? 0 }});
+  const sessionData = @json(session('pds', []));
+  const draftData = @json($data ?? []);
+  const flat = {};
+
+  const walk = (obj, prefix = '') => {
+    if (obj === null || obj === undefined) return;
+    if (typeof obj !== 'object') { if (prefix) flat[prefix] = obj; return; }
+    if (Array.isArray(obj)) {
+      obj.forEach((v, i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`));
+    } else {
+      Object.entries(obj).forEach(([k, v]) => walk(v, prefix ? `${prefix}[${k}]` : k));
+    }
+  };
+
+  walk(sessionData);
+  walk(draftData);
+  
+
+  // Reuse shared cache key defined in first script
+  const storageKey = window.storageKey || ('pds_form_step1_' + ({{ auth()->id() ?? 0 }}));
   const singleSelectCheckboxNames = new Set(['sex[]','civilstatus[]','citizenship[]']);
   const storageBase = "{{ asset('storage') }}/";
   const initialSignaturePath = @json($signaturePath ?? '');
@@ -2493,13 +2893,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (overrideData) {
-      data = { ...data, ...overrideData };
+      // Prefer local cache; only backfill keys missing locally
+      Object.entries(overrideData).forEach(([k, v]) => {
+        if (data[k] === undefined) {
+          data[k] = v;
+        }
+      });
     }
 
-    if (overrideData?.signature_path && signaturePathInput) {
+    // Map single-select checkbox arrays from draft/session (keys without []) into form fields
+    const hydrateSingleSelect = (baseKey) => {
+      const val = Array.isArray(data[baseKey]) ? data[baseKey][0] : data[baseKey];
+      if (val === undefined) return;
+      const targetName = `${baseKey}[]`;
+      form.querySelectorAll(`input[type="checkbox"][name="${targetName}"]`).forEach(el => {
+        el.checked = String(el.value) === String(val);
+      });
+    };
+
+    ['sex', 'civilstatus', 'citizenship'].forEach(hydrateSingleSelect);
+
+    // Only apply server/session signature if local value is missing
+    if (overrideData?.signature_path && signaturePathInput && !signaturePathInput.value) {
       signaturePathInput.value = overrideData.signature_path;
     }
-    if (overrideData?.signature_data && signatureDataInput) {
+    if (overrideData?.signature_data && signatureDataInput && !signatureDataInput.value) {
       signatureDataInput.value = overrideData.signature_data;
     }
 
@@ -2522,7 +2940,7 @@ document.addEventListener('DOMContentLoaded', () => {
           } else if (el.type === 'radio') {
             el.checked = val === el.value;
           } else {
-            if (!el.value) el.value = val;
+            el.value = val;
           }
           if (el.tagName === 'TEXTAREA' || el.type === 'text') {
             el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2543,9 +2961,7 @@ document.addEventListener('DOMContentLoaded', () => {
           el.checked = stored === el.value;
         }
         else {
-          if (!el.value) {
-            el.value = stored;
-          }
+          el.value = stored;
         }
 
         if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -2642,38 +3058,68 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsDataURL(file);
   };
 
-  // AUTOSAVE to server (throttled)
+  // AUTOSAVE to server (throttled with retry + overlay until OK)
   const autoSaveToServer = (() => {
     let timer;
+    const retryDelay = 1200;
+    const showOverlay = (flag) => {
+      if (!autosaveOverlay) return;
+      autosaveOverlay.classList.toggle('hidden', !flag);
+    };
+
+    const appendSingleSelectGroups = (formData) => {
+      ['sex', 'civilstatus', 'citizenship'].forEach((base) => {
+        const selected = form.querySelector(`input[name="${base}[]"]:checked`);
+        if (selected) {
+          formData.set(base, selected.value);
+        }
+      });
+    };
+    const send = () => {
+      const formData = new FormData(form);
+      appendSingleSelectGroups(formData);
+      console.log('Auto-saving to server...');
+      fetch('{{ route('pds.autosave') }}', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        credentials: 'same-origin',
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          console.error('Auto-save failed:', response.status, response.statusText);
+          showOverlay(true);
+          setTimeout(send, retryDelay);
+          throw new Error('Auto-save failed');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Auto-save response:', data);
+        const ok = data && data.status === 'ok';
+        if (ok) {
+          showOverlay(false);
+        } else {
+          showOverlay(true);
+          setTimeout(send, retryDelay);
+        }
+      })
+      .catch(error => {
+        console.error('Auto-save error:', error);
+        showOverlay(true);
+        setTimeout(send, retryDelay);
+      });
+    };
+
     return () => {
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const formData = new FormData(form);
-        console.log('Auto-saving to server...');
-        fetch('{{ route('pds.autosave') }}', {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
-          },
-          body: formData
-        })
-        .then(response => {
-          if (!response.ok) {
-            console.error('Auto-save failed:', response.status, response.statusText);
-            throw new Error('Auto-save failed');
-          }
-          console.log('Auto-save successful');
-          return response.json();
-        })
-        .then(data => {
-          console.log('Auto-save response:', data);
-        })
-        .catch(error => {
-          console.error('Auto-save error:', error);
-        });
-      }, 800);
+      timer = setTimeout(send, 800);
     };
   })();
+
+  let hydrated = true; // allow immediate caching even before hydration completes
 
   const persist = () => {
     console.log('Persist function called');
@@ -2681,7 +3127,16 @@ document.addEventListener('DOMContentLoaded', () => {
     autoSaveToServer();
   };
 
-  loadCache();
+  // Expose persist so add/remove buttons can trigger it
+  window.persist = persist;
+
+  // Hydrate: server/session defaults, then local cache overrides
+  loadCache({ ...(draftData || {}), ...(sessionData || {}) });
+  hydrated = true;
+  // Persist merged cache once so a fast refresh keeps latest values
+  saveCache();
+  // Push hydrated values to server immediately so data survives logout/localStorage clears
+  autoSaveToServer();
   updateSignaturePreviewFromInputs();
 
   // Debug: Check if form element exists
@@ -2705,8 +3160,12 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(r => r.ok ? r.json() : null)
     .then(json => {
       if (!json || !json.data) return;
+      // Apply server data as defaults; keep existing local overrides
       loadCache(json.data);
       updateSignaturePreviewFromInputs();
+      // Persist merged cache once so a fast refresh keeps latest values
+      hydrated = true;
+      saveCache();
     })
     .catch(() => {});
 
@@ -2719,8 +3178,149 @@ document.addEventListener('DOMContentLoaded', () => {
     persist();
   });
 
+  // Sync all date fields across forms using localStorage - form1 is the master
+  window.syncAllDates = function(selectedDate) {
+    console.log('syncAllDates called with:', selectedDate);
+    if (!selectedDate) return;
+    
+    // Save to localStorage for cross-page synchronization
+    localStorage.setItem('pds_master_date', selectedDate);
+    console.log('Saved master date to localStorage:', selectedDate);
+    
+    // Update all date inputs on current page (excluding form1)
+    const dateInputs = document.querySelectorAll('input[type="date"][name^="date"]');
+    console.log('Found date inputs on current page:', dateInputs.length);
+    
+    dateInputs.forEach(input => {
+      console.log('Processing input:', input.name, 'current value:', input.value);
+      // Skip form1's date input - it's the master
+      if (input.name === 'date1') return;
+      
+      if (input.value !== selectedDate) {
+        console.log('Updating', input.name, 'from', input.value, 'to', selectedDate);
+        input.value = selectedDate;
+        // Trigger change event to save to cache
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  };
+
+  // Initialize sync when form1 date changes
+  const form1DateInput = document.querySelector('input[name="date1"]');
+  if (form1DateInput) {
+    const storedMasterDate = localStorage.getItem('pds_master_date');
+    if (storedMasterDate && !form1DateInput.value) {
+      console.log('Applying master date from localStorage to form1:', storedMasterDate);
+      form1DateInput.value = storedMasterDate;
+      form1DateInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    form1DateInput.addEventListener('change', function() {
+      console.log('Form1 date changed to:', this.value);
+      syncAllDates(this.value);
+    });
+
+    // Seed master date on initial load so other forms can pick it up without requiring a change event
+    if (form1DateInput.value) {
+      console.log('Seeding master date from existing form1 value:', form1DateInput.value);
+      syncAllDates(form1DateInput.value);
+    }
+  }
+
 });
 </script>
+
+<style>
+/* Custom styling for date inputs - bigger calendar icon and middle text alignment */
+input[type="date"] {
+  color-scheme: light dark;
+  font-size: 30px;
+  text-align: center !important;
+  padding-right: 40px;
+  position: relative;
+  margin-left: 100px;
+}
+
+/* Make calendar icon bigger and black in WebKit browsers (Chrome, Safari, Edge) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  background-size: 30px 30px;
+  background-color: transparent;
+  filter: invert(0) brightness(0) !important;
+  opacity: 1 !important;
+  -webkit-filter: invert(0) brightness(0) !important;
+  vertical-align: middle;
+  position: absolute;
+  right: 5px;
+}
+
+/* Make calendar icon bigger and black in Firefox */
+input[type="date"]::-moz-calendar-picker-indicator {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  background-size: 30px 30px;
+  background-color: transparent;
+  filter: invert(0) brightness(0) !important;
+  opacity: 1 !important;
+  -webkit-filter: invert(0) brightness(0) !important;
+  vertical-align: middle;
+  position: absolute;
+  right: 5px;
+}
+
+/* Ensure text is vertically centered and black */
+input[type="date"]::-webkit-datetime-edit-text {
+  vertical-align: middle;
+  color: #000000;
+  font-size: 16px;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center !important;
+}
+
+/* Firefox date input text color and centering */
+input[type="date"]::-moz-datetime-edit-text {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-month-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-day-field {
+  color: #000000;
+  text-align: center !important;
+}
+
+input[type="date"]::-moz-datetime-edit-year-field {
+  color: #000000;
+  text-align: center !important;
+}
+</style>
 
 
 </x-app-layout>

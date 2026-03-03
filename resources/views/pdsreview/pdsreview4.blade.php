@@ -381,8 +381,8 @@
         </td>
       </tr>
       <tr>
-        <td class="pr-5 p-0 align-top w-[40%] border-l border-black border-r-0 flex-1">
-        <table class="border-collapse text-xs border-2 ml-2 mt-2 h-[5.6cm] w-full">
+        <td class="pr-5 p-0 align-top border-l border-black border-r-0" style="width: 60% !important; max-width: 60% !important; flex: none !important;">
+        <table class="border-collapse text-xs border-2 ml-2 mt-2 h-[5.71cm] w-[10cm]">
   <!-- HEADER -->
   <tr>
     <td class="border px-2 py-1 font-semibold h-5 border-black" colspan="2">
@@ -425,13 +425,13 @@
 
 </table>
         </td>
-        <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2">
+        <td class="p-0 align-top border-b-0 border-l-0 border-r-0 border-black" colspan="2">
           @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
-          <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
+          <table class="border-collapse text-xs border-3 mt-2 border-2 mb-2 w-[11.6cm]" style="margin-left: 122px;">
             <tr>
-              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative overflow-hidden">
+              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative p-1">
                 @if($signatureUrl)
-                  <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:4.5cm;">
+                  <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
                 @else
                   (wet signature / e-signature / digital certificate)
                 @endif
@@ -444,32 +444,7 @@
   <td>
     <div class="relative flex justify-center py-2">
       <div class="flex items-center space-x-1 relative">
-        <input
-          type="text"
-          name="date4_month"
-          maxlength="2"
-          placeholder="MM"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_day"
-          maxlength="2"
-          placeholder="DD"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_year"
-          maxlength="2"
-          placeholder="YY"
-          inputmode="numeric"
-          class="text-center text-xl bg-transparent border-none focus:outline-none"
-        />
+        <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
       </div>
     </div>
   </td>
@@ -491,10 +466,10 @@
         <td class="p-2 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-3">
             <tr>
-  <td class="border-black h-20 text-center align-middle italic text-red-600 relative overflow-hidden">
+  <td class="border-black h-24 text-center align-middle italic text-red-600 relative overflow-hidden">
 
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:5cm;">
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6.5cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
     @else
       <!-- Placeholder / Text -->
       <div id="signaturePlaceholder">

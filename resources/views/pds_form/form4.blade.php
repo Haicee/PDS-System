@@ -20,7 +20,7 @@
     .pds-sheet { min-width: 980px; }
     .signature-box {
       position: relative;
-      background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
+      background: transparent;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       overflow: hidden;
@@ -385,6 +385,23 @@
         disableFollowingRows(['reference_name[]','reference_address[]','reference_contact[]'], refState.allNA);
       };
 
+      const scrollToField = (el) => {
+        if (!el) return;
+        const nav = document.querySelector('nav');
+        const navHeight = nav?.getBoundingClientRect().height || 80;
+        const offset = navHeight + 200;
+        const anchor = el.closest('td, th, label, div') || el;
+        const applyOffset = () => {
+          const rect = anchor.getBoundingClientRect();
+          const targetY = Math.max(rect.top + window.pageYOffset - offset, 0);
+          window.scrollTo({ top: targetY, behavior: 'auto' });
+        };
+        applyOffset();
+        requestAnimationFrame(applyOffset);
+        setTimeout(applyOffset, 140);
+        setTimeout(applyOffset, 320);
+      };
+
       referenceFirstRow.forEach(f => f?.addEventListener('input', refreshRows));
       refreshRows();
 
@@ -481,12 +498,17 @@
         .filter(el => !el.disabled && !el.readOnly && el.offsetParent !== null);
 
       window.validateRequired = validateRequired = () => {
-        let hasMissing = false;
+        let firstMissing = null;
 
-        const hasMissingRequired = requiredFields.some(el => {
-          if (el.disabled || el.readOnly) return false;
-          if (el.offsetParent === null) return false; // ignore hidden required controls (e.g., camera file input)
-          return !isFilled(el);
+        // Clear old custom validity to avoid stale errors
+        document.querySelectorAll('input, textarea, select').forEach(el => el.setCustomValidity(''));
+
+        requiredFields.forEach(el => {
+          if (firstMissing || el.disabled || el.readOnly) return;
+          if (el.offsetParent === null) return; // ignore hidden required controls (e.g., camera file input)
+          if (!isFilled(el)) {
+            firstMissing = el;
+          }
         });
 
         for (const group of conditionalGroups) {
@@ -504,81 +526,76 @@
             const wasDisabled = group.detailDisabledState[cacheKey] ?? false;
             group.detailDisabledState[cacheKey] = disable;
 
-            // Restore only on transition from disabled -> enabled
             if (!disable && wasDisabled) {
               if (typeof group.detailCache[cacheKey] === 'string' && el.value === '') {
                 el.value = group.detailCache[cacheKey];
               }
             }
 
-            // While enabled, keep cache in sync with current value (including empty)
             if (!disable) {
               group.detailCache[cacheKey] = el.value;
             }
 
-            // When disabling (NO), store current then clear so it won't submit
             if (disable) {
               group.detailCache[cacheKey] = el.value;
               el.value = '';
             }
           });
 
-          if (!yesChecked && !noChecked) {
-            hasMissing = true;
-            break;
+          if (!firstMissing && !yesChecked && !noChecked) {
+            firstMissing = yesBox || noBox;
           }
 
-          if (yesChecked) {
-            const detailMissing = group.details.some(el => {
+          if (!firstMissing && yesChecked) {
+            const detailMissingEl = group.details.find(el => {
               if (el.disabled || el.readOnly || el.offsetParent === null) return false;
               return !isFilled(el);
             });
-            if (detailMissing) {
-              hasMissing = true;
+            if (detailMissingEl) {
+              firstMissing = detailMissingEl;
+            }
+          }
+        }
+
+        if (!firstMissing) {
+          for (const set of firstRowSets) {
+            const state = firstRowState(set);
+            if (!(state.allNA || state.anyData)) {
+              firstMissing = set.find(f => f && !isFilled(f)) || set[0];
               break;
             }
           }
         }
 
-        const firstRowsIncomplete = firstRowSets.some(set => {
-          const state = firstRowState(set);
-          return !(state.allNA || state.anyData);
-        });
-
-        hasMissing = hasMissing || hasMissingRequired || firstRowsIncomplete;
-
-        if (!nextBtn) return;
-        if (hasMissing) {
-          nextBtn.setAttribute('aria-disabled', 'true');
-          nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        } else {
-          nextBtn.removeAttribute('aria-disabled');
-          nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        }
+        if (!nextBtn) return null;
+        nextBtn.removeAttribute('aria-disabled');
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        return firstMissing;
       };
 
       document.addEventListener('input', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
       document.addEventListener('change', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
-      // Initialize disabled until validated
-      if (nextBtn) {
-        nextBtn.setAttribute('aria-disabled', 'true');
-        nextBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-      }
       validateRequired();
 
       if (nextBtn) {
         nextBtn.addEventListener('click', (e) => {
-          if (nextBtn.getAttribute('aria-disabled') === 'true') {
+          const firstMissing = validateRequired();
+          if (firstMissing) {
             e.preventDefault();
             e.stopPropagation();
-            validateRequired();
+            firstMissing.setCustomValidity('Please complete this field.');
+            firstMissing.reportValidity();
+            firstMissing.focus({ preventScroll: true });
+            scrollToField(firstMissing);
           }
         });
       }
 
       // Local cache + autosave/draft
       const storageKey = 'pds_form_step4_' + ({{ auth()->id() ?? 0 }});
-      const singleSelectCheckboxNames = new Set();
+      const singleSelectCheckboxNames = new Set([
+        'q34_a','q34_b','q35_a','q35_b','q36','q37','q38_a','q38_b','q39','q40_a','q40_b','q40_c'
+      ]);
 
       const loadCache = (overrideData = null) => {
         let data = {};
@@ -589,13 +606,19 @@
         }
 
         if (overrideData) {
-          data = { ...data, ...overrideData };
+          // Prefer local cache; only backfill keys missing locally
+          Object.entries(overrideData).forEach(([k, v]) => {
+            if (data[k] === undefined) {
+              data[k] = v;
+            }
+          });
         }
 
-        if (overrideData?.signature_path && signaturePathInput4) {
+        // Only apply server/session signature if local value is missing
+        if (overrideData?.signature_path && signaturePathInput4 && !signaturePathInput4.value) {
           signaturePathInput4.value = overrideData.signature_path;
         }
-        if (overrideData?.signature_data && signatureDataInput4) {
+        if (overrideData?.signature_data && signatureDataInput4 && !signatureDataInput4.value) {
           signatureDataInput4.value = overrideData.signature_data;
         }
 
@@ -623,7 +646,7 @@
               } else if (el.type === 'radio') {
                 el.checked = val === el.value;
               } else {
-                if (!el.value) el.value = val;
+                el.value = val;
               }
               if (el.tagName === 'TEXTAREA' || el.type === 'text') {
                 el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -644,9 +667,7 @@
               el.checked = stored === el.value;
             }
             else {
-              if (!el.value) {
-                el.value = stored;
-              }
+              el.value = stored;
             }
 
             if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -707,6 +728,9 @@
 
       const autoSaveToServer = (() => {
         let timer;
+        let failureCount = 0;
+        const retryDelay = 1200;
+        const maxRetries = 3;
         return () => {
           clearTimeout(timer);
           timer = setTimeout(() => {
@@ -714,10 +738,36 @@
             fetch('{{ route('pds.autosave') }}', {
               method: 'POST',
               headers: {
-                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
               },
+              credentials: 'same-origin',
               body: formData
-            }).catch(() => {});
+            })
+            .then(response => {
+              if (response.status === 401 || response.status === 419) {
+                throw new Error('Auto-save unauthorized');
+              }
+              if (!response.ok) {
+                throw new Error('Auto-save failed');
+              }
+              return response.json().catch(() => {
+                throw new Error('Auto-save invalid JSON');
+              });
+            })
+            .then(data => {
+              const ok = data && data.status === 'ok';
+              if (ok) {
+                failureCount = 0;
+              } else {
+                throw new Error('Auto-save response not ok');
+              }
+            })
+            .catch(() => {
+              if (failureCount < maxRetries) {
+                failureCount += 1;
+                setTimeout(() => autoSaveToServer(), retryDelay);
+              }
+            });
           }, 800);
         };
       })();
@@ -728,6 +778,8 @@
 
       loadCache();
       updateSignaturePreview4();
+      // Persist merged cache once so a fast refresh keeps latest values
+      saveCache();
 
       refreshSequential();
       validateRequired();
@@ -739,6 +791,8 @@
           if (!json || !json.data) return;
           loadCache(json.data);
           updateSignaturePreview4();
+          // Persist merged cache once so a fast refresh keeps latest values
+          saveCache();
           refreshSequential();
           validateRequired();
           loadCachedPhoto();
@@ -748,6 +802,35 @@
       form.addEventListener('input', persist);
       form.addEventListener('change', persist);
     });
+
+    // Check for master date from form1 and apply it
+    function ensureMasterDateSeed() {
+      const date4Input = document.querySelector('input[name="date4"]');
+      const existing = localStorage.getItem('pds_master_date');
+      const candidate = existing || date4Input?.value;
+      if (candidate && !existing) {
+        localStorage.setItem('pds_master_date', candidate);
+      }
+      return candidate || null;
+    }
+
+    function syncFromForm1() {
+      const masterDate = ensureMasterDateSeed();
+      if (masterDate) {
+        const date4Input = document.querySelector('input[name="date4"]');
+        if (date4Input && date4Input.value !== masterDate) {
+          date4Input.value = masterDate;
+          // Trigger change event to save to cache
+          date4Input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
+
+    // Check for master date when page loads
+    syncFromForm1();
+
+    // Also check periodically in case user navigates back from form1
+    setInterval(syncFromForm1, 1000);
   </script>
   
   <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
@@ -1099,14 +1182,14 @@
           <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
             <tr>
               <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative p-1">
-                <label id="signatureBox4a" class="signature-box block h-full w-full cursor-pointer relative">
+                <label id="signatureBox4a" class="signature-box block h-full w-full cursor-default relative">
                   <input
                     type="file"
                     name="signature_file"
                     id="signatureFileInput4"
                     accept="image/*"
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onchange="handleSignatureUpload4(this.files[0])"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+                    disabled
                   >
                   <img
                     id="signaturePreviewImg4a"
@@ -1114,9 +1197,7 @@
                     alt="Signature preview"
                     class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
                   >
-                  <div id="signaturePlaceholder4a" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
-                    Upload signature here
-                  </div>
+                  <div id="signaturePlaceholder4a" class="absolute inset-0" aria-hidden="true"></div>
                 </label>
                 <input type="hidden" name="signature_path" id="signature_path4" value="{{ $signaturePath ?? '' }}">
                 <input type="hidden" name="signature_data" id="signature_data4">
@@ -1127,33 +1208,13 @@
             </tr>
            <tr>
   <td>
-    <div class="relative flex justify-center py-2">
-      <div class="flex items-center space-x-1 relative">
+    <div class="relative flex justify-center py-2 h-10">
+      <div class="flex items-center justify-center w-full">
         <input
-          type="text"
-          name="date4_month"
-          maxlength="2"
-          placeholder="MM"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_day"
-          maxlength="2"
-          placeholder="DD"
-          inputmode="numeric"
-          class="text-center text-base bg-transparent border-none focus:outline-none"
-        />
-        <span class="text-base select-none">/</span>
-        <input
-          type="text"
-          name="date4_year"
-          maxlength="2"
-          placeholder="YY"
-          inputmode="numeric"
-          class="text-center text-xl bg-transparent border-none focus:outline-none"
+          type="date"
+          name="date4"
+          required
+          class="w-full h-full text-center text-lg bg-transparent border-none focus:outline-none px-2 py-1"
         />
       </div>
     </div>
@@ -1176,16 +1237,16 @@
         <td class="p-2 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-3">
             <tr>
-  <td class="border-black h-16 text-center align-middle italic text-red-600 relative overflow-hidden">
+  <td class="border-black h-24 text-center align-middle italic text-red-600 relative overflow-hidden">
 
-    <label id="signatureBox4b" class="signature-box block h-full w-full cursor-pointer relative">
+    <label id="signatureBox4b" class="signature-box block h-full w-full cursor-default relative">
       <input
         type="file"
         name="signature_file"
         id="signatureFileInput4b"
         accept="image/*"
-        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        onchange="handleSignatureUpload4(this.files[0])"
+        class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed pointer-events-none"
+        disabled
       />
 
       <img
@@ -1195,9 +1256,7 @@
         class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
       >
 
-      <div id="signaturePlaceholder4b" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-2">
-        Upload signature here
-      </div>
+      <div id="signaturePlaceholder4b" class="absolute inset-0" aria-hidden="true"></div>
     </label>
 
   </td>
@@ -1216,4 +1275,77 @@
   </div>
   </div>
 </form>
+
+<style>
+/* Custom styling for date inputs - bigger calendar icon and middle text alignment */
+input[type="date"] {
+  color-scheme: light dark;
+  font-size: 30px;
+  text-align: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin-left: 50px;
+}
+
+/* Hide calendar icon since date is synced from form1 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* Ensure text is vertically centered and black */
+input[type="date"]::-webkit-datetime-edit-text {
+  vertical-align: middle;
+  color: #000000;
+  font-size: 16px;
+  text-align: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  vertical-align: middle;
+  font-size: 16px;
+  color: #000000;
+  text-align: center;
+}
+
+/* Firefox date input text color and centering */
+input[type="date"]::-moz-datetime-edit-text {
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-moz-datetime-edit-month-field {
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-moz-datetime-edit-day-field {
+  color: #000000;
+  text-align: center;
+}
+
+input[type="date"]::-moz-datetime-edit-year-field {
+  color: #000000;
+  text-align: center;
+}
+</style>
 </x-app-layout>
