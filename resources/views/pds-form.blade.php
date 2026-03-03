@@ -30,6 +30,7 @@
                     selected: null,
                     confirmOpen: false,
                     confirmAction: null,
+                    rejectNote: '',
 
                     submissions: {{ Js::from($submissions ?? []) }},
 
@@ -73,22 +74,27 @@
 
                     requestConfirm(newStatus) {
                         this.confirmAction = newStatus;
+                        if (newStatus !== 'rejected') {
+                            this.rejectNote = '';
+                        }
                         this.confirmOpen = true;
                     },
 
                     confirmStatus() {
                         if (!this.confirmAction) return;
-                        this.setStatus(this.confirmAction);
+                        this.setStatus(this.confirmAction, this.confirmAction === 'rejected' ? this.rejectNote : '');
                         this.confirmAction = null;
+                        this.rejectNote = '';
                         this.confirmOpen = false;
                     },
 
                     cancelConfirm() {
                         this.confirmAction = null;
+                        this.rejectNote = '';
                         this.confirmOpen = false;
                     },
 
-                    async setStatus(newStatus) {
+                    async setStatus(newStatus, note = '') {
                         if (!this.selected) return;
                         const statusKey = this.normalized(newStatus);
                         const statusLabel = statusKey === 'approved'
@@ -104,7 +110,7 @@
                                     'Content-Type': 'application/json',
                                     'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
                                 },
-                                body: JSON.stringify({ status: statusLabel }),
+                                body: JSON.stringify({ status: statusLabel, note }),
                             });
 
                             if (!response.ok) throw new Error('Failed to update status');
@@ -211,7 +217,7 @@
                                     class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
                                         <th class="px-6 py-3">Employee</th>
-                                        <th class="px-6 py-3">Unit</th>
+                                        <th class="px-6 py-3">Unit/Division/Section</th>
                                         <th class="px-6 py-3">Email</th>
                                         <th class="px-6 py-3">Submitted</th>
                                         <th class="px-6 py-3">Status</th>
@@ -293,11 +299,12 @@
                         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                                 <div class="flex items-center gap-3">
-                                    <div class="h-10 w-10 rounded-full flex items-center justify-center" :class="confirmAction === 'approved' ? 'bg-emerald-400' : 'bg-rose-400'">
+                                    <div class="h-10 w-10 rounded-full flex items-center justify-center" :class="confirmAction === 'approved' ? 'bg-emerald-400' : confirmAction === 'rejected' ? 'bg-rose-400' : 'bg-amber-400'">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#edf1edff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-check-icon lucide-file-check"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="m9 15 2 2 4-4"/></svg>
                                     </div>
                                     <div>
-                                        <p class="text-lg font-semibold text-slate-900" x-text="confirmAction === 'approved' ? 'Approve submission?' : 'Reject submission?'" ></p>
+                                        <p class="text-lg font-semibold text-slate-900"
+                                            x-text="confirmAction === 'approved' ? 'Approve submission?' : confirmAction === 'rejected' ? 'Reject submission?' : 'Mark as pending?'" ></p>
                                     </div>
                                 </div>
                                 <button type="button" class="rounded-full p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100" @click="cancelConfirm()">
@@ -308,11 +315,22 @@
                             </div>
                             <div class="px-6 py-5 flex flex-col gap-4">
                                 <div class="flex items-center gap-2 text-sm text-slate-600">
-                                    <p class="text-md text-slate-700">This will update the status of submitted PDS.</p>
+                                    <p class="text-md text-slate-700" x-text="confirmAction === 'approved' ? 'This will approve the submitted PDS.' : confirmAction === 'rejected' ? 'This will reject the submitted PDS.' : 'This will mark the submitted PDS as pending.'"></p>
                                 </div>
+                                <template x-if="confirmAction === 'rejected'">
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-sm font-medium text-slate-700">Rejection note</label>
+                                        <textarea class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-rose-500 focus:ring-rose-200"
+                                            rows="3" placeholder="Add a short reason for rejection"
+                                            x-model.trim="rejectNote"></textarea>
+                                    </div>
+                                </template>
                                 <div class="flex gap-3">
                                     <button type="button" class="flex-1 rounded-xl border px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300" @click="cancelConfirm()">Cancel</button>
-                                    <button type="button" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm" :class="confirmAction === 'approved' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'" @click="confirmStatus()" x-text="confirmAction === 'approved' ? 'Confirm' : 'Reject'"></button>
+                                    <button type="button" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                                        :class="confirmAction === 'approved' ? 'bg-emerald-600 hover:bg-emerald-500' : confirmAction === 'rejected' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-amber-600 hover:bg-amber-500'"
+                                        @click="confirmStatus()"
+                                        x-text="confirmAction === 'approved' ? 'Confirm' : confirmAction === 'rejected' ? 'Reject' : 'Mark Pending'"></button>
                                 </div>
                             </div>
                         </div>

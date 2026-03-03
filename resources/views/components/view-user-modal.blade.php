@@ -3,6 +3,7 @@
     'name',
     'key' => null,
     'width' => '2xl',
+    'units' => [],
 ])
 
 <x-modal :name="$name" :max-width="$width">
@@ -10,6 +11,7 @@
         x-data="{
             key: @js($key ?? $name),
             employee: @js($employee),
+            units: @js($units),
             working: {},
             init() { this.reset(); },
             reset() { this.working = JSON.parse(JSON.stringify(this.employee)); },
@@ -61,10 +63,10 @@
             typeClass() { return this.working.type === 'Permanent Employee' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'; },
         }">
             <div class="flex items-center gap-4">
-                <div class="relative h-20 w-20">
+                <div class="relative" style="height: 120px; width: 120px;">
                     <img :src="working.avatar"
                         :alt="working.name + ' avatar'" 
-                        class="h-20 w-20 rounded-full object-cover shadow">
+                        class="rounded-full object-cover shadow" style="height: 120px; width: 120px;">
                     
                 </div>
                 <div class="space-y-2 flex-1">
@@ -72,31 +74,37 @@
                     <input type="text" class="px-2 py-1 text-2xl font-semibold text-slate-900 border-slate-200 rounded-xl p-0 focus:ring-0 focus:outline-none uppercase"
                         x-model="working.name"
                         x-on:input="working.name = (working.name || '').toUpperCase()" />
+                </div>
+                <div class="flex items-center gap-2 text-sm text-slate-500">
                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="typeClass()" x-text="working.type"></span>
                 </div>
                 <div class="flex items-center gap-2 text-sm text-slate-500">
-                    <span x-text="working.unit"></span>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" x-text="working.unit"></span>
                 </div>
             </div>
         </div>
 
         <div class="grid gap-4 text-sm text-slate-700">
-            <label class="flex flex-col gap-1">
-                <span class="font-semibold text-slate-500">Unit</span>
-                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500 uppercase" 
-                x-model="working.unit"
-                x-on:input="working.unit = (working.unit || '').toUpperCase()" />
-            </label>
+            
 
-            <label class="flex flex-col gap-1">
-                <span class="font-semibold text-slate-500">Email</span>
-                <input type="email" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.email" />
-            </label>
+            <div class="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                <label class="flex flex-col gap-1">
+                    <span class="font-semibold text-slate-500">Email</span>
+                    <input type="email" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.email" />
+                </label>
 
-            <label class="flex flex-col gap-1">
-                <span class="font-semibold text-slate-500">Phone</span>
-                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.phone" />
-            </label>
+                <label class="flex flex-col gap-1">
+                    <span class="font-semibold text-slate-500">Phone</span>
+                    <input type="tel"
+                        class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+                        x-model="working.phone"
+                        maxlength="11"
+                        pattern="\d{11}"
+                        inputmode="numeric"
+                        x-on:input="working.phone = (working.phone || '').replace(/[^0-9]/g, '').slice(0, 11)"
+                    />
+                </label>
+            </div>
 
             <div class="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <label class="flex flex-col gap-1">
@@ -121,6 +129,17 @@
                 <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500 uppercase" x-model="working.location"
                 x-on:input="working.location = (working.location || '').toUpperCase()" />
             </label>
+
+            <label class="flex flex-col gap-1">
+                <span class="font-semibold text-slate-500">Unit/Division/Section</span>
+                <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.unit">
+                    <option value="" disabled>Select Unit/Division/Section</option>
+                    <template x-for="option in units" :key="option">
+                        <option :value="option" x-text="option"></option>
+                    </template>
+                </select>
+            </label>
+
         </div>
 
         <template x-if="saveError">

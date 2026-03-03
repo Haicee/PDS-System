@@ -15,10 +15,12 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $units = config('units.list', []);
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'gender' => ['required', 'in:Male,Female'],
-            'unit' => ['required', 'string', 'max:255'],
+            'unit' => ['required', Rule::in($units)],
             'phone' => ['required', 'digits:11'],
             'email' => [
                 'required',

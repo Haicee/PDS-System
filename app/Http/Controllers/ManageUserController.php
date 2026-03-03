@@ -6,14 +6,20 @@ use App\Models\User;
 use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\Rule;
+use App\Notifications\EmployeeInfoUpdated;
 
 class ManageUserController extends Controller
 {
     // profile
     public function index(Request $request)
         {
-            $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned')
+            $units = config('units.list', []);
+
+            $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned', 'created_at')
                 ->with('profile')
+                ->latest('created_at')
                 ->get()
                 ->map(function (User $user) {
                     $avatar = $this->avatarUrl($user->profile?->profile);
@@ -28,21 +34,24 @@ class ManageUserController extends Controller
                         'type' => $user->type,
                         'status' => $user->status,
                         'location' => $user->location_assigned,
+                        'created_at' => $user->created_at?->toIso8601String(),
                         'avatar' => $avatar,
                     ];
                 })
                 ->values();
 
-            return view('manage-user', compact('employees'));
+            return view('manage-user', compact('employees', 'units'));
         }
 
     
         // update
     public function update(Request $request, User $user)
     {
+        $units = config('units.list', []);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'unit' => ['required', 'string', 'max:255'],
+            'unit' => ['required', Rule::in($units)],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'phone' => ['required', 'digits:11'],
             'type' => ['required', 'in:Permanent Employee,Job Order'],
@@ -50,13 +59,53 @@ class ManageUserController extends Controller
             'location_assigned' => ['required', 'string', 'max:255'],
         ]);
 
+        $original = $user->only(['name','unit','email','phone','type','status','location_assigned']);
+
         $user->fill($data);
         $user->save();
+
+        $changed = [];
+        foreach ($data as $key => $value) {
+            $origVal = $original[$key] ?? null;
+            if ($origVal !== $value) {
+                $changed[] = match ($key) {
+                    'name' => 'Name',
+                    'unit' => 'Unit/Division/Section',
+                    'email' => 'Email',
+                    'phone' => 'Phone',
+                    'type' => 'Type',
+                    'status' => 'Status',
+                    'location_assigned' => 'Location Assigned',
+                    default => $key,
+                };
+            }
+        }
+
+        if (!empty($changed)) {
+            Notification::send($user, new EmployeeInfoUpdated($user, $changed));
+            $this->trimNotificationHistory($user);
+        }
 
         return response()->json([
             'message' => 'User updated',
             'user' => $user->only(['id','name','gender','unit','email','phone','type','status','location_assigned']),
         ]);
+    }
+
+    private function trimNotificationHistory($notifiable, int $limit = 20): void
+    {
+        $query = $notifiable->notifications()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->skip($limit);
+
+        do {
+            $excessIds = $query->take(500)->pluck('id');
+            if ($excessIds->isEmpty()) {
+                break;
+            }
+            $notifiable->notifications()->whereIn('id', $excessIds)->delete();
+        } while ($excessIds->count() === 500);
     }
 
     // delete all account info

@@ -25,7 +25,7 @@
             <div class="bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-lg p-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="space-y-2">
                     <p class="text-sm uppercase tracking-wide text-white/80">Employee workspace</p>
-                    <h1 class="text-2xl lg:text-3xl font-semibold">Welcome choi {{ auth()->user()->name ?? 'Employee' }}</h1>
+                    <h1 class="text-2xl lg:text-3xl font-semibold">Welcome {{ auth()->user()->name ?? 'Employee' }}</h1>
                     <p class="text-white/80 text-sm lg:text-base">Manage your Personal Data Sheet, track review status, and upload supporting documents.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">

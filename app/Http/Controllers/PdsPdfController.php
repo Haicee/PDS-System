@@ -169,16 +169,17 @@ return compact(
 
     private function makeShot(string $html): Browsershot
     {
-        // Browsershot forbids HTML containing file://. Strip any accidental file:// or file:/ references (including backslashes) to prevent HtmlIsNotAllowedToContainFile.
-       $html = preg_replace(
-    [
-        '#file://[\w\.\-\\\/:%]+#i',   // file://...
-        '#file:/[\w\.\-\\\/:%]+#i',    // file:/...
-        '#file:\\\\[\w\.\-\\\/:%]+#i', // file:\...
-    ],
-    '',
-    $html ?? ''
-);
+        // Browsershot forbids HTML containing file://. Strip any accidental file:// or file:/ references (including backslashes/spaces) to prevent HtmlIsNotAllowedToContainFile.
+        $html = $html ?? '';
+
+        // Fast removal of protocol markers (handles variants like file:///, file:\, etc.)
+        $html = str_ireplace([
+            'file:///', 'file:\\', 'file://', 'file:/', 'file:\\/', 'file:\\', 'file:\\//'
+        ], '', $html);
+
+        // Extra guard: remove any remaining file: tokens up to the next whitespace/quote/angle bracket
+        $html = preg_replace('#file:[^\s\"\
+\n<>]+#i', '', $html);
 
         $chromePath = env('BROWSERSHOT_CHROME_PATH', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
         $nodePath = env('BROWSERSHOT_NODE_PATH', 'C:\\Program Files\\nodejs\\node.exe');

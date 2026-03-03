@@ -97,7 +97,7 @@
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
                             <tr>
                                 <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Unit</th>
+                                <th class="px-6 py-3">Unit/Division/Section</th>
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
                                 <th class="px-6 py-3">Place of Assignment</th>
@@ -142,7 +142,7 @@
             <div class="bg-white shadow-sm sm:rounded-2xl border border-slate-100">
                 <div class="px-8 py-4 flex items-center justify-between border-b border-slate-100">
                     <div>
-                        <p class="text-base font-semibold text-slate-900">"History of admin activity (Sample table for recent history of admin activity, need jud e connect database sori!)"</p>
+                        <p class="text-base font-semibold text-slate-900">Admin History Activity</p>
                         <p class="text-sm text-slate-500">Track recent activity</p>
                     </div>
                     <span class="text-sm text-slate-500 font-semibold">Updated {{ now()->format('M d, Y') }}</span>
@@ -153,7 +153,7 @@
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
                             <tr>
                                 <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Unit</th>
+                                <th class="px-6 py-3">Unit/Division/Section</th>
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
                                 <th class="px-6 py-3">Place of Assignment</th>
