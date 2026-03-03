@@ -21,6 +21,7 @@ use App\Http\Controllers\PdsController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminProfileController;
+use App\Http\Controllers\NotificationController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -30,6 +31,14 @@ Route::get('/', function () {
 Route::get('/employee', [EmployeeController::class, 'dashboard'])
     ->middleware(['auth:web'])
     ->name('employee.dashboard');
+
+// Notifications (admin/web authenticated)
+Route::middleware(['auth:admin,web'])->group(function () {
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])
+        ->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
+        ->name('notifications.readAll');
+});
 
 // Dashboard Route
 Route::get('/dashboard', [DashboardController::class, 'index'])

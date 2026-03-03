@@ -6,11 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\RegistrationUser;
 use App\Models\UserProfile;
 use App\Models\User;
+use App\Models\AdminUser;
+use App\Notifications\EmployeeRegistered;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -22,6 +26,25 @@ class RegisteredUserController extends Controller
     public function create(): View
     {
         return view('auth.register');
+    }
+
+    private function trimNotificationHistory(Collection $notifiables, int $limit = 20): void
+    {
+        foreach ($notifiables as $notifiable) {
+            $query = $notifiable->notifications()
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->skip($limit);
+
+            // Delete in small chunks to avoid dialect quirks
+            do {
+                $excessIds = $query->take(500)->pluck('id');
+                if ($excessIds->isEmpty()) {
+                    break;
+                }
+                $notifiable->notifications()->whereIn('id', $excessIds)->delete();
+            } while ($excessIds->count() === 500);
+        }
     }
 
     /**
@@ -77,6 +100,16 @@ class RegisteredUserController extends Controller
             'name' => $user->name,
             'profile' => $path,
         ]);
+
+        // Notify all admins about the new employee registration
+        $adminUsers = AdminUser::all();
+        $adminsFromUsersTable = User::where('role', 'admin')->get();
+        $recipients = $adminUsers->concat($adminsFromUsersTable);
+
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new EmployeeRegistered($user));
+            $this->trimNotificationHistory($recipients);
+        }
 
         event(new Registered($user));
 

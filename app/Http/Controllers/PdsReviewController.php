@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\PdsSubmission;
+use App\Notifications\PdsStatusUpdated;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class PdsReviewController extends Controller
 {
@@ -44,6 +46,11 @@ class PdsReviewController extends Controller
         $submission->status = $request->status;
         $submission->save();
 
+        if ($submission->user) {
+            Notification::send($submission->user, new PdsStatusUpdated($submission));
+            $this->trimNotificationHistory($submission->user);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Status updated successfully',
@@ -53,5 +60,21 @@ class PdsReviewController extends Controller
                 'status_key' => strtolower($submission->status),
             ],
         ]);
+    }
+
+    private function trimNotificationHistory($notifiable, int $limit = 20): void
+    {
+        $query = $notifiable->notifications()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->skip($limit);
+
+        do {
+            $excessIds = $query->take(500)->pluck('id');
+            if ($excessIds->isEmpty()) {
+                break;
+            }
+            $notifiable->notifications()->whereIn('id', $excessIds)->delete();
+        } while ($excessIds->count() === 500);
     }
 }

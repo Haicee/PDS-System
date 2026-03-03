@@ -34,13 +34,82 @@
 
             <!-- Settings Dropdown + Notifications -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-3">
-                <button type="button" class="relative inline-flex items-center justify-center rounded-full p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                    </svg>
-                    <span class="sr-only">Notifications</span>
-                </button>
+                @php
+                    $unreadCount = Auth::user()->unreadNotifications()->count();
+                    $recentNotifications = Auth::user()->notifications()->latest()->take(20)->get();
+                @endphp
+
+@php
+    $currentAdminId = optional(Auth::guard('admin')->user())->id ?? Auth::id();
+@endphp
+<script>
+    window.currentAdminId = {{ $currentAdminId ?? 'null' }};
+</script>
+
+                <x-dropdown align="right" width="0">
+                    <x-slot name="trigger">
+                        <button type="button" class="relative inline-flex items-center justify-center rounded-full p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                            </svg>
+                            <span id="notification-badge" data-count="{{ $unreadCount }}" class="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold px-1.5 py-0.5 min-w-[18px] {{ $unreadCount > 0 ? '' : 'hidden' }}">{{ $unreadCount }}</span>
+                            <span class="sr-only">Notifications</span>
+                        </button>
+                    </x-slot>
+
+                    <x-slot name="content">
+                        <div class="w-[400px] max-w-[95vw] bg-white rounded-xl shadow-lg overflow-hidden">
+                            <div class="px-5 py-3 flex items-center justify-between gap-3 border-b border-gray-100">
+                                <div class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                                    <div class="text-base font-semibold text-gray-900">Notifications</div>
+                                </div>
+                                @if($unreadCount > 0)
+                                    <form method="POST" action="{{ route('notifications.readAll') }}">
+                                        @csrf
+                                        <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">Mark All as Read</button>
+                                    </form>
+                                @endif
+                            </div>
+
+                            <div id="notification-list" class="max-h-[460px] overflow-y-auto" x-on:click.stop>
+                            @forelse($recentNotifications as $notification)
+                                @php
+                                    $data = $notification->data ?? [];
+                                    $title = $data['title'] ?? 'Notification';
+                                    $message = $data['message'] ?? '';
+                                    $link = $data['link'] ?? null;
+                                    $isUnread = is_null($notification->read_at);
+                                    $pill = $isUnread ? 'bg-indigo-600' : 'bg-gray-300';
+                                    $initial = strtoupper(mb_substr($data['name'] ?? $title ?? 'N', 0, 1));
+                                @endphp
+                                    <div class="px-6 py-5 {{ $isUnread ? 'bg-indigo-50' : 'bg-white' }} hover:bg-indigo-50/70 transition" data-notification-id="{{ $notification->id }}">
+                                        <div class="flex items-start gap-4">
+
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-start justify-between gap-3">
+                                                    <div class="text-sm font-semibold text-gray-900 leading-snug">{{ $title }}</div>
+                                                    <span class="text-[11px] text-gray-400 shrink-0">{{ $notification->created_at->diffForHumans() }}</span>
+                                                </div>
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="text-xs text-gray-600 mt-1 leading-relaxed">{{ $message }}</div>
+                                                    <div class="mt-3 flex items-center gap-4 text-xs font-semibold">
+                                                        @if($link)
+                                                            <a href="{{ $link }}" onclick="return viewNotification(event, '{{ $notification->id }}', '{{ $link }}')" class="text-indigo-600 hover:text-indigo-800">View</a>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                <div class="px-6 py-8 text-sm text-gray-500 text-center">No notifications yet.</div>
+                            @endforelse
+                            </div>
+                        </div>
+                    </x-slot>
+                </x-dropdown>
 
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">

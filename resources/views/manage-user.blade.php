@@ -212,17 +212,22 @@
                             })
                             .sort((a, b) => {
                                 const dir = this.sortDir === 'asc' ? 1 : -1;
-                                const key = this.sortKey;
+                                const key = ['name', 'unit', 'email', 'phone', 'created_at'].includes(this.sortKey) ? this.sortKey : 'name';
 
-                                if (key === 'status') {
-                                    const order = { active: 1, inactive: 2 };
-                                    const av = order[norm(a.status)] ?? 99;
-                                    const bv = order[norm(b.status)] ?? 99;
-                                    if (av !== bv) return (av - bv) * dir;
+                                const as = a[key];
+                                const bs = b[key];
+
+                                // Date sort for created_at when available
+                                if (key === 'created_at') {
+                                    const at = Number(new Date(as));
+                                    const bt = Number(new Date(bs));
+                                    if (Number.isFinite(at) && Number.isFinite(bt) && at !== bt) {
+                                        return (at - bt) * dir;
+                                    }
                                 }
 
-                                const av = norm(a[key]);
-                                const bv = norm(b[key]);
+                                const av = norm(as);
+                                const bv = norm(bs);
                                 const primary = av.localeCompare(bv);
                                 if (primary !== 0) return primary * dir;
 
@@ -234,8 +239,8 @@
                         this.search = '';
                         this.filterStatus = '';
                         this.filterType = '';
-                        this.sortKey = 'name';
-                        this.sortDir = 'asc';
+                        this.sortKey = 'created_at';
+                        this.sortDir = 'desc';
                     },
                     removeEmployeeById(id) {
                         const targetId = Number(id);
@@ -262,8 +267,9 @@
                         <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                             <option value="created_at">Sort: Date</option>
                             <option value="name">Sort: Name</option>
-                            <option value="department">Sort: Department</option>
-                            <option value="status">Sort: Status</option>
+                            <option value="unit">Sort: Unit/Division/Section</option>
+                            <option value="email">Sort: Email</option>
+                            <option value="phone">Sort: Phone</option>
                         </select>
                         <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
                             x-on:click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">

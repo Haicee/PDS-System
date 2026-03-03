@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Collection;
+use App\Models\AdminUser;
+use App\Notifications\PdsSubmitted;
 use Illuminate\Support\Str;
 use App\Models\PdsSubmission;
 use App\Models\User;
@@ -13,6 +17,24 @@ use App\Models\PdsDraft;
 
 class PdsSubmissionController extends Controller
 {
+    private function trimNotificationHistory(Collection $notifiables, int $limit = 20): void
+    {
+        foreach ($notifiables as $notifiable) {
+            $query = $notifiable->notifications()
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->skip($limit);
+
+            do {
+                $excessIds = $query->take(500)->pluck('id');
+                if ($excessIds->isEmpty()) {
+                    break;
+                }
+                $notifiable->notifications()->whereIn('id', $excessIds)->delete();
+            } while ($excessIds->count() === 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $userId = Auth::id();
@@ -395,6 +417,16 @@ class PdsSubmissionController extends Controller
         });
 
         session()->forget('pds');
+
+        // Notify admins about the PDS submission
+        $adminUsers = AdminUser::all();
+        $adminsFromUsersTable = User::where('role', 'admin')->get();
+        $recipients = $adminUsers->concat($adminsFromUsersTable);
+
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new PdsSubmitted(User::find($userId)));
+            $this->trimNotificationHistory($recipients);
+        }
 
         return back()->with('status', 'PDS saved');
     }
