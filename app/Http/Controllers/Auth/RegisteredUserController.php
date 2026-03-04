@@ -119,6 +119,11 @@ class RegisteredUserController extends Controller
         session()->forget(['pds', 'pds_owner']);
         session(['pds_owner' => $user->id]);
 
+        // Require email verification before proceeding
+        if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice')->with('status', 'verification-link-sent');
+        }
+
         return $user->role === 'employee'
             ? redirect('/employee')
             : redirect(route('dashboard', absolute: false));

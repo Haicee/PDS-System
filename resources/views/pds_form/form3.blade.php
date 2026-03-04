@@ -1,6 +1,6 @@
 <x-app-layout>
 <div id="autosaveOverlay3" class="autosave-overlay hidden">Saving…</div>
-<form id="pds-form3" method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
+<form id="pds-form3" method="POST" action="{{ route('pds.saveStep', [3], false) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
         <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
@@ -507,7 +507,7 @@
                 };
                 const send = () => {
                     const formData = new FormData(form);
-                    fetch('{{ route('pds.autosave') }}', {
+                    fetch('{{ route('pds.autosave', [], false) }}', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -561,7 +561,7 @@
             // Persist merged cache once so a fast refresh keeps latest values
             saveCache();
 
-            fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
+            fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.ok ? r.json() : null)
                 .then(json => {
                     if (!json || !json.data) return;

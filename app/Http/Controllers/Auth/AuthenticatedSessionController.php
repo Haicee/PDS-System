@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Otp;
 use App\Models\PdsDraft;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\View\View;
 
@@ -30,31 +34,44 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Prefer admin guard if authenticated there
-        if (Auth::guard('admin')->check()) {
+        // Identify authenticated guard and user
+        $guard = Auth::guard('admin')->check() ? 'admin' : 'web';
+        $user = Auth::guard($guard)->user();
+
+        // Require verified email for users that implement it
+        if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+            return redirect()->route('verification.notice')->with('status', 'verification-link-sent');
+        }
+
+        // Skip OTP for privileged admin roles
+        $otpExemptAdminRoles = ['main admin', 'admin user'];
+        if ($guard === 'admin' && in_array(strtolower($user->role ?? ''), $otpExemptAdminRoles, true)) {
             return redirect()->intended(route('dashboard', absolute: false));
         }
 
-        // Reset any stale pds session data before hydrating for this user
-        session()->forget(['pds', 'pds_owner']);
+        // Generate and send OTP
+        $code = rand(100000, 999999);
+        Otp::updateOrCreate(
+            ['email' => $user->email],
+            ['code' => $code, 'expires_at' => Carbon::now()->addMinutes(3)]
+        );
 
-        $user = Auth::guard('web')->user();
+        Mail::raw("Your OTP code is: $code", function ($message) use ($user) {
+            $message->to($user->email)->subject('Your OTP Code');
+        });
 
-        // hydrate per-user pds session cache from persisted draft
-        if ($user) {
-            $draft = PdsDraft::where('user_id', $user->id)->first();
-            if ($draft && $draft->data) {
-                session(['pds' => $draft->data, 'pds_owner' => $user->id]);
-            } else {
-                session()->forget('pds');
-            }
-        }
+        // Stage OTP session and log out until verification
+        $request->session()->put('otp_pending', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'guard' => $guard,
+            'redirect' => $user?->role === 'employee' ? '/employee' : route('dashboard', absolute: false),
+        ]);
 
-        if ($user?->role === 'employee') {
-            return redirect('/employee');
-        }
+        Auth::guard($guard)->logout();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->route('otp.show')->with('status', 'We sent a one-time passcode to your email.');
     }
 
     /**

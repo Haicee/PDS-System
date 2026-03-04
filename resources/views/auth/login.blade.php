@@ -11,7 +11,7 @@
                 <p class="text-center text-sm text-slate-500">Use your official BFAR email account to continue.</p>
             </div>
 
-            <form class="space-y-6" method="POST" action="{{ route('login') }}">
+            <form class="space-y-6" method="POST" action="{{ route('login', [], false) }}">
                 @csrf
 
                 <!-- Email Address -->

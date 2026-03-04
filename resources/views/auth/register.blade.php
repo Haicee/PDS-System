@@ -7,7 +7,7 @@
                 <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>
 
-            <form class="space-y-6" method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('register', [], false) }}" class="space-y-6" enctype="multipart/form-data">
                 @csrf
 
                 <!-- Name -->

@@ -12,10 +12,10 @@ const reverbConfig = {
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY || 'localkey',
     wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
-    wsPort: import.meta.env.VITE_REVERB_PORT || 6001,
-    wssPort: import.meta.env.VITE_REVERB_PORT || 6001,
-    forceTLS: false,
-    enabledTransports: ['ws'],
+    wsPort: import.meta.env.VITE_REVERB_PORT || 443,
+    wssPort: import.meta.env.VITE_REVERB_PORT || 443,
+    forceTLS: true,
+    enabledTransports: ['wss'],
 };
 
 window.Echo = new Echo(reverbConfig);

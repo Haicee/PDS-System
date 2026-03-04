@@ -1,7 +1,7 @@
 <x-app-layout>
  <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">    
 <div id="autosaveOverlay" class="autosave-overlay hidden">Saving…</div>
-<form id="pds-form1" method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
+<form id="pds-form1" method="POST" action="{{ route('pds.saveStep', [1], false) }}" enctype="multipart/form-data">
     @csrf
     <style>
         /* Print-friendly, spreadsheet-like grid */
@@ -3079,7 +3079,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const formData = new FormData(form);
       appendSingleSelectGroups(formData);
       console.log('Auto-saving to server...');
-      fetch('{{ route('pds.autosave') }}', {
+      fetch('{{ route('pds.autosave', [], false) }}', {
         method: 'POST',
         headers: {
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -3121,10 +3121,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let hydrated = true; // allow immediate caching even before hydration completes
 
+  let hasUserInput = false;
+
   const persist = () => {
     console.log('Persist function called');
     saveCache();
-    autoSaveToServer();
+    if (hasUserInput) {
+      autoSaveToServer();
+    }
   };
 
   // Expose persist so add/remove buttons can trigger it
@@ -3135,8 +3139,7 @@ document.addEventListener('DOMContentLoaded', () => {
   hydrated = true;
   // Persist merged cache once so a fast refresh keeps latest values
   saveCache();
-  // Push hydrated values to server immediately so data survives logout/localStorage clears
-  autoSaveToServer();
+  // Do not auto-save to server until the user actually interacts
   updateSignaturePreviewFromInputs();
 
   // Debug: Check if form element exists
@@ -3171,10 +3174,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   form.addEventListener('input', (e) => {
     console.log('Form input event triggered on:', e.target.name, e.target.type);
+    hasUserInput = true;
     persist();
   });
   form.addEventListener('change', (e) => {
     console.log('Form change event triggered on:', e.target.name, e.target.type);
+    hasUserInput = true;
     persist();
   });
 

@@ -429,7 +429,7 @@
           @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
           <table class="border-collapse text-xs border-3 mt-2 border-2 mb-2 w-[11.6cm]" style="margin-left: 122px;">
             <tr>
-              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative p-1">
+              <td class="h-[2.74cm] border-black text-center align-middle italic text-red-600 relative p-1">
                 @if($signatureUrl)
                   <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
                 @else
