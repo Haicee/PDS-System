@@ -681,6 +681,7 @@ Route::get('/otp/resend', [OtpController::class, 'resend'])
     Route::get('/otp', [OtpController::class, 'show'])->name('otp.show');
     Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify');
     Route::post('/otp/resend', [OtpController::class, 'resend'])->name('otp.resend');
+    Route::post('/otp/cancel', [OtpController::class, 'cancel'])->name('otp.cancel');
 });
 
 require __DIR__.'/auth.php';

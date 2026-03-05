@@ -90,7 +90,9 @@
     <script>
         (() => {
             const statusUrl = '{{ route('verification.status', [], false) }}';
-            const CHECK_INTERVAL_MS = 2000;
+            const buildStatusUrl = () => `${statusUrl}?t=${Date.now()}`; // bust caches
+            const CHECK_INTERVAL_MS = 300;
+            const REDIRECT_DELAY_MS = 3000;
             const RESEND_KEY = 'verify_resend_at';
             const COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
             const resendBtn = document.getElementById('resend-btn');
@@ -102,11 +104,16 @@
             const errorModal = document.getElementById('verify-error-modal');
             const dismissErrorBtn = document.getElementById('dismiss-verify-error');
 
+            let redirecting = false;
+            let pollTimer = null;
+
             async function checkVerification() {
+                if (redirecting) return;
                 try {
-                    const res = await fetch(statusUrl, {
+                    const res = await fetch(buildStatusUrl(), {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         credentials: 'same-origin',
+                        cache: 'no-store',
                     });
                     if (res.status === 401) {
                         console.warn('Verification status check: unauthenticated. Please stay logged in on this page.');
@@ -115,15 +122,26 @@
                     if (!res.ok) return;
                     const data = await res.json();
                     if (data.verified) {
+                        redirecting = true;
+                        if (pollTimer) clearInterval(pollTimer);
                         const target = data.redirect || '{{ route('dashboard', [], false) }}';
                         const overlay = document.createElement('div');
-                        overlay.className = 'fixed inset-0 z-20 flex items-center justify-center bg-slate-900/70 text-white text-center p-6';
-                        overlay.innerHTML = '<h3 class="text-xl font-semibold">Redirecting...</h3>';
+                        overlay.className = 'fixed inset-0 z-20 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm text-white text-center p-6 transition-opacity duration-500 ease-out opacity-0';
+                        overlay.innerHTML = `
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="h-14 w-14 rounded-full border-3 border-white/30 border-t-white animate-spin"></div>
+                                <div class="space-y-1">
+                                    <h3 class="text-xl font-semibold">Redirecting...</h3>
+                                </div>
+                            </div>
+                        `;
                         document.body.appendChild(overlay);
+
+                        requestAnimationFrame(() => overlay.classList.remove('opacity-0'));
 
                         setTimeout(() => {
                             window.location.href = target;
-                        }, 800);
+                        }, REDIRECT_DELAY_MS);
                     }
                 } catch (err) {
                     console.error('Verification status check failed', err);
@@ -183,7 +201,7 @@
 
             // Poll for verification to auto-redirect main page
             checkVerification();
-            setInterval(checkVerification, CHECK_INTERVAL_MS);
+            pollTimer = setInterval(checkVerification, CHECK_INTERVAL_MS);
         })();
     </script>
 </x-guest-layout>

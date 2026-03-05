@@ -63,38 +63,62 @@ class OtpController extends Controller
     }
 
     public function resend(Request $request)
-{
-    $pending = $request->session()->get('otp_pending');
+    {
+        $pending = $request->session()->get('otp_pending');
 
-    if (! $pending) {
-        return response()->json(['message' => 'No OTP session found'], 400);
+        if (! $pending) {
+            return response()->json(['message' => 'No OTP session found'], 400);
+        }
+
+        $userId = $pending['user_id'] ?? null;
+        $guard = $pending['guard'] ?? 'web';
+
+        if (! $userId) {
+            return response()->json(['message' => 'Invalid OTP session'], 400);
+        }
+
+        // Fetch the user
+        $user = Auth::guard($guard)->getProvider()->retrieveById($userId);
+        if (! $user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Generate new OTP
+        $code = rand(100000, 999999);
+        Otp::updateOrCreate(
+            ['email' => $user->email],
+            ['code' => $code, 'expires_at' => \Carbon\Carbon::now()->addMinutes(3)]
+        );
+
+        // Send OTP via email
+        \Mail::raw("Your OTP code is: $code", function ($message) use ($user) {
+            $message->to($user->email)->subject('Your OTP Code');
+        });
+
+        return response()->json(['message' => 'OTP resent successfully']);
     }
 
-    $userId = $pending['user_id'] ?? null;
-    $guard = $pending['guard'] ?? 'web';
+    /**
+     * Cancel OTP: clear pending session, log out, and invalidate OTP.
+     */
+    public function cancel(Request $request)
+    {
+        $pending = $request->session()->get('otp_pending');
 
-    if (! $userId) {
-        return response()->json(['message' => 'Invalid OTP session'], 400);
+        // Clear session state
+        $request->session()->forget('otp_pending');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        // Logout both guards to be safe
+        Auth::guard('web')->logout();
+        Auth::guard('admin')->logout();
+
+        // Remove any stored OTP for this email
+        if ($pending && ! empty($pending['email'])) {
+            Otp::where('email', $pending['email'])->delete();
+        }
+
+        return redirect()->route('login')->with('status', 'Session ended. Please sign in again.');
     }
-
-    // Fetch the user
-    $user = Auth::guard($guard)->getProvider()->retrieveById($userId);
-    if (! $user) {
-        return response()->json(['message' => 'User not found'], 404);
-    }
-
-    // Generate new OTP
-    $code = rand(100000, 999999);
-    Otp::updateOrCreate(
-        ['email' => $user->email],
-        ['code' => $code, 'expires_at' => \Carbon\Carbon::now()->addMinutes(3)]
-    );
-
-    // Send OTP via email
-    \Mail::raw("Your OTP code is: $code", function ($message) use ($user) {
-        $message->to($user->email)->subject('Your OTP Code');
-    });
-
-    return response()->json(['message' => 'OTP resent successfully']);
-}
 }
