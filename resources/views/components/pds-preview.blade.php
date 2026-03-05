@@ -50,7 +50,7 @@
                         <p class="font-medium" x-text="selected?.email ?? '—'"></p>
                     </div>
                     <div>
-                        <p class="text-xs uppercase text-slate-400 font-semibold">Unit</p>
+                        <p class="text-xs uppercase text-slate-400 font-semibold">Unit</p>  
                         <p class="font-medium" x-text="selected?.unit ?? '—'"></p>
                     </div>
                     <div class="flex flex-col gap-2">

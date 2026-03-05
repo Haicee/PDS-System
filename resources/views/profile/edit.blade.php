@@ -15,18 +15,27 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg" x-data="{ editable: false }">
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg" x-data="{ editable: @json($editAllowed ?? false) }">
+                <form id="profile-request-form" method="POST" action="{{ route('profile.requestEdit') }}" class="hidden">
+                    @csrf
+                </form>
                 <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 lg:items-center">
                     <div class="max-w-1xl">
                         @include('profile.partials.update-profile-information-form')
                     </div>
 
                    <div class="flex flex-col items-end gap-16 lg:self-start p-4">
-                        <button type="button" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                            @click="editable = !editable">
-                            <span x-show="!editable">Edit Profile Request (testing)</span>
-                            <span x-show="editable">Lock Profile (testing)</span>
+                        <button type="submit" form="profile-request-form" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-60"
+                            @disabled(($editRequest?->status ?? null) === 'pending' || ($editRequest?->status ?? null) === 'approved')>
+                            @if(($editRequest?->status ?? null) === 'approved')
+                                Request Approved
+                            @elseif(($editRequest?->status ?? null) === 'pending')
+                                Request Pending
+                            @else
+                                Edit Profile Request
+                            @endif
                         </button>
+                        
 
                         <div x-data="{
                                 preview: @js($avatar ?? asset('images/avatar.jpg')),

@@ -3,7 +3,7 @@
         <section class="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur">
             <div class="mb-8 space-y-2">
                 <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
-                <h2 class="text-3xl font-semibold text-slate-900 text-center">Sign up for BFAR Portal</h2>
+                <h2 class="text-3xl font-semibold text-slate-900 text-center">Sign up for BFAR XII Portal</h2>
                 <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>
 
@@ -48,7 +48,7 @@
                 <div class="grid gap-6 md:grid-cols-2">
                     <!-- Type -->
                     <div>
-                        <label for="type" class="text-sm font-medium text-slate-700">Type</label>
+                        <label for="type" class="text-sm font-medium text-slate-700">Employee Status</label>
                         <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-search-icon lucide-user-round-search"><circle cx="10" cy="8" r="5"/><path d="M2 21a8 8 0 0 1 10.434-7.62"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.9-1.9"/></svg>  
                             <select id="type" name="type" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>
@@ -61,7 +61,7 @@
 
                     <!-- Gender -->
                     <div>
-                        <label for="gender" class="text-sm font-medium text-slate-700">Gender</label>
+                        <label for="gender" class="text-sm font-medium text-slate-700">Sex</label>
                         <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
                             <select id="gender" name="gender" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>

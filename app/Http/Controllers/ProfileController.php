@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\ProfileEditRequest;
 use App\Models\AdminUser;
 use App\Notifications\EmployeeProfileUpdated;
+use App\Notifications\ProfileEditRequested;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,11 +22,56 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
+        $user = $request->user();
+        $latestEditRequest = ProfileEditRequest::where('user_id', $user->id)
+            ->latest()
+            ->first();
+        $editAllowed = $latestEditRequest && $latestEditRequest->status === 'approved';
+
         return view('profile.edit', [
-            'user' => $request->user(),
-            'avatar' => $this->avatarUrl($request->user()?->profile?->profile),
+            'user' => $user,
+            'avatar' => $this->avatarUrl($user?->profile?->profile),
             'units' => config('units.list', []),
+            'editRequest' => $latestEditRequest,
+            'editAllowed' => $editAllowed,
         ]);
+    }
+
+    /**
+     * Create a profile edit request and notify admins.
+     */
+    public function requestEdit(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $existing = ProfileEditRequest::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        $editRequest = $existing ?? ProfileEditRequest::create([
+            'user_id' => $user->id,
+            'status' => 'pending',
+        ]);
+
+        $notification = new ProfileEditRequested($editRequest);
+        $admins = AdminUser::all();
+        $adminUsers = \App\Models\User::where('role', 'admin')->get();
+
+        if ($admins->isNotEmpty()) {
+            Notification::send($admins, $notification);
+            foreach ($admins as $admin) {
+                $this->trimNotificationHistory($admin);
+            }
+        }
+
+        if ($adminUsers->isNotEmpty()) {
+            Notification::send($adminUsers, $notification);
+            foreach ($adminUsers as $adminUser) {
+                $this->trimNotificationHistory($adminUser);
+            }
+        }
+
+        return Redirect::route('profile.edit')->with('status', 'profile-edit-requested');
     }
 
     /**
@@ -101,6 +148,20 @@ class ProfileController extends Controller
                     $this->trimNotificationHistory($adminUser);
                 }
             }
+        }
+
+        // Consume approved edit request (one-time edit window)
+        $latestApproved = ProfileEditRequest::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->latest()
+            ->first();
+        if ($latestApproved) {
+            $latestApproved->update([
+                'status' => 'rejected', // used/consumed
+                'remarks' => 'Edit window used on save',
+                'reviewed_at' => $latestApproved->reviewed_at ?? now(),
+                'reviewed_by' => $latestApproved->reviewed_by,
+            ]);
         }
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');

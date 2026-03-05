@@ -12,13 +12,22 @@
             deleteError: '',
             deleting: false,
 
+            viewUserId: {{ request('view_user') ? (int) request('view_user') : 'null' }},
+
             newEmployeeName: '',
             newEmployeeUnit: '',
             savingEmployee: false,
             employeeError: '',
             employeeFieldErrors: {},
             init() {
-                // reserved for future outer-level setup
+                if (this.viewUserId) {
+                    // wait a tick for modals to be registered
+                    setTimeout(() => this.openUserModalById(this.viewUserId), 50);
+                }
+            },
+            openUserModalById(id) {
+                if (!id) return;
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'employee-details-' + id }));
             },
             openEmployee() {
                 this.employeeError = '';

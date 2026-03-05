@@ -221,9 +221,8 @@
     </div>
   </td>
   <td rowspan="3" colspan="2"
-      class="border p-0 align-top bg-[#e7e7e7]">
+      style="background-color:#e7e7e7; border-top:1px solid black; padding:4px; vertical-align:top; font-size:20px;">
 
-    <div class="flex w-full h-full">
       
       <!-- LEFT TABLE -->
       <table class="bg-[#e7e7e7]" style="width:35%; border-right:1px solid #000;">
@@ -301,7 +300,6 @@
         </tr>
       </table>
 
-    </div>
   </td>
 
 

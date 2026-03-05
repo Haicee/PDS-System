@@ -59,7 +59,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <x-input-label for="gender" :value="__('Gender')" />
+                <x-input-label for="gender" :value="__('Sex')" />
                 <select id="gender" name="gender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required x-bind:disabled="!editable">
                     <option value="Male" {{ old('gender', $user->gender) === 'Male' ? 'selected' : '' }}>Male</option>
                 <option value="Female" {{ old('gender', $user->gender) === 'Female' ? 'selected' : '' }}>Female</option>
@@ -68,7 +68,7 @@
             </div>
 
             <div>
-                <x-input-label for="type" :value="__('Type')" />
+                <x-input-label for="type" :value="__('Employee Status')" />
                 <select id="type" name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required x-bind:disabled="!editable">
                     <option value="Permanent Employee" {{ old('type', $user->type) === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
                     <option value="Job Order" {{ old('type', $user->type) === 'Job Order' ? 'selected' : '' }}>Job Order</option>

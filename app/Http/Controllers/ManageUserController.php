@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\ProfileEditRequest;
 use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,9 @@ class ManageUserController extends Controller
                 ->get()
                 ->map(function (User $user) {
                     $avatar = $this->avatarUrl($user->profile?->profile);
+                    $latestEditRequest = ProfileEditRequest::where('user_id', $user->id)
+                        ->latest()
+                        ->first();
 
                     return [
                         'id' => $user->id,
@@ -36,6 +40,11 @@ class ManageUserController extends Controller
                         'location' => $user->location_assigned,
                         'created_at' => $user->created_at?->toIso8601String(),
                         'avatar' => $avatar,
+                        'edit_request' => $latestEditRequest ? [
+                            'id' => $latestEditRequest->id,
+                            'status' => $latestEditRequest->status,
+                            'remarks' => $latestEditRequest->remarks,
+                        ] : null,
                     ];
                 })
                 ->values();

@@ -22,6 +22,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileEditRequestController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -623,6 +624,7 @@ Route::post('/registration-users', function (Request $request) {
 Route::middleware('auth:admin,web')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/request-edit', [ProfileController::class, 'requestEdit'])->name('profile.requestEdit');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::post('/pds/submit', [PdsSubmissionController::class, 'store'])->name('pds.submit');
@@ -631,6 +633,12 @@ Route::middleware('auth:admin,web')->group(function () {
     ->name('pds.autosave');
     Route::get('/pds/draft', [PdsStepController::class, 'draft'])->name('pds.draft');
     Route::get('/pds/pdf', [PdsPdfController::class, 'download'])->name('pds.pdf');
+});
+
+// Profile edit requests (admin only)
+Route::middleware(['auth:admin'])->group(function () {
+    Route::post('/profile-edit-requests/{profileEditRequest}/approve', [ProfileEditRequestController::class, 'approve'])->name('profile-edit-requests.approve');
+    Route::post('/profile-edit-requests/{profileEditRequest}/reject', [ProfileEditRequestController::class, 'reject'])->name('profile-edit-requests.reject');
 });
 
 // Employee routes
