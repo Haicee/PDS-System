@@ -318,15 +318,48 @@ class PdsSubmissionController extends Controller
                 $edu = collect([$edu->first()]);
             }
 
-            // Dynamic education extras
-            $extraLevels = $req->input('education_extra_level', []);
-            $extraSchools = $req->input('education_extra_school_name', []);
-            $extraBasics = $req->input('education_extra_basic_education', []);
-            $extraFrom = $req->input('education_extra_from', []);
-            $extraTo = $req->input('education_extra_to', []);
-            $extraHighest = $req->input('education_extra_highest_level', []);
-            $extraYear = $req->input('education_extra_year_graduated', []);
-            $extraHonors = $req->input('education_extra_scholarship_acadhonors', []);
+            // Dynamic education extras (fallback to draft data if current request/session lacks them)
+            $draftExtras = $draftData ?? [];
+
+            $extraLevels = $req->input('education_extra_level');
+            if (empty($extraLevels) && isset($draftExtras['education_extra_level'])) {
+                $extraLevels = $draftExtras['education_extra_level'];
+            }
+
+            $extraSchools = $req->input('education_extra_school_name');
+            if (empty($extraSchools) && isset($draftExtras['education_extra_school_name'])) {
+                $extraSchools = $draftExtras['education_extra_school_name'];
+            }
+
+            $extraBasics = $req->input('education_extra_basic_education');
+            if (empty($extraBasics) && isset($draftExtras['education_extra_basic_education'])) {
+                $extraBasics = $draftExtras['education_extra_basic_education'];
+            }
+
+            $extraFrom = $req->input('education_extra_from');
+            if (empty($extraFrom) && isset($draftExtras['education_extra_from'])) {
+                $extraFrom = $draftExtras['education_extra_from'];
+            }
+
+            $extraTo = $req->input('education_extra_to');
+            if (empty($extraTo) && isset($draftExtras['education_extra_to'])) {
+                $extraTo = $draftExtras['education_extra_to'];
+            }
+
+            $extraHighest = $req->input('education_extra_highest_level');
+            if (empty($extraHighest) && isset($draftExtras['education_extra_highest_level'])) {
+                $extraHighest = $draftExtras['education_extra_highest_level'];
+            }
+
+            $extraYear = $req->input('education_extra_year_graduated');
+            if (empty($extraYear) && isset($draftExtras['education_extra_year_graduated'])) {
+                $extraYear = $draftExtras['education_extra_year_graduated'];
+            }
+
+            $extraHonors = $req->input('education_extra_scholarship_acadhonors');
+            if (empty($extraHonors) && isset($draftExtras['education_extra_scholarship_acadhonors'])) {
+                $extraHonors = $draftExtras['education_extra_scholarship_acadhonors'];
+            }
 
             $extraEdu = collect($extraLevels)->map(function ($level, $i) use ($userId, $extraSchools, $extraBasics, $extraFrom, $extraTo, $extraHighest, $extraYear, $extraHonors) {
                 return [

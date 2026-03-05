@@ -61,10 +61,12 @@ class EmailVerificationNotificationController extends Controller
         // Prefer web guard user (employee) if available
         $user = Auth::guard('web')->user() ?? $request->user();
 
-        // Refresh to pick up verification done in another browser/device
-        if ($user) {
-            $user->refresh();
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
         }
+
+        // Refresh to pick up verification done in another browser/device
+        $user->refresh();
 
         $verified = $user?->hasVerifiedEmail();
         $role = strtolower($user->role ?? '');

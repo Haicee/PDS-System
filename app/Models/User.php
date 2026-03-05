@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
+use App\Notifications\CustomVerifyEmail;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -53,6 +55,17 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Send a verification notification with a fresh token, invalidating previous links.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $token = Str::random(64);
+        $this->forceFill(['email_verification_token' => $token])->save();
+
+        $this->notify(new CustomVerifyEmail($token));
     }
 
     public function hasSubmittedPds(): bool

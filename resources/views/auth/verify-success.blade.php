@@ -12,33 +12,5 @@
             </div>
         </div>
 
-        <script>
-    (() => {
-        const statusUrl = '{{ route('verification.status', [], false) }}';
-        const CHECK_INTERVAL_MS = 2000;
-
-        async function checkVerification() {
-            try {
-                const res = await fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                if (!res.ok) return;
-                const data = await res.json();
-                if (data.verified) {
-                    // Show a success overlay before redirect
-                    const overlay = document.createElement('div');
-                    overlay.className = 'fixed inset-0 flex items-center justify-center bg-slate-900/70 text-white text-center p-6';
-                    overlay.innerHTML = '<h3 class="text-xl font-semibold">Email Verified! Redirecting...</h3>';
-                    document.body.appendChild(overlay);
-
-                    setTimeout(() => {
-                        window.location.href = REDIRECT_URL;
-                    }, 800); // short delay for UX
-                }
-            } catch (err) {
-                console.error('Verification check failed', err);
-            }
-        }
-
-        setInterval(checkVerification, CHECK_INTERVAL_MS);
-    })();
-    </script>
     </x-guest-layout>
+

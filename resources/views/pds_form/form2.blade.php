@@ -69,42 +69,11 @@
                 requestAnimationFrame(() => autoSize(el));
             });
 
-            // NA locking for any [] group on this page: disable only fields BELOW the first NA/N/A/NONE, keep existing values above
+            // NA helper
             const isNA = (val) => {
                 const v = (val || '').trim().toUpperCase();
                 return v === 'NA' || v === 'N/A' || v === 'NONE';
             };
-
-            const names = new Set();
-            document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
-                const name = el.getAttribute('name');
-                if (name) names.add(name);
-            });
-
-            names.forEach(name => {
-                const selectorName = name.replace(/["'\\]/g, '\\$&');
-                const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
-                if (!fields.length) return;
-
-                const refresh = () => {
-                    const firstField = fields[0];
-                    const firstIsNA = firstField ? isNA(firstField.value) : false;
-
-                    fields.forEach((f, idx) => {
-                        const shouldDisable = firstIsNA && idx > 0;
-                        f.disabled = shouldDisable;
-                        f.classList.toggle('bg-gray-200', shouldDisable);
-                        f.classList.toggle('text-gray-500', shouldDisable);
-                        f.classList.toggle('cursor-not-allowed', shouldDisable);
-                        if (shouldDisable && f.tagName === 'TEXTAREA') {
-                            f.value = '';
-                        }
-                    });
-                };
-
-                fields.forEach(f => f.addEventListener('input', refresh));
-                refresh();
-            });
 
             // First-row logic for eligibility and work tables
             const rowGroup = (names) => names.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
@@ -124,6 +93,22 @@
                             f.value = '';
                         }
                     });
+                });
+            };
+
+            const fillRowWithNA = (names, rowIndex = 0) => {
+                names.forEach(n => {
+                    const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+                    const target = fields[rowIndex];
+                    if (target) target.value = 'NA';
+                });
+            };
+
+            const clearRowNA = (names, rowIndex = 0) => {
+                names.forEach(n => {
+                    const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+                    const target = fields[rowIndex];
+                    if (target && isNA(target.value)) target.value = '';
                 });
             };
 
@@ -165,12 +150,34 @@
                 return { allBlank, allNA, incomplete };
             };
 
-            const refreshRows = () => {
-                const eligState = firstRowState(eligibilityFirstRow);
-                disableFollowingRows(['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]'], eligState.allNA);
+            let prevDisableEligibilityRows = null;
+            let prevDisableWorkRows = null;
 
-                const workState = firstRowState(workFirstRow);
-                disableFollowingRows(['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]'], workState.allNA);
+            const refreshRows = () => {
+                const eligibilityFirst = eligibilityFirstRow[0];
+                const workFirst = workFirstRow[0];
+
+                const disableEligibilityRows = eligibilityFirst ? isNA(eligibilityFirst.value) : false;
+                const disableWorkRows = workFirst ? isNA(workFirst.value) : false;
+
+                disableFollowingRows(['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]'], disableEligibilityRows);
+                disableFollowingRows(['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]'], disableWorkRows);
+
+                if (disableEligibilityRows) {
+                    fillRowWithNA(['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]'], 0);
+                } else if (prevDisableEligibilityRows === true && disableEligibilityRows === false) {
+                    // Clear auto-filled NA once when toggling off, but allow user to enter NA afterward
+                    clearRowNA(['rating[]','date[]','place[]','license_no[]','validity[]'], 0);
+                }
+
+                if (disableWorkRows) {
+                    fillRowWithNA(['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]'], 0);
+                } else if (prevDisableWorkRows === true && disableWorkRows === false) {
+                    clearRowNA(['work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]'], 0);
+                }
+
+                prevDisableEligibilityRows = disableEligibilityRows;
+                prevDisableWorkRows = disableWorkRows;
             };
 
             [...eligibilityFirstRow, ...workFirstRow].forEach(f => {

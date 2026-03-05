@@ -7,7 +7,12 @@
                 <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>
 
-            <form method="POST" action="{{ route('register', [], false) }}" class="space-y-6" enctype="multipart/form-data">
+            <form method="POST" 
+                action="{{ route('register', [], false) }}" 
+                class="space-y-6"
+                enctype="multipart/form-data"
+                x-data="formCache()"
+                x-init="init()">
                 @csrf
 
                 <!-- Name -->
@@ -15,7 +20,7 @@
                     <label for="name" class="text-sm font-medium text-slate-700">{{ __('Full name') }}</label>
                     <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
-                        <input id="name" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" placeholder="Juan Dela Cruz" oninput="this.value = this.value.toUpperCase();" />
+                        <input id="name" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name" placeholder="Juan Dela Cruz" oninput="this.value = this.value.toUpperCase();" />
                     </div>
                     <x-input-error :messages="$errors->get('name')" class="mt-2" />
                 </div>
@@ -27,7 +32,7 @@
                         <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail-icon lucide-mail"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
                             <input id="email" 
-                            class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" type="email" name="email" :value="old('email')" required autocomplete="username" placeholder="name@bfar.gov.ph" />
+                            class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" type="email" name="email" value="{{ old('email') }}" required autocomplete="username" placeholder="name@bfar.gov.ph" />
                         </div>
                         <x-input-error :messages="$errors->get('email')" class="mt-2" />
                     </div>
@@ -37,7 +42,7 @@
                         <label for="phone" class="text-sm font-medium text-slate-700">Phone</label>
                         <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone-icon lucide-phone"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
-                            <input id="phone" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" type="tel" name="phone" :value="old('phone')" autocomplete="tel" placeholder="09123456789" required maxlength="11" pattern="\d{11}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);" />
+                            <input id="phone" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" type="tel" name="phone" value="{{ old('phone') }}" autocomplete="tel" placeholder="09123456789" required maxlength="11" pattern="\d{11}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);" />
                         </div>
                         <x-input-error :messages="$errors->get('phone')" class="mt-2" />
                     </div>
@@ -117,91 +122,50 @@
                     <label for="location_assigned" class="text-sm font-medium text-slate-700">Location Assigned</label>
                     <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pinned-icon lucide-map-pinned"><path d="M18 8c0 3.613-3.869 7.429-5.393 8.795a1 1 0 0 1-1.214 0C9.87 15.429 6 11.613 6 8a6 6 0 0 1 12 0"/><circle cx="12" cy="8" r="2"/><path d="M8.714 14h-3.71a1 1 0 0 0-.948.683l-2.004 6A1 1 0 0 0 3 22h18a1 1 0 0 0 .948-1.316l-2-6a1 1 0 0 0-.949-.684h-3.712"/></svg>
-                        <input id="location_assigned" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="location_assigned" :value="old('location_assigned')" placeholder="e.g., BFAR Regional HQ – Lagao, GenSan" required oninput="this.value = this.value.toUpperCase();" />
+                        <input id="location_assigned" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="location_assigned" value="{{ old('location_assigned') }}" placeholder="e.g., BFAR Regional HQ – Lagao, GenSan" required oninput="this.value = this.value.toUpperCase();" />
                     </div>
                     <x-input-error :messages="$errors->get('location_assigned')" class="mt-2" />
                 </div>
 
                 <!-- Profile Photo -->
-                <div x-data="{
-                        preview: null,
-                        stream: null,
-                        streaming: false,
-                        setPreview(file) {
-                            if (!file) { this.preview = null; return; }
-                            const reader = new FileReader();
-                            reader.onload = e => { this.preview = e.target?.result; };
-                            reader.readAsDataURL(file);
-                        },
-                        clear() {
-                            this.preview = null;
-                            const input = this.$refs.uploadInput;
-                            if (input) { input.value = ''; }
-                            this.stopCamera();
-                        },
-                        async startCamera() {
-                            try {
-                                this.stopCamera();
-                                const stream = await navigator.mediaDevices?.getUserMedia?.({ video: true });
-                                if (!stream) return;
-                                this.stream = stream;
-                                this.streaming = true;
-                                const video = this.$refs.video;
-                                if (video) {
-                                    video.srcObject = stream;
-                                    await video.play();
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                this.streaming = false;
-                            }
-                        },
-                        captureFrame() {
-                            if (!this.streaming) return;
-                            const video = this.$refs.video;
-                            const canvas = this.$refs.canvas;
-                            if (!video || !canvas) return;
-                            const { videoWidth: w, videoHeight: h } = video;
-                            if (!w || !h) return;
-                            canvas.width = w;
-                            canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(video, 0, 0, w, h);
-                            canvas.toBlob(blob => {
-                                if (!blob) return;
-                                const file = new File([blob], 'profile_photo.jpg', { type: 'image/jpeg' });
-                                const dt = new DataTransfer();
-                                dt.items.add(file);
-                                this.$refs.uploadInput.files = dt.files;
-                                this.setPreview(file);
-                                this.stopCamera();
-                            }, 'image/jpeg', 0.9);
-                        },
-                        stopCamera() {
-                            if (this.stream) {
-                                this.stream.getTracks().forEach(t => t.stop());
-                            }
-                            this.stream = null;
-                            this.streaming = false;
-                        },
-                        chooseUpload() {
-                            this.stopCamera();
-                            this.$refs.uploadInput?.click();
-                        }
-                    }" class="space-y-3">
+                <div>
                     <label class="text-sm font-medium text-slate-700" for="profile_photo">Profile Photo</label>
 
                     <div class="flex flex-col items-center gap-3">
                         <div class="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full overflow-hidden border border-gray-200 shadow-sm bg-white">
-                            <video x-ref="video" class="absolute inset-0 h-full w-full object-cover" x-show="streaming" playsinline muted></video>
+                            <!-- Live Camera -->
+                            <video x-ref="video" class="absolute inset-0 h-full w-full object-cover" 
+                                x-show="streaming" playsinline muted></video>
+
+                            <!-- Face Guide Overlay -->
+                            <div x-show="streaming"
+                                class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <div class="w-24 h-32 sm:w-32 sm:h-40 md:w-36 md:h-44 
+                                            rounded-full border-4 border-white/80 
+                                            border-dashed shadow-inner">
+                                </div>
+                            </div>
+
+                            <!-- Image Preview -->
                             <template x-if="preview">
-                                <img :src="preview" alt="Profile preview" class="h-full w-full object-cover" />
+                                <img :src="preview" alt="Profile preview" 
+                                    class="h-full w-full object-cover" />
                             </template>
-                            <template x-if="!preview">
+
+                            <!-- Placeholder -->
+                            <template x-if="!preview && !streaming">
                                 <div class="flex h-full w-full items-center justify-center text-slate-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-44 lg:h-44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-44 lg:h-44"
+                                        viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="1.8"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="12" cy="7" r="4"/>
+                                    </svg>
                                 </div>
                             </template>
+
                         </div>
 
 
@@ -214,7 +178,7 @@
                                 accept="image/*"
                                 required
                                 class="hidden"
-                                @change="setPreview($event.target.files[0])">
+                                @change="handlePhoto($event)">
 
                             <canvas x-ref="canvas" class="hidden"></canvas>
 
@@ -259,4 +223,166 @@
             </form>
         </section>
     </div>
+
+  <script>
+function formCache() {
+    return {
+        preview: null,
+        stream: null,
+        streaming: false,
+
+        init() {
+            const form = document.querySelector("form");
+            const saved = JSON.parse(localStorage.getItem("register_cache") || "{}");
+
+            // Restore normal inputs (text/select)
+            Object.entries(saved).forEach(([name, value]) => {
+                if (name === "profile_photo_base64") return;
+                const input = form.querySelector(`[name="${name}"]`);
+                const isSelect = input?.tagName === 'SELECT';
+                if (input && input.type !== "file" && input.type !== "password" && (!input.value || isSelect)) {
+                    input.value = value;
+                    input.dispatchEvent(new Event('input'));
+                }
+            });
+
+            this.restorePhoto(saved.profile_photo_base64, form);
+
+            // Cache normal inputs
+            form.querySelectorAll("input, select, textarea").forEach(input => {
+                if (input.type === "file" || input.type === "password") return;
+                input.addEventListener("input", () => {
+                    const cache = JSON.parse(localStorage.getItem("register_cache") || "{}");
+                    cache[input.name] = input.value;
+                    localStorage.setItem("register_cache", JSON.stringify(cache));
+                });
+            });
+        },
+
+        restorePhoto(base64, form) {
+            if (!base64) return;
+            this.preview = base64;
+
+            // Recreate file for the required input so validation passes without re-upload
+            const dt = new DataTransfer();
+            const byteString = atob(base64.split(",")[1]);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            const blob = new Blob([ab], { type: "image/jpeg" });
+            const file = new File([blob], "profile_photo.jpg", { type: "image/jpeg" });
+            dt.items.add(file);
+            const uploadInput = form.querySelector("[name='profile_photo']");
+            if (uploadInput) uploadInput.files = dt.files;
+        },
+
+        handlePhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            this.cachePhoto(file);
+        },
+
+        cachePhoto(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.preview = e.target.result;
+                const cache = JSON.parse(localStorage.getItem("register_cache") || "{}");
+                cache.profile_photo_base64 = e.target.result;
+                localStorage.setItem("register_cache", JSON.stringify(cache));
+            };
+            reader.readAsDataURL(file);
+        },
+
+        async startCamera() {
+            try {
+                this.stopCamera();
+                const stream = await navigator.mediaDevices?.getUserMedia?.({ video: true });
+                if (!stream) return;
+                this.stream = stream;
+                this.streaming = true;
+                const video = this.$refs.video;
+                if (video) {
+                    video.srcObject = stream;
+                    await video.play();
+                }
+            } catch (e) {
+                console.error(e);
+                this.streaming = false;
+            }
+        },
+
+        stopCamera() {
+            if (this.stream) {
+                this.stream.getTracks().forEach(t => t.stop());
+            }
+            this.stream = null;
+            this.streaming = false;
+        },
+
+        chooseUpload() {
+            this.stopCamera();
+            this.$refs.uploadInput?.click();
+        },
+
+        captureFrame() {
+            if (!this.streaming) return;
+            const video = this.$refs.video;
+            const canvas = this.$refs.canvas;
+            if (!video || !canvas) return;
+            const { videoWidth: w, videoHeight: h } = video;
+            if (!w || !h) return;
+
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, w, h);
+            canvas.toBlob(blob => {
+                if (!blob) return;
+                const file = new File([blob], 'profile_photo.jpg', { type: 'image/jpeg' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                if (this.$refs.uploadInput) this.$refs.uploadInput.files = dt.files;
+                this.cachePhoto(file);
+                this.stopCamera();
+            }, 'image/jpeg', 0.9);
+        },
+
+        clear() {
+            this.preview = null;
+            const uploadInput = this.$refs.uploadInput;
+            if (uploadInput) uploadInput.value = '';
+            this.stopCamera();
+            const cache = JSON.parse(localStorage.getItem("register_cache") || "{}");
+            delete cache.profile_photo_base64;
+            localStorage.setItem("register_cache", JSON.stringify(cache));
+        }
+    }
+}
+</script>
+
+@if ($errors->any())
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    let cache = JSON.parse(localStorage.getItem("register_cache") || "{}");
+
+    @foreach ($errors->keys() as $field)
+        delete cache["{{ $field }}"];
+    @endforeach
+
+    localStorage.setItem("register_cache", JSON.stringify(cache));
+
+});
+</script>
+@endif
+
+@if(session('clearRegisterCache'))
+<script>
+localStorage.removeItem("register_cache");
+</script>
+@endif
 </x-guest-layout>
+
+

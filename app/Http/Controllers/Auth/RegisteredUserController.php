@@ -125,7 +125,7 @@ class RegisteredUserController extends Controller
         }
 
         return $user->role === 'employee'
-            ? redirect('/employee')
-            : redirect(route('dashboard', absolute: false));
+            ? redirect('/employee')->with('clearRegisterCache', true)
+            : redirect(route('dashboard', absolute: false))->with('clearRegisterCache', true);
     }
 }

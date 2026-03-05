@@ -23,11 +23,16 @@ class VerifyEmailController extends Controller
             ? '/employee'
             : route('dashboard', absolute: false);
 
+        if (! $this->tokenMatches($request, $user)) {
+            return view('auth.verify-invalid');
+        }
+
         if ($user->hasVerifiedEmail()) {
             return redirect()->intended($target.'?verified=1');
         }
 
         if ($user->markEmailAsVerified()) {
+            $user->forceFill(['email_verification_token' => null])->save();
             event(new Verified($user));
         }
 
@@ -40,29 +45,34 @@ class VerifyEmailController extends Controller
     public function guestVerify(Request $request): \Illuminate\Contracts\View\View|RedirectResponse
     {
         if (! $request->hasValidSignature()) {
-            return redirect()->route('login')->withErrors(['email' => 'Verification link is invalid or expired.']);
+            return view('auth.verify-invalid');
         }
 
         $user = $this->resolveUserFromRequest($request);
 
         if (! $user) {
-            return redirect()->route('login')->withErrors(['email' => 'Verification link is invalid or expired.']);
+            return view('auth.verify-invalid');
         }
 
         // Validate hash from signed URL matches user's email
         if (! hash_equals((string) $request->route('hash'), sha1($user->getEmailForVerification()))) {
-            return redirect()->route('login')->withErrors(['email' => 'Verification link is invalid or expired.']);
+            return view('auth.verify-invalid');
         }
 
         $target = ($user->role ?? null) === 'employee'
             ? '/employee'
             : route('dashboard', absolute: false);
 
+        if (! $this->tokenMatches($request, $user)) {
+            return view('auth.verify-invalid');
+        }
+
         if ($user->hasVerifiedEmail()) {
             return view('auth.verify-success', ['redirect' => $target]);
         }
 
         if ($user->markEmailAsVerified()) {
+            $user->forceFill(['email_verification_token' => null])->save();
             event(new Verified($user));
         }
 
@@ -82,5 +92,13 @@ class VerifyEmailController extends Controller
 
         // Fallback to admin users
         return AdminUser::find($id);
+    }
+
+    private function tokenMatches(Request $request, $user): bool
+    {
+        $tokenFromLink = (string) $request->query('token', '');
+        $currentToken = (string) ($user->email_verification_token ?? '');
+
+        return $tokenFromLink !== '' && $currentToken !== '' && hash_equals($currentToken, $tokenFromLink);
     }
 }

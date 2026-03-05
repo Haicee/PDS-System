@@ -1,4 +1,20 @@
 <x-guest-layout>
+    @if ($errors->has('email'))
+        <div id="verify-error-modal" class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4">
+            <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl ring-1 ring-rose-200 text-center p-8 space-y-4">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m15 9-6 6m0-6 6 6"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-rose-600">Verification expired</p>
+                    <h3 class="text-xl font-semibold text-slate-900">This verification link is invalid or has expired.</h3>
+                    <p class="text-sm text-slate-600">Please resend a new activation link and use the latest email we sent.</p>
+                </div>
+                <button id="dismiss-verify-error" type="button" class="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2">Got it</button>
+            </div>
+        </div>
+    @endif
+
     <div class="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4">
         <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
             <!-- Header -->
@@ -32,7 +48,7 @@
                 <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <p class="text-sm font-semibold text-slate-800">Entered the wrong email?</p>
                     <p class="text-xs text-slate-600">Update your email and we will send a new activation link.</p>
-                    <form method="POST" action="{{ route('verification.update', [], false) }}" class="mt-3 space-y-2">
+                    <form method="POST" action="{{ route('verification.update', [], false) }}" class="mt-3 space-y-2" id="update-email-form">
                         @csrf
                         <label for="new_email" class="text-xs font-medium text-slate-700">New email</label>
                         <input id="new_email" name="email" type="email" value="{{ old('email', auth()->user()->email) }}" required
@@ -40,7 +56,7 @@
                         @error('email')
                             <div class="text-xs font-medium text-rose-600">{{ $message }}</div>
                         @enderror
-                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2">
+                        <button id="update-email-btn" type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
                             Update email & send link
                         </button>
                     </form>
@@ -73,11 +89,65 @@
     <!-- Script -->
     <script>
         (() => {
+            const statusUrl = '{{ route('verification.status', [], false) }}';
+            const CHECK_INTERVAL_MS = 2000;
             const RESEND_KEY = 'verify_resend_at';
             const COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
             const resendBtn = document.getElementById('resend-btn');
             const resendLabel = document.getElementById('resend-label');
             const resendForm = document.getElementById('resend-form');
+            const updateEmailInput = document.getElementById('new_email');
+            const updateEmailBtn = document.getElementById('update-email-btn');
+            const initialEmail = updateEmailInput ? updateEmailInput.value.trim() : '';
+            const errorModal = document.getElementById('verify-error-modal');
+            const dismissErrorBtn = document.getElementById('dismiss-verify-error');
+
+            async function checkVerification() {
+                try {
+                    const res = await fetch(statusUrl, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                    });
+                    if (res.status === 401) {
+                        console.warn('Verification status check: unauthenticated. Please stay logged in on this page.');
+                        return;
+                    }
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data.verified) {
+                        const target = data.redirect || '{{ route('dashboard', [], false) }}';
+                        const overlay = document.createElement('div');
+                        overlay.className = 'fixed inset-0 z-20 flex items-center justify-center bg-slate-900/70 text-white text-center p-6';
+                        overlay.innerHTML = '<h3 class="text-xl font-semibold">Redirecting...</h3>';
+                        document.body.appendChild(overlay);
+
+                        setTimeout(() => {
+                            window.location.href = target;
+                        }, 800);
+                    }
+                } catch (err) {
+                    console.error('Verification status check failed', err);
+                }
+            }
+
+            // Disable update email button unless value changed
+            function syncUpdateEmailState() {
+                if (!updateEmailInput || !updateEmailBtn) return;
+                const current = updateEmailInput.value.trim();
+                const changed = current.toLowerCase() !== initialEmail.toLowerCase();
+                updateEmailBtn.disabled = !changed;
+            }
+
+            if (updateEmailInput) {
+                updateEmailInput.addEventListener('input', syncUpdateEmailState);
+                syncUpdateEmailState();
+            }
+
+            if (dismissErrorBtn && errorModal) {
+                dismissErrorBtn.addEventListener('click', () => {
+                    errorModal.remove();
+                });
+            }
 
             // Update button state based on cooldown
             function updateResendState() {
@@ -110,6 +180,10 @@
             // Run every second to update label
             setInterval(updateResendState, 1000);
             updateResendState();
+
+            // Poll for verification to auto-redirect main page
+            checkVerification();
+            setInterval(checkVerification, CHECK_INTERVAL_MS);
         })();
     </script>
 </x-guest-layout>

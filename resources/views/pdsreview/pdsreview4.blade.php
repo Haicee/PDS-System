@@ -358,19 +358,20 @@
       @php
         // Reindex to zero-based keys so array-style access works for all saved references
         $refRows = ($references ?? collect())->values();
+        $hasReferences = $refRows->filter(fn($ref) => !empty($ref->name) || !empty($ref->address) || !empty($ref->contact))->isNotEmpty();
         $maxRef = max(7, $refRows->count());
       @endphp
       @for ($i = 0; $i < $maxRef; $i++)
-      @php $ref = $refRows[$i] ?? null; @endphp
+      @php $ref = $hasReferences ? ($refRows[$i] ?? null) : null; @endphp
       <tr class="border border-r-0 border-l-3 border-black align-top">
         <td class="border border-black align-top p-0 w-60 text-center" style="height:25px;">
-          {{ $ref->name ?? '' }}
+          {{ !$hasReferences && $i === 0 ? 'N/A' : ($ref->name ?? '') }}
         </td>
         <td class="border border-black align-top p-0 text-center" style="height:25px;">
-          {{ $ref->address ?? '' }}
+          {{ !$hasReferences && $i === 0 ? 'N/A' : ($ref->address ?? '') }}
         </td>
         <td class="border border-r-3 align-top p-0 border-r-2 border-black text-center" style="height:25px;">
-          {{ $ref->contact ?? '' }}
+          {{ !$hasReferences && $i === 0 ? 'N/A' : ($ref->contact ?? '') }}
         </td>
       </tr>
       @endfor

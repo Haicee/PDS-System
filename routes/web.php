@@ -637,7 +637,7 @@ Route::middleware('auth:admin,web')->group(function () {
 // Employee routes
 Route::middleware(['auth','role:employee'])->group(function () {
     Route::get('/employee', [EmployeeController::class, 'dashboard'])->name('employee.dashboard');
-    Route::view('/employee/pds/form1', 'pds_form.form1')->name('pds.form1');
+    Route::get('/employee/pds/form1', [PdsStepController::class, 'form1'])->name('pds.form1');
     Route::view('/employee/pds/form2', 'pds_form.form2')->name('pds.form2');
     Route::view('/employee/pds/form3', 'pds_form.form3')->name('pds.form3');
     Route::view('/employee/pds/form4', 'pds_form.form4')->name('pds.form4');

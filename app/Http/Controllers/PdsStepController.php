@@ -205,6 +205,9 @@ class PdsStepController extends Controller
         }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
+        if (!empty($data)) {
+            session(['pds' => $data, 'pds_owner' => $userId]);
+        }
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
 
         return view('pds_form.form1', compact('data', 'signaturePath'));

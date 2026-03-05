@@ -33,14 +33,10 @@
 
                 <input type="hidden" name="code" id="otpValue">
 
-                <button type="submit" class="group relative inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
-                    <span class="absolute inset-0 rounded-2xl opacity-0 transition group-hover:opacity-20" style="background: linear-gradient(120deg, rgba(255,255,255,.7), rgba(255,255,255,0));"></span>
-                    Verify and continue
-                </button>
             </form>
 
             <div class="mt-4 text-center text-sm text-slate-600">
-                <span id="countdown">03:00</span>
+                <span id="countdown" style="display: none;">03:00</span>
                 <button id="resendBtn" class="ml-2 text-blue-600 underline hidden">Resend</button>
             </div>
         </section>
@@ -49,11 +45,14 @@
     <script>
 const otpInputs = document.querySelectorAll('.otp-input');
 const otpValueInput = document.getElementById('otpValue');
+const otpForm = document.getElementById('otpForm');
 const resendBtn = document.getElementById('resendBtn');
 const countdownEl = document.getElementById('countdown');
 const COUNTDOWN_SEC = 180; // 3 minutes
-let remaining = COUNTDOWN_SEC;
+const COUNTDOWN_MS = COUNTDOWN_SEC * 1000;
+const RESEND_KEY = 'otp_resend_expires_at';
 let countdownInterval;
+let autoSubmitted = false;
 
 // Autofocus first input
 otpInputs[0].focus();
@@ -63,6 +62,11 @@ function updateOtpValue() {
     let otp = '';
     otpInputs.forEach(input => otp += input.value);
     otpValueInput.value = otp;
+
+    if (!autoSubmitted && otp.length === otpInputs.length && otp.match(/^\d{6}$/)) {
+        autoSubmitted = true;
+        otpForm.requestSubmit();
+    }
 }
 
 // Input navigation & paste handling
@@ -98,22 +102,26 @@ function formatTime(sec) {
     return `${m}:${s}`;
 }
 
-// Start countdown
-function startCountdown() {
-    remaining = COUNTDOWN_SEC;
+// Start countdown using expiry timestamp
+function startCountdown(expiryTs) {
+    localStorage.setItem(RESEND_KEY, expiryTs.toString());
     resendBtn.classList.add('hidden');
+    const remainingMsInitial = Math.max(0, expiryTs - Date.now());
+    countdownEl.textContent = formatTime(Math.ceil(remainingMsInitial / 1000));
     countdownEl.style.display = 'inline';
-    countdownEl.textContent = formatTime(remaining);
 
     clearInterval(countdownInterval);
     countdownInterval = setInterval(() => {
-        remaining--;
-        if (remaining <= 0) {
+        const remainingMs = expiryTs - Date.now();
+        const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+
+        if (remainingMs <= 0) {
             clearInterval(countdownInterval);
+            localStorage.removeItem(RESEND_KEY);
             countdownEl.style.display = 'none'; // hide countdown completely
             resendBtn.classList.remove('hidden'); // show resend
         } else {
-            countdownEl.textContent = formatTime(remaining);
+            countdownEl.textContent = formatTime(remainingSec);
         }
     }, 1000);
 }
@@ -122,9 +130,9 @@ function startCountdown() {
 // Resend button click
 resendBtn.addEventListener('click', () => {
     // Immediately hide the resend button and show countdown
-    resendBtn.classList.add('hidden');
+    const expiryTs = Date.now() + COUNTDOWN_MS;
     countdownEl.style.display = 'inline';
-    startCountdown();
+    startCountdown(expiryTs);
 
     // Send the OTP request asynchronously
     fetch('{{ route("otp.resend", [], false) }}', {
@@ -144,6 +152,17 @@ resendBtn.addEventListener('click', () => {
 });
 
 // Initialize countdown on page load
-startCountdown();
+(() => {
+    const storedExpiry = parseInt(localStorage.getItem(RESEND_KEY) || '0', 10);
+    const now = Date.now();
+
+    if (storedExpiry && storedExpiry > now) {
+        startCountdown(storedExpiry);
+    } else {
+        localStorage.removeItem(RESEND_KEY);
+        countdownEl.style.display = 'none';
+        resendBtn.classList.remove('hidden');
+    }
+})();
 </script>
 </x-guest-layout>

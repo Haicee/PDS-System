@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.saveCache();
         }
     };
+
     const flat = {};
 
     const walk = (obj, prefix = '') => {
@@ -104,6 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Ensure country is always set to Philippines by default
+    const countryInput = document.querySelector('input[name="country"]');
+    if (countryInput && !countryInput.value) {
+        countryInput.value = 'Philippines';
+        countryInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     // Force textarea input to uppercase
     document.querySelectorAll('textarea').forEach(el => {
         el.addEventListener('input', () => {
@@ -139,11 +147,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Education dynamic extra rows
     const extraPrototype = document.getElementById('education-extra-prototype');
     const addButtons = Array.from(document.querySelectorAll('[data-education-add]'));
+    const addRows = Array.from(document.querySelectorAll('tr[data-education-base]')).filter(row => row.querySelector('td.add-btn-cell.has-add-btn'));
+
+    // Hover highlight spans entire row for add-enabled rows (anywhere in the row)
+    addRows.forEach(row => {
+        row.addEventListener('mouseenter', () => row.classList.add('row-add-hover'));
+        row.addEventListener('mouseleave', () => row.classList.remove('row-add-hover'));
+    });
 
     const autoHeight = (ta) => {
         ta.addEventListener('input', () => {
             ta.style.height = 'auto';
             ta.style.height = ta.scrollHeight + 'px';
+        });
+    };
+
+    const enforceUppercase = (ta) => {
+        ta.style.textTransform = 'uppercase';
+        ta.addEventListener('input', () => {
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            ta.value = (ta.value || '').toUpperCase();
+            ta.selectionStart = start;
+            ta.selectionEnd = end;
         });
     };
 
@@ -163,13 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     ta.value = levelKey;
                 }
                 ta.readOnly = true;
-                ta.classList.add('pointer-events-none', 'bg-gray-100');
+                ta.classList.add('pointer-events-none', 'bg-transparent', 'text-transparent', 'caret-transparent', 'select-none');
             }
             if (name && values[name] !== undefined) {
                 ta.value = values[name] ?? '';
             }
             ta.required = true;
             autoHeight(ta);
+            enforceUppercase(ta);
         });
 
         // Register required validation on newly added fields
@@ -217,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Restore dynamic education rows from cache/draft so refresh keeps added rows
+    // Restore dynamic education rows from cache/draft so refresh keeps added rows (cache-first like form2)
     const hydrateExistingExtras = () => {
         // Prefer local cache (captures unsent changes)
         let source = {};
@@ -227,15 +254,16 @@ document.addEventListener('DOMContentLoaded', () => {
             source = {};
         }
 
+        const serverSource = (draftData && Object.keys(draftData).length) ? draftData : sessionData;
         const hasLocalCache = Object.keys(source).length > 0;
-        // Backfill missing keys from server-provided draft/session only if no local cache
-        if (!hasLocalCache) {
-            const serverSource = (draftData && Object.keys(draftData).length) ? draftData : sessionData;
-            if (serverSource) {
-                Object.entries(serverSource).forEach(([k, v]) => {
-                    if (source[k] === undefined) source[k] = v;
-                });
-            }
+
+        // Backfill only missing keys from server draft/session; never override cached values
+        if (serverSource) {
+            Object.entries(serverSource).forEach(([k, v]) => {
+                if (!hasLocalCache && source[k] === undefined) {
+                    source[k] = v;
+                }
+            });
         }
 
         if (!Object.keys(source).length) return;
@@ -285,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const firstDob = childrenDobFields[0];
         if (!firstName || !firstDob) return;
 
+        // If first row is NA in both columns, lock down the rest (leave them blank) and keep first row as NA
         const firstIsNA = isNA(firstName.value) && isNA(firstDob.value);
 
         if (firstIsNA) {
@@ -293,9 +322,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         childrenNameFields.forEach((f, idx) => {
-            const shouldDisable = firstIsNA && idx > 0;
-            if (idx > 0) {
-                f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
+            const shouldDisable = firstIsNA && idx >= 1;
+            if (shouldDisable) {
+                f.value = '';
             }
             f.disabled = shouldDisable;
             f.readOnly = shouldDisable;
@@ -306,9 +335,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         childrenDobFields.forEach((f, idx) => {
-            const shouldDisable = firstIsNA && idx > 0;
-            if (idx > 0) {
-                f.value = firstIsNA ? '' : (isNA(f.value) ? '' : f.value);
+            const shouldDisable = firstIsNA && idx >= 1;
+            if (shouldDisable) {
+                f.value = '';
             }
             f.disabled = shouldDisable;
             f.readOnly = shouldDisable;
@@ -389,11 +418,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const firstRowState = (fields) => {
         const values = fields.map(f => (f?.value || '').trim());
         const allNA = values.length && values.every(v => isNA(v));
-        const allBlank = values.every(v => v === '');
-        const anyBlank = values.some(v => v === '');
-        const anyData = values.some(v => v !== '' && !isNA(v));
-        const allFilledNoBlank = values.length > 0 && !anyBlank;
-        return { allNA, allBlank, anyData, allFilledNoBlank };
+        const hasBlank = values.some(v => v === '');
+        const anyNA = values.some(v => v !== '' && isNA(v));
+        const anyRealData = values.some(v => v !== '' && !isNA(v));
+        const allFilled = values.length > 0 && !hasBlank;
+        const validReal = allFilled && anyRealData && !anyNA;
+        return { allNA, hasBlank, validReal };
     };
 
     const scrollToField = (el) => {
@@ -463,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const missingChildDobField = findMissingChildDob();
 
         const firstRowStateResult = firstRowState(firstRowFields);
-        const firstRowIncomplete = !(firstRowStateResult.allNA || firstRowStateResult.allBlank || firstRowStateResult.allFilledNoBlank);
+        const firstRowIncomplete = !(firstRowStateResult.allNA || firstRowStateResult.validReal);
 
         return missingRequiredInputs || missingCheckboxGroup || firstRowIncomplete || !!missingChildDobField;
     };
@@ -506,11 +536,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const firstState = firstRowState(firstRowFields);
-        if (!(firstState.allNA || firstState.allBlank || firstState.allFilledNoBlank)) {
+        if (!(firstState.allNA || firstState.validReal)) {
             const firstMissing = firstRowFields.find(f => f && !(f.value || '').trim());
             const target = firstMissing || firstRowFields[0];
             if (target) {
-                target.setCustomValidity('Please complete the first row or mark N/A.');
+                target.setCustomValidity('Please fill in the first child row or mark both fields N/A.');
                 target.reportValidity();
                 target.focus();
                 scrollToField(target);
@@ -540,6 +570,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (form && nextBtn) {
         form.addEventListener('submit', (e) => {
+            // Ensure country is set on submit
+            if (countryInput && !countryInput.value) {
+                countryInput.value = 'Philippines';
+            }
+
             const middleNameInput = document.getElementById('middlename');
             if (middleNameInput && !middleNameInput.value.trim()) {
                 e.preventDefault();
@@ -607,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <col style="width:8%">
       <col style="width:9%">
       <col style="width:10%">
-      <col style="width:10%">
+      <col style="width:13%">
     </colgroup>
 
     <!-- SECTION HEADER -->
@@ -712,30 +747,24 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- DATE OF BIRTH + CITIZENSHIP -->
     <tr>
       <td class="bg-[#e7e7e7] px-2 align-middle border">
-        3. DATE OF BIRTH
-        <p class="text-xs font-normal ml-4">(dd/mm/yyyy)</p>
-      </td>
-      <td class="border h-10">
-        <div 
-          class="h-full w-full
-           min-h-full
-           wrap-break-words whitespace-normal
-           outline-none
-           py-2
-           text-lg">
-           <textarea
-      name="date_of_birth"
-      required
-      rows="1"
-      class="w-full text-lg resize-none
-             focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden"
-      placeholder="Enter Date of Birth"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    ></textarea>
-      </div>
-      </td>
+    3. DATE OF BIRTH
+    <p class="text-xs font-normal ml-7">(dd/mm/yyyy)</p>
+  </td>
 
+  <td class="border h-10">
+    <div class="h-full w-full min-h-full p-0">
+      <input 
+        type="date"
+        name="date_of_birth"
+        required
+        class="block w-full h-full text-medium
+             focus:outline-none focus:ring-0
+             bg-transparent"
+        placeholder="dd/mm/yyyy"
+        autocomplete="off"
+        style="font-size:23px; padding:8px; border:none; box-sizing:border-box; margin:0;" />
+    </div>
+  </td>
       <td rowspan="3" class="bg-[#e7e7e7] px-2 align-top border-l-5">
         16. CITIZENSHIP
         <p class="text-base mt-8 text-center">
@@ -757,33 +786,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="by_birth"> by birth</label>
             <label class="inline-flex items-center gap-2"><input type="checkbox" name="citizenship[]" value="by_naturalization"> by naturalization</label>
           </div>
-          <p class="py-3 flex justify-center">Pls. indicate country:</p>
+           <p class="py-3 flex justify-center">Pls. indicate country:</p>
         <div class="border mb-2 mt-1 w-full text-center" style="min-height: 38px;">
-  <select
-    name="country"
-    id="country"
-    placeholder="Enter Country"
-    required
-    class="w-full text-lg text-center"
-  >
-    <option value="">Select a country...</option>
-    <option value="Afghanistan">Afghanistan</option>
-    <option value="Albania">Albania</option>
-    <option value="Algeria">Algeria</option>
-    <option value="Andorra">Andorra</option>
-    <option value="Angola">Angola</option>
-    <option value="Argentina">Argentina</option>
-    <option value="Armenia">Armenia</option>
-    <option value="Australia">Australia</option>
-    <option value="Austria">Austria</option>
-    <option value="Azerbaijan">Azerbaijan</option>
-    <!-- ...add all countries here -->
-    <option value="Philippines">Philippines</option>
-    <option value="United States">United States</option>
-    <option value="United Kingdom">United Kingdom</option>
-    <option value="Vietnam">Vietnam</option>
-  </select>
-</div>
+          <span class="text-2xl font-['Arial_Narrow','Arial',sans-serif]">Philippines</span>
+          <input type="hidden" name="country" value="Philippines" required>
+        </div>
         </div>
       </td>
     </tr>
@@ -822,7 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
         5. SEX AT BIRTH
       </td>
       <td class="border px-2 text-base">
-        <label class="mr-10 ml-2 mt-2">
+        <label class="mr-10 ml-2">
           <input type="checkbox" name="sex[]" value="male"> Male
         </label>
         <label>
@@ -1377,6 +1384,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
    <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+  <style>
+    /* Show education add buttons only on hover */
+    tr[data-education-base] .edu-add-btn {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    tr.row-add-hover .edu-add-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Emphasize add area with a bottom highlight on hover */
+    tr[data-education-base] td.add-btn-cell.has-add-btn {
+      position: relative;
+      overflow: visible;
+    }
+    tr[data-education-base] td.add-btn-cell.has-add-btn::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 3px;
+      background: #059669;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      pointer-events: none;
+    }
+    tr.row-add-hover td.add-btn-cell.has-add-btn::after {
+      opacity: 1;
+    }
+
+    /* Extend hover highlight across the full row bottom border */
+    tr.row-add-hover td {
+      box-shadow: inset 0 -2px 0 #059669;
+      border-bottom-color: #059669;
+    }
+  </style>
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -2354,7 +2400,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative">
+          class="border h-10 relative add-btn-cell has-add-btn">
           <div class="h-full w-full">
          <textarea
       name="education[secondary][scholarship_acadhonors]"
@@ -2366,7 +2412,7 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700 whitespace-nowrap" data-education-add="SECONDARY">Add Secondary Row</button>
+      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="SECONDARY" aria-label="Add secondary row">+</button>
       </td>
   </tr>
 
@@ -2459,7 +2505,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative">
+          class="border h-10 relative add-btn-cell has-add-btn">
           <div class="h-full w-full">
          <textarea
       name="education[vocational][scholarship_acadhonors]"
@@ -2471,7 +2517,7 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700 whitespace-nowrap" data-education-add="VOCATIONAL / TRADE COURSE">Add Vocational Row</button>
+      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="VOCATIONAL / TRADE COURSE" aria-label="Add vocational row">+</button>
       </td>
   </tr>
 
@@ -2564,7 +2610,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative">
+          class="border h-10 relative add-btn-cell has-add-btn">
           <div class="h-full w-full">
          <textarea
       name="education[college][scholarship_acadhonors]"
@@ -2576,6 +2622,7 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
+      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="COLLEGE" aria-label="Add college row">+</button>
       </td>
   </tr>
 
@@ -2668,7 +2715,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative">
+          class="border h-10 relative add-btn-cell has-add-btn">
           <div class="h-full w-full">
          <textarea
       name="education[graduate_studies][scholarship_acadhonors]"
@@ -2680,11 +2727,11 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700 whitespace-nowrap" data-education-add="GRADUATE STUDIES">Add Graduate Row</button>
+      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="GRADUATE STUDIES" aria-label="Add graduate row">+</button>
       </td>
   </tr>
 
-  <!-- Dynamic extra education rows -->
+  <!-- Dynamic extra education rows (hydrated client-side) -->
   <tbody id="education-extra-rows"></tbody>
 
   <!-- Prototype for dynamic education row -->
@@ -3075,9 +3122,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     };
+
+    // When no dynamic education extra rows exist, explicitly send empty arrays
+    const appendEmptyEducationExtras = (formData) => {
+      const extraKeys = [
+        'education_extra_level',
+        'education_extra_school_name',
+        'education_extra_basic_education',
+        'education_extra_from',
+        'education_extra_to',
+        'education_extra_highest_level',
+        'education_extra_year_graduated',
+        'education_extra_scholarship_acadhonors'
+      ];
+      extraKeys.forEach((key) => {
+        if (!form.querySelector(`[name="${key}[]"]`)) {
+          formData.append(`${key}[]`, '');
+        }
+      });
+    };
+
     const send = () => {
       const formData = new FormData(form);
       appendSingleSelectGroups(formData);
+      appendEmptyEducationExtras(formData);
       console.log('Auto-saving to server...');
       fetch('{{ route('pds.autosave', [], false) }}', {
         method: 'POST',
@@ -3135,12 +3203,18 @@ document.addEventListener('DOMContentLoaded', () => {
   window.persist = persist;
 
   // Hydrate: server/session defaults, then local cache overrides
-  loadCache({ ...(draftData || {}), ...(sessionData || {}) });
+  const initialPayload = { ...(draftData || {}), ...(sessionData || {}) };
+  loadCache(initialPayload);
   hydrated = true;
   // Persist merged cache once so a fast refresh keeps latest values
   saveCache();
-  // Do not auto-save to server until the user actually interacts
   updateSignaturePreviewFromInputs();
+  // If we hydrated with any data, push it to the server once so drafts persist after login
+  const hasHydratedData = initialPayload && Object.keys(initialPayload).length > 0;
+  if (hasHydratedData) {
+    hasUserInput = true; // allow autosave to fire
+    autoSaveToServer();
+  }
 
   // Debug: Check if form element exists
   console.log('Form element:', form);
@@ -3169,6 +3243,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Persist merged cache once so a fast refresh keeps latest values
       hydrated = true;
       saveCache();
+      // Push fetched draft to server to keep DB in sync
+      if (json.data && Object.keys(json.data).length > 0) {
+        hasUserInput = true;
+        autoSaveToServer();
+      }
     })
     .catch(() => {});
 
@@ -3184,6 +3263,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Sync all date fields across forms using localStorage - form1 is the master
+  // Exclude personal DOB (date_of_birth) so it stays independent
   window.syncAllDates = function(selectedDate) {
     console.log('syncAllDates called with:', selectedDate);
     if (!selectedDate) return;
@@ -3192,14 +3272,16 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('pds_master_date', selectedDate);
     console.log('Saved master date to localStorage:', selectedDate);
     
-    // Update all date inputs on current page (excluding form1)
-    const dateInputs = document.querySelectorAll('input[type="date"][name^="date"]');
+    // Update all date inputs on current page (excluding form1 and personal DOB)
+    const dateInputs = document.querySelectorAll('input[type="date"][name^="date"]:not([name="date_of_birth"])');
     console.log('Found date inputs on current page:', dateInputs.length);
     
     dateInputs.forEach(input => {
       console.log('Processing input:', input.name, 'current value:', input.value);
       // Skip form1's date input - it's the master
       if (input.name === 'date1') return;
+      // Skip personal DOB so it never syncs with the master date
+      if (input.name === 'date_of_birth') return;
       
       if (input.value !== selectedDate) {
         console.log('Updating', input.name, 'from', input.value, 'to', selectedDate);
