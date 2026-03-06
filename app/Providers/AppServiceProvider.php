@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View; // <-- import View
 use Illuminate\Support\Facades\Auth; // <-- import Auth
+use App\Models\PdsRejection;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,11 +27,16 @@ class AppServiceProvider extends ServiceProvider
         $user = Auth::user();
 
         // Check if the user is logged in AND is an employee
+        $hasSubmitted = false;
+        $hasRejected = false;
+
         if ($user && $user->role === 'employee') {
-            $view->with('hasSubmittedPds', $user->hasSubmittedPds());
-        } else {
-            $view->with('hasSubmittedPds', false);
+            $hasSubmitted = $user->hasSubmittedPds();
+            $hasRejected = PdsRejection::where('user_id', $user->id)->exists();
         }
+
+        $view->with('hasSubmittedPds', $hasSubmitted);
+        $view->with('hasRejectedPds', $hasRejected);
     });
     }
 }

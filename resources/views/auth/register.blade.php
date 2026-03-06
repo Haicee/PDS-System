@@ -1,13 +1,22 @@
 <x-guest-layout>
+    <style>
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
     <div class="flex items-center justify-center px-4">
-        <section class="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur">
+        <section class="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur max-h-[75vh] overflow-y-auto hide-scrollbar">
             <div class="mb-8 space-y-2">
                 <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
                 <h2 class="text-3xl font-semibold text-slate-900 text-center">Sign up for BFAR XII Portal</h2>
                 <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>
 
-            <form class="space-y-6" method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
+            <form class="space-y-6 pb-6" method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
                 @csrf
 
                 <!-- Name -->
@@ -98,11 +107,11 @@
 
                     <!-- Unit -->
                     <div>
-                        <label for="unit" class="text-sm font-medium text-slate-700">Unit/Division/Section</label>
+                        <label for="unit" class="text-sm font-medium text-slate-700">Division/Section/Unit/Office</label>
                         <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2-icon lucide-building-2"><path d="M10 12h4"/><path d="M10 8h4"/><path d="M14 21v-3a2 2 0 0 0-4 0v3"/><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/></svg>
                             <select id="unit" name="unit" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" required>
-                                <option value="" disabled {{ old('unit') ? '' : 'selected' }}>Select unit</option>
+                                <option value="" disabled {{ old('unit') ? '' : 'selected' }}>Select Division/Section/Unit/Office</option>
                                 @foreach (config('units.list', []) as $unit)
                                     <option value="{{ $unit }}" {{ old('unit') === $unit ? 'selected' : '' }}>{{ $unit }}</option>
                                 @endforeach
@@ -114,7 +123,7 @@
 
                 <!-- Location Assigned -->
                 <div>
-                    <label for="location_assigned" class="text-sm font-medium text-slate-700">Location Assigned</label>
+                    <label for="location_assigned" class="text-sm font-medium text-slate-700">Place of Assignment</label>
                     <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pinned-icon lucide-map-pinned"><path d="M18 8c0 3.613-3.869 7.429-5.393 8.795a1 1 0 0 1-1.214 0C9.87 15.429 6 11.613 6 8a6 6 0 0 1 12 0"/><circle cx="12" cy="8" r="2"/><path d="M8.714 14h-3.71a1 1 0 0 0-.948.683l-2.004 6A1 1 0 0 0 3 22h18a1 1 0 0 0 .948-1.316l-2-6a1 1 0 0 0-.949-.684h-3.712"/></svg>
                         <input id="location_assigned" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="location_assigned" :value="old('location_assigned')" placeholder="e.g., BFAR Regional HQ – Lagao, GenSan" required oninput="this.value = this.value.toUpperCase();" />
@@ -199,7 +208,7 @@
                             </template>
                             <template x-if="!preview">
                                 <div class="flex h-full w-full items-center justify-center text-slate-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-44 lg:h-44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 lg:w-44 lg:h-44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
                                 </div>
                             </template>
                         </div>
@@ -240,7 +249,7 @@
                             </button>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500">Use your device camera or upload a clear headshot. Square/circle framing shows how it will display.</p>
+                    <p class="text-xs text-slate-500 text-center">Use your device camera or upload a clear headshot. Square/circle framing shows how it will display.</p>
                     <x-input-error :messages="$errors->get('profile_photo')" class="mt-1" />
                 </div>
 
@@ -249,7 +258,7 @@
                     {{ __('Create account') }}
                 </button>
 
-                <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <div class="sticky bottom-0 rounded-2xl border border-slate-100 bg-slate-50/95 backdrop-blur px-4 py-3 text-sm text-slate-600 shadow-[0_-6px_18px_-12px_rgba(15,23,42,0.35)]">
                     <p class="font-medium text-slate-800">Have an account already?</p>
                     <p class="mt-1 text-slate-600">
                         Log in with your BFAR account.

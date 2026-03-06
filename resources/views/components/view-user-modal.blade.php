@@ -160,7 +160,7 @@
 
             <div class="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <label class="flex flex-col gap-1">
-                    <span class="font-semibold text-slate-500">Type</span>
+                    <span class="font-semibold text-slate-500">Employee Status</span>
                     <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.type">
                         <option value="Permanent Employee">Permanent Employee</option>
                         <option value="Job Order">Job Order</option>
@@ -177,15 +177,15 @@
             </div>
 
             <label class="flex flex-col gap-1">
-                <span class="font-semibold text-slate-500">Location Assigned</span>
+                <span class="font-semibold text-slate-500">Place of Assignment</span>
                 <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500 uppercase" x-model="working.location"
                 x-on:input="working.location = (working.location || '').toUpperCase()" />
             </label>
 
             <label class="flex flex-col gap-1">
-                <span class="font-semibold text-slate-500">Unit/Division/Section</span>
+                <span class="font-semibold text-slate-500">Division/Section/Unit/Office</span>
                 <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.unit">
-                    <option value="" disabled>Select Unit/Division/Section</option>
+                    <option value="" disabled>Select Division/Section/Unit/Office</option>
                     <template x-for="option in units" :key="option">
                         <option :value="option" x-text="option"></option>
                     </template>

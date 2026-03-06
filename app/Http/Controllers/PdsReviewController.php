@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PdsRejection;
 use App\Models\PdsSubmission;
 use App\Notifications\PdsStatusUpdated;
 use Illuminate\Http\Request;
@@ -38,16 +39,36 @@ class PdsReviewController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
-        $request->validate([
+        $data = $request->validate([
             'status' => 'required|in:Pending,Approved,Rejected',
+            'note' => 'nullable|string|max:2000',
         ]);
 
         $submission = PdsSubmission::findOrFail($id);
-        $submission->status = $request->status;
+        $submission->status = $data['status'];
         $submission->save();
 
+        if ($submission->status === 'Rejected' && $submission->user_id) {
+            PdsRejection::updateOrCreate(
+                ['user_id' => $submission->user_id],
+                [
+                    'name' => $submission->name ?? $submission->user?->name ?? 'Unknown',
+                    'status' => 'Rejected',
+                    'notes' => $data['note'] ?? null,
+                ]
+            );
+        } elseif ($submission->user_id) {
+            PdsRejection::where('user_id', $submission->user_id)->delete();
+        }
+
         if ($submission->user) {
-            Notification::send($submission->user, new PdsStatusUpdated($submission));
+            $noteToSend = $data['note'] ?? null;
+
+            if (!$noteToSend && $submission->status === 'Rejected') {
+                $noteToSend = PdsRejection::where('user_id', $submission->user_id)->value('notes');
+            }
+
+            Notification::send($submission->user, new PdsStatusUpdated($submission, $noteToSend));
             $this->trimNotificationHistory($submission->user);
         }
 
@@ -58,6 +79,7 @@ class PdsReviewController extends Controller
                 'id' => $submission->id,
                 'status' => $submission->status,
                 'status_key' => strtolower($submission->status),
+                'note' => $data['note'] ?? null,
             ],
         ]);
     }

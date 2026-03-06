@@ -115,12 +115,12 @@ class ProfileController extends Controller
             if ($user->{$key} !== $value) {
                 $changed[] = match ($key) {
                     'name' => 'Name',
-                    'gender' => 'Gender',
-                    'unit' => 'Unit/Division/Section',
+                    'gender' => 'Sex',
+                    'unit' => 'Division/Section/Unit/Office',
                     'phone' => 'Phone',
                     'email' => 'Email',
-                    'type' => 'Type',
-                    'location_assigned' => 'Location Assigned',
+                    'type' => 'Employee Status',
+                    'location_assigned' => 'Place of Assignment',
                     default => $key,
                 };
             }

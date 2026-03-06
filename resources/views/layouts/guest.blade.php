@@ -22,9 +22,9 @@
         <div class="min-h-screen flex flex-col items-center px-3 pt-3 pb-4 gap-8">
             <div class="w-full max-w-7xl flex flex-col items-center text-white text-center drop-shadow-lg gap-1">
                 <div class="flex items-center justify-center gap-4 mb-2">
-                    <img src="{{ asset('images/ph-logo.png') }}" alt="Philippines" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-16">
-                    <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-16">
-                    <img src="{{ asset('images/gad-logo.jpg') }}" alt="GAD" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-16">
+                    <img src="{{ asset('images/ph-logo.png') }}" alt="Philippines" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-24">
+                    <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-24">
+                    <img src="{{ asset('images/gad-logo.jpg') }}" alt="GAD" class="h-16 w-auto object-contain drop-shadow-md sm:h-11 lg:h-24">
                 </div>
                 <p class="text-base sm:text-lg font-semibold tracking-[0.35em] text-emerald-100 [text-shadow:0_4px_12px_rgba(0,0,0,0.7)]">DEPARTMENT OF AGRICULTURE</p>
                 <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.2rem] [text-shadow:0_4px_12px_rgba(0,0,0,0.55)]">BUREAU OF FISHERIES AND AQUATIC RESOURCES REGION XII</h1>

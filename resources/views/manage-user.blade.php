@@ -162,13 +162,13 @@
         x-on:open-delete.window="requestDelete($event.detail)">
         
 
-        <div class="mx-auto sm:px-6 lg:px-20 flex flex-col h-[calc(100vh-180px)]">
+        <div class="mx-auto sm:px-6 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-180px)]">
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p class="text-sm uppercase tracking-wide text-indigo-500 font-semibold">Team Directory</p>
                     <h1 class="text-2xl font-bold text-slate-900">Manage Employees</h1>
-                    <p class="text-slate-500 text-sm">Review account status, employee type, and contact details in one place.</p>
+                    <p class="text-slate-500 text-sm">Review account status, employee status, and contact details in one place.</p>
                 </div>
                 <div class="flex gap-3">
                     <button type="button"
@@ -268,15 +268,15 @@
                             <option value="Active">Active</option>
                             <option value="Inactive">Inactive</option>
                         </select>
-                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterType">
-                            <option value="">Type: All</option>
+                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
+                            <option value="">Employee Status: All</option>
                             <option value="Permanent Employee">Permanent</option>
                             <option value="Job Order">Job Order</option>
                         </select>
                         <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                             <option value="created_at">Sort: Date</option>
                             <option value="name">Sort: Name</option>
-                            <option value="unit">Sort: Unit/Division/Section</option>
+                            <option value="unit">Sort: Division/Section/Unit/Office</option>
                             <option value="email">Sort: Email</option>
                             <option value="phone">Sort: Phone</option>
                         </select>
@@ -315,7 +315,7 @@
                                 <thead class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
                                         <th class="px-6 py-3">Employee</th>
-                                        <th class="px-6 py-3">Unit/Division/Section</th>
+                                        <th class="px-6 py-3">Division/Section/Unit/Office</th>
                                         <th class="px-6 py-3">Email</th>
                                         <th class="px-6 py-3">Phone</th>
                                         <th class="px-6 py-3">Status</th>

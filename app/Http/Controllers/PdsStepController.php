@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\PdsDraft;
+use App\Models\PdsRejection;
+use App\Models\PdsSubmission;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -199,6 +201,10 @@ class PdsStepController extends Controller
     public function form1()
     {
         $userId = Auth::id();
+        $redirect = $this->redirectIfLocked($userId);
+        if ($redirect) {
+            return $redirect;
+        }
         // clear stale session cache if it belongs to another user
         if (session('pds_owner') && session('pds_owner') !== $userId) {
             session()->forget(['pds', 'pds_owner']);
@@ -213,6 +219,10 @@ class PdsStepController extends Controller
       public function form2()
     {
         $userId = Auth::id();
+        $redirect = $this->redirectIfLocked($userId);
+        if ($redirect) {
+            return $redirect;
+        }
         if (session('pds_owner') && session('pds_owner') !== $userId) {
             session()->forget(['pds', 'pds_owner']);
         }
@@ -226,6 +236,10 @@ class PdsStepController extends Controller
       public function form3()
     {
         $userId = Auth::id();
+        $redirect = $this->redirectIfLocked($userId);
+        if ($redirect) {
+            return $redirect;
+        }
         if (session('pds_owner') && session('pds_owner') !== $userId) {
             session()->forget(['pds', 'pds_owner']);
         }
@@ -239,6 +253,10 @@ class PdsStepController extends Controller
       public function form4()
     {
         $userId = Auth::id();
+        $redirect = $this->redirectIfLocked($userId);
+        if ($redirect) {
+            return $redirect;
+        }
         if (session('pds_owner') && session('pds_owner') !== $userId) {
             session()->forget(['pds', 'pds_owner']);
         }
@@ -252,6 +270,10 @@ class PdsStepController extends Controller
     public function form5()
     {
         $userId = Auth::id();
+        $redirect = $this->redirectIfLocked($userId);
+        if ($redirect) {
+            return $redirect;
+        }
         if (session('pds_owner') && session('pds_owner') !== $userId) {
             session()->forget(['pds', 'pds_owner']);
         }
@@ -304,14 +326,42 @@ class PdsStepController extends Controller
      */
     private function replaceArrays(array $existing, array $incoming): array
     {
-        foreach ($incoming as $key => $val) {
-            if (is_array($val)) {
-                // Reset existing array so replacement does not merge old indexes
-                $existing[$key] = [];
+        foreach ($incoming as $key => $value) {
+            if (is_array($value)) {
+                $existing[$key] = $value;
+            } else {
+                $existing[$key] = $value;
             }
         }
 
-        return array_replace_recursive($existing, $incoming);
+        return $existing;
+    }
+
+    private function redirectIfLocked(?int $userId)
+    {
+        if (!$userId) {
+            abort(403, 'Unauthorized');
+        }
+
+        $submission = PdsSubmission::where('user_id', $userId)->first();
+        $rejected = PdsRejection::where('user_id', $userId)->exists();
+
+        // If approved, lock (view only)
+        if ($submission && $submission->status === 'Approved') {
+            return redirect()->route('pds.view');
+        }
+
+        // If rejected exists, allow editing
+        if ($rejected) {
+            return null;
+        }
+
+        // If pending submission exists, keep in view-only until admin decides
+        if ($submission && $submission->status === 'Pending') {
+            return redirect()->route('pds.view');
+        }
+
+        return null;
     }
 
     private function storeSignature(Request $request, int $userId): ?string

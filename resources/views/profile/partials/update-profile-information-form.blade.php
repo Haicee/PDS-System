@@ -80,9 +80,9 @@
         
 
         <div>
-            <x-input-label for="unit" :value="__('Unit/Division/Section')" />
+            <x-input-label for="unit" :value="__('Division/Section/Unit/Office')" />
             <select id="unit" name="unit" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required x-bind:disabled="!editable">
-                <option value="" disabled {{ old('unit', $user->unit) ? '' : 'selected' }}>Select unit</option>
+                <option value="" disabled {{ old('unit', $user->unit) ? '' : 'selected' }}>Select Division/Section/Unit/Office</option>
                 @foreach ($units ?? config('units.list', []) as $unit)
                     <option value="{{ $unit }}" {{ old('unit', $user->unit) === $unit ? 'selected' : '' }}>{{ $unit }}</option>
                 @endforeach
@@ -91,7 +91,7 @@
         </div>
 
         <div>
-            <x-input-label for="location_assigned" :value="__('Location Assigned')" />
+            <x-input-label for="location_assigned" :value="__('Place of Assignment')" />
             <x-text-input id="location_assigned" name="location_assigned" type="text" class="mt-1 block w-full uppercase" :value="old('location_assigned', $user->location_assigned)" required oninput="this.value = this.value.toUpperCase();" x-bind:readonly="!editable" />
             <x-input-error class="mt-2" :messages="$errors->get('location_assigned')" />
         </div>

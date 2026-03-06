@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Collection;
 use App\Models\AdminUser;
+use App\Models\PdsRejection;
 use App\Notifications\PdsSubmitted;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -480,9 +481,13 @@ class PdsSubmissionController extends Controller
                         'unit' => $user->unit,
                         'email' => $user->email,
                         'type' => $user->type,
+                        'status' => 'Pending',
                         'submitted' => now(),
                     ]
                 );
+
+                // Clear prior rejection entry when user resubmits
+                PdsRejection::where('user_id', $userId)->delete();
             }
         });
 

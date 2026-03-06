@@ -97,7 +97,7 @@
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
                             <tr>
                                 <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Unit/Division/Section</th>
+                                <th class="px-6 py-3">Division/Section/Unit/Office</th>
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
                                 <th class="px-6 py-3">Place of Assignment</th>
@@ -153,7 +153,7 @@
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
                             <tr>
                                 <th class="px-6 py-3">Employee</th>
-                                <th class="px-6 py-3">Unit/Division/Section</th>
+                                <th class="px-6 py-3">Division/Section/Unit/Office</th>
                                 <th class="px-6 py-3">Email</th>
                                 <th class="px-6 py-3">Phone</th>
                                 <th class="px-6 py-3">Place of Assignment</th>

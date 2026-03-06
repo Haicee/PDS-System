@@ -18,7 +18,11 @@
                     </div>
 
                                 <div class="hidden space-x-8 sm:-my-px sm:ms-2 sm:flex items-stretch">
-                @if($hasSubmittedPds)
+                @if($hasRejectedPds)
+                    <x-nav-link :href="route('pds.form1')" :active="request()->routeIs('pds.form*')">
+                        {{ __('PDS Form') }}
+                    </x-nav-link>
+                @elseif($hasSubmittedPds)
                     <x-nav-link :href="route('pds.view')" :active="request()->routeIs('pds.view')">
                         {{ __('View PDS') }}
                     </x-nav-link>

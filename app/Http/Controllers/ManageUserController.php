@@ -79,12 +79,12 @@ class ManageUserController extends Controller
             if ($origVal !== $value) {
                 $changed[] = match ($key) {
                     'name' => 'Name',
-                    'unit' => 'Unit/Division/Section',
+                    'unit' => 'Division/Section/Unit/Office',
                     'email' => 'Email',
                     'phone' => 'Phone',
-                    'type' => 'Type',
+                    'type' => 'Employee Status',
                     'status' => 'Status',
-                    'location_assigned' => 'Location Assigned',
+                    'location_assigned' => 'Place of Assignment',
                     default => $key,
                 };
             }

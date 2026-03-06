@@ -12,7 +12,7 @@ class PdsStatusUpdated extends Notification implements ShouldBroadcastNow
 {
     use Queueable;
 
-    public function __construct(public PdsSubmission $submission)
+    public function __construct(public PdsSubmission $submission, public ?string $note = null)
     {
     }
 
@@ -25,10 +25,17 @@ class PdsStatusUpdated extends Notification implements ShouldBroadcastNow
     {
         $status = $this->submission->status ?? 'Pending';
 
+        $message = sprintf('Your PDS was marked %s.', $status);
+
+        if ($status === 'Rejected' && $this->note) {
+            $message .= '<br>Note: ' . $this->note;
+        }
+
         return [
             'title' => 'PDS Submission Updates',
-            'message' => sprintf('Your PDS was marked %s.', $status),
+            'message' => $message,
             'status' => $status,
+            'note' => ($status === 'Rejected') ? $this->note : null,
             'submission_id' => $this->submission->id,
             'link' => route('employee.dashboard'),
         ];

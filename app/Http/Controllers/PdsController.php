@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Models\PdsRejection;
+use App\Models\PdsSubmission;
 
 class PdsController extends Controller
 {
@@ -14,6 +16,10 @@ class PdsController extends Controller
         $userId = Auth::id();
         if (!$userId) {
             abort(403, 'Unauthorized');
+        }
+
+        if ($redirect = $this->redirectIfRejected($userId)) {
+            return $redirect;
         }
 
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
@@ -115,6 +121,10 @@ class PdsController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        if ($redirect = $this->redirectIfRejected($userId)) {
+            return $redirect;
+        }
+
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
         $signaturePath = $signatureFiles->signature_file_path ?? null;
         $photoPath = $signatureFiles->photo_file_path ?? null;
@@ -132,6 +142,10 @@ class PdsController extends Controller
         $userId = Auth::id();
         if (!$userId) {
             abort(403, 'Unauthorized');
+        }
+
+        if ($redirect = $this->redirectIfRejected($userId)) {
+            return $redirect;
         }
 
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
@@ -164,6 +178,10 @@ class PdsController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        if ($redirect = $this->redirectIfRejected($userId)) {
+            return $redirect;
+        }
+
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
         $signaturePath = $signatureFiles->signature_file_path ?? null;
         $photoPath = $signatureFiles->photo_file_path ?? null;
@@ -192,6 +210,10 @@ class PdsController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        if ($redirect = $this->redirectIfRejected($userId)) {
+            return $redirect;
+        }
+
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
         $signaturePath = $signatureFiles->signature_file_path ?? null;
         $photoPath = $signatureFiles->photo_file_path ?? null;
@@ -200,5 +222,22 @@ class PdsController extends Controller
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
         return view('pdsreview.pdsreview5', compact('remarks', 'declaration', 'signaturePath', 'photoPath'));
+    }
+
+    private function redirectIfRejected(int $userId)
+    {
+        $hasRejection = PdsRejection::where('user_id', $userId)->exists();
+        if ($hasRejection) {
+            // If admin rejected, send employee back to editable PDS forms to resubmit
+            return redirect()->route('pds.form1');
+        }
+
+        // If approved, keep view-only behavior; otherwise allow view
+        $submission = PdsSubmission::where('user_id', $userId)->first();
+        if ($submission && $submission->status === 'Approved') {
+            return null;
+        }
+
+        return null;
     }
 }

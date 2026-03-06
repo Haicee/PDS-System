@@ -35,60 +35,62 @@
         
     <div class="flex-1 overflow-hidden">
         <div class="grid gap-6 px-6 py-6 h-full lg:grid-cols-[280px_minmax(0,1fr)]">
-            <div class="space-y-4 pr-2 lg:pr-0">
-                <div class="flex items-center gap-3">
-                    <img :src="selected?.avatar" :alt="(selected?.name ?? 'User') + ' avatar'" class="h-12 w-12 rounded-full object-cover shadow" />
-                    <div>
-                        <p class="text-base font-semibold text-slate-900" x-text="selected?.name ?? '—'"></p>
-                        <p class="text-sm text-slate-500" x-text="selected?.type ?? '—'"></p>
-                    </div>
-                </div>
-
-                <div class="grid gap-6 text-sm text-slate-700">
-                    <div>
-                        <p class="text-xs uppercase text-slate-400 font-semibold">Email</p>
-                        <p class="font-medium" x-text="selected?.email ?? '—'"></p>
-                    </div>
-                    <div>
-                        <p class="text-xs uppercase text-slate-400 font-semibold">Unit</p>  
-                        <p class="font-medium" x-text="selected?.unit ?? '—'"></p>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <p class="text-xs uppercase text-slate-400 font-semibold">Status</p>
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button"
-                                class="rounded-full px-3 py-1.5 text-xs font-semibold border"
-                                :class="(selected?.status_key ?? 'pending') === 'pending'
-                                    ? 'border-amber-200 bg-amber-50 text-amber-700 shadow-sm'
-                                    : 'border-slate-200 text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700'"
-                                @click.stop="requestConfirm('pending')">
-                                Pending
-                            </button>
-                            <button type="button"
-                                class="rounded-full px-3 py-1.5 text-xs font-semibold border"
-                                :class="(selected?.status_key ?? 'pending') === 'approved'
-                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm'
-                                    : 'border-slate-200 text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'"
-                                @click.stop="requestConfirm('approved')">
-                                Approved
-                            </button>
-                            <button type="button"
-                                class="rounded-full px-3 py-1.5 text-xs font-semibold border"
-                                :class="(selected?.status_key ?? 'pending') === 'rejected'
-                                    ? 'border-rose-200 bg-rose-50 text-rose-700 shadow-sm'
-                                    : 'border-slate-200 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700'"
-                                @click.stop="requestConfirm('rejected')">
-                                Rejected
-                            </button>
+            <div class="flex flex-col h-full pr-2 lg:pr-0 gap-4">
+                <div class="space-y-4 flex-1">
+                    <div class="flex items-center gap-3">
+                        <img :src="selected?.avatar" :alt="(selected?.name ?? 'User') + ' avatar'" class="h-12 w-12 rounded-full object-cover shadow" />
+                        <div>
+                            <p class="text-base font-semibold text-slate-900" x-text="selected?.name ?? '—'"></p>
+                            <p class="text-sm text-slate-500" x-text="selected?.type ?? '—'"></p>
                         </div>
                     </div>
-                    <div>
-                        <p class="text-xs uppercase text-slate-400 font-semibold">Submitted</p>
-                        <p class="font-medium" x-text="selected?.submitted_at ?? '—'"></p>
+
+                    <div class="grid gap-6 text-sm text-slate-700">
+                        <div>
+                            <p class="text-xs uppercase text-slate-400 font-semibold">Email</p>
+                            <p class="font-medium" x-text="selected?.email ?? '—'"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase text-slate-400 font-semibold">Unit</p>  
+                            <p class="font-medium" x-text="selected?.unit ?? '—'"></p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <p class="text-xs uppercase text-slate-400 font-semibold">Status</p>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button"
+                                    class="rounded-full px-3 py-1.5 text-xs font-semibold border"
+                                    :class="(selected?.status_key ?? 'pending') === 'pending'
+                                        ? 'border-amber-200 bg-amber-50 text-amber-700 shadow-sm'
+                                        : 'border-slate-200 text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700'"
+                                    @click.stop="requestConfirm('pending')">
+                                    Pending
+                                </button>
+                                <button type="button"
+                                    class="rounded-full px-3 py-1.5 text-xs font-semibold border"
+                                    :class="(selected?.status_key ?? 'pending') === 'approved'
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm'
+                                        : 'border-slate-200 text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'"
+                                    @click.stop="requestConfirm('approved')">
+                                    Approved
+                                </button>
+                                <button type="button"
+                                    class="rounded-full px-3 py-1.5 text-xs font-semibold border"
+                                    :class="(selected?.status_key ?? 'pending') === 'rejected'
+                                        ? 'border-rose-200 bg-rose-50 text-rose-700 shadow-sm'
+                                        : 'border-slate-200 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700'"
+                                    @click.stop="requestConfirm('rejected')">
+                                    Rejected
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase text-slate-400 font-semibold">Submitted</p>
+                            <p class="font-medium" x-text="selected?.submitted_at ?? '—'"></p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3 pt-2">
+                <div class="flex flex-col gap-3 pb-4 mt-auto justify-end">
                     <button type="button"
                         class="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100"
                         @click.stop="downloadPds()">
@@ -118,4 +120,48 @@
             </div>
         </div>
     </div>
+
+    {{-- Confirmation Modal --}}
+    <template x-if="confirmOpen">
+        <div class="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/40 px-4 py-6" x-cloak @keydown.escape.window="cancelConfirm()" @click.self="cancelConfirm()">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-full flex items-center justify-center" :class="confirmAction === 'approved' ? 'bg-emerald-400' : confirmAction === 'rejected' ? 'bg-rose-400' : 'bg-amber-400'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#edf1edff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-check-icon lucide-file-check"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="m9 15 2 2 4-4"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-lg font-semibold text-slate-900"
+                                x-text="confirmAction === 'approved' ? 'Approve submission?' : confirmAction === 'rejected' ? 'Reject submission?' : 'Mark as pending?'"></p>
+                        </div>
+                    </div>
+                    <button type="button" class="rounded-full p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100" @click="cancelConfirm()">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6m0 12L6 6" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="px-6 py-5 flex flex-col gap-4">
+                    <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <p class="text-md text-slate-700" x-text="confirmAction === 'approved' ? 'This will approve the submitted PDS.' : confirmAction === 'rejected' ? 'This will reject the submitted PDS.' : 'This will mark the submitted PDS as pending.'"></p>
+                    </div>
+                    <template x-if="confirmAction === 'rejected'">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-medium text-slate-700">Rejection note</label>
+                            <textarea class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-rose-500 focus:ring-rose-200"
+                                rows="3" placeholder="Add a short reason for rejection"
+                                x-model.trim="rejectNote"></textarea>
+                        </div>
+                    </template>
+                    <div class="flex gap-3">
+                        <button type="button" class="flex-1 rounded-xl border px-4 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300" @click="cancelConfirm()">Cancel</button>
+                        <button type="button" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                            :class="confirmAction === 'approved' ? 'bg-emerald-600 hover:bg-emerald-500' : confirmAction === 'rejected' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-amber-600 hover:bg-amber-500'"
+                            @click="confirmStatus()"
+                            x-text="confirmAction === 'approved' ? 'Confirm' : confirmAction === 'rejected' ? 'Reject' : 'Mark Pending'"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
