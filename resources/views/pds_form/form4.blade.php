@@ -1,5 +1,5 @@
 <x-app-layout>
-<form id="pds-form4" method="POST" action="{{ route('pds.saveStep', 4) }}" enctype="multipart/form-data">
+<form id="pds-form4" method="POST" action="{{ route('pds.saveStep', [4], false) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
         <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
@@ -327,34 +327,13 @@
         if (name) names.add(name);
       });
 
-      names.forEach(name => {
-        const selectorName = name.replace(/["'\\]/g, '\\$&');
-        const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
-        if (!fields.length) return;
-
-        const refresh = () => {
-          const firstField = fields[0];
-          const firstIsNA = firstField ? isNA(firstField.value) : false;
-
-          fields.forEach((f, idx) => {
-            const shouldDisable = firstIsNA && idx > 0;
-            f.disabled = shouldDisable;
-            f.classList.toggle('bg-gray-200', shouldDisable);
-            f.classList.toggle('text-gray-500', shouldDisable);
-            f.classList.toggle('cursor-not-allowed', shouldDisable);
-            if (shouldDisable && f.tagName === 'TEXTAREA') {
-              f.value = '';
-            }
-          });
-        };
-
-        fields.forEach(f => f.addEventListener('input', refresh));
-        refresh();
-      });
-
       // First-row logic for reference table
       const rowGroup = (namesArr) => namesArr.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
       const referenceFirstRow = rowGroup(['reference_name[]','reference_address[]','reference_contact[]']);
+      const referenceRowNames = ['reference_name[]','reference_address[]','reference_contact[]'];
+      const govFields = ['gov_id','licence_passport_id','id_issue_date_place'];
+      const photoFileInput = document.getElementById('photoFile');
+      const photoDataInput = document.getElementById('photoData');
 
       const disableFollowingRows = (namesArr, disable) => {
         namesArr.forEach(n => {
@@ -374,15 +353,85 @@
       };
 
       const firstRowState = (fields) => {
-        const values = fields.map(f => (f?.value || '').trim());
-        const allNA = values.length && values.every(v => isNA(v));
-        const anyData = values.some(v => v !== '' && !isNA(v));
-        return { allNA, anyData };
+        const active = fields.filter(f => f && !f.disabled && !f.readOnly);
+        const optionalNames = new Set();
+
+        const allBlank = active.every(f => (f.value || '').trim() === '');
+        const allNA = active.length && active.every(f => isNA(f.value));
+
+        let requiredMissing = false;
+        if (!(allBlank || allNA)) {
+          requiredMissing = active.some(f => {
+            if (optionalNames.has(f.name)) return false;
+            return !isFilled(f);
+          });
+        }
+
+        const incomplete = !(allBlank || allNA) && requiredMissing;
+
+        return { allBlank, allNA, incomplete };
       };
 
+      const enforceRowCompleteness = (namesArr, optionalNames = new Set()) => {
+        let invalidField = null;
+        const columns = namesArr.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`)));
+        const maxRows = Math.max(...columns.map(c => c.length));
+
+        for (let row = 0; row < maxRows; row++) {
+          const rowFields = columns.map(c => c[row]).filter(Boolean);
+          if (!rowFields.length) continue;
+
+          const active = rowFields.filter(f => f && !f.disabled && !f.readOnly);
+          if (!active.length) continue;
+
+          const rowHasData = active.some(f => !optionalNames.has(f.name) && !isNA(f.value) && (f.value || '').trim() !== '');
+          if (!rowHasData) continue;
+
+          for (const f of active) {
+            if (optionalNames.has(f.name)) continue;
+            const val = (f.value || '').trim();
+            const filled = val !== '' || isNA(val);
+            if (!filled) {
+              f.setCustomValidity('Complete all fields in this row or clear the first column.');
+              if (!invalidField) invalidField = f;
+            }
+          }
+        }
+
+        return invalidField;
+      };
+
+      const fillRowWithNA = (namesArr, rowIndex = 0) => {
+        namesArr.forEach(n => {
+          const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+          const target = fields[rowIndex];
+          if (target) target.value = 'NA';
+        });
+      };
+
+      const clearRowNA = (namesArr, rowIndex = 0) => {
+        namesArr.forEach(n => {
+          const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+          const target = fields[rowIndex];
+          if (target && isNA(target.value)) target.value = '';
+        });
+      };
+
+      let prevDisableReferences = null;
+
       const refreshRows = () => {
-        const refState = firstRowState(referenceFirstRow);
-        disableFollowingRows(['reference_name[]','reference_address[]','reference_contact[]'], refState.allNA);
+        const refFirst = referenceFirstRow[0];
+        const disableRefs = refFirst ? isNA(refFirst.value) : false;
+
+        disableFollowingRows(['reference_name[]','reference_address[]','reference_contact[]'], disableRefs);
+
+        if (disableRefs) {
+          fillRowWithNA(['reference_name[]','reference_address[]','reference_contact[]'], 0);
+        } else if (prevDisableReferences === true && disableRefs === false) {
+          clearRowNA(['reference_address[]','reference_contact[]'], 0);
+        }
+
+        prevDisableReferences = disableRefs;
       };
 
       const scrollToField = (el) => {
@@ -511,6 +560,27 @@
           }
         });
 
+        if (!firstMissing) {
+          const photoProvided = (() => {
+            const hasFile = photoFileInput && photoFileInput.files && photoFileInput.files.length > 0;
+            const hasData = photoDataInput && (photoDataInput.value || '').trim() !== '';
+            return hasFile || hasData;
+          })();
+          if (!photoProvided && photoFileInput) {
+            firstMissing = photoFileInput;
+          }
+        }
+
+        if (!firstMissing) {
+          for (const name of govFields) {
+            const field = form.querySelector(`[name="${name}"]`);
+            if (field && !field.disabled && !field.readOnly && (field.value || '').trim() === '') {
+              firstMissing = field;
+              break;
+            }
+          }
+        }
+
         for (const group of conditionalGroups) {
           const [yesBox, noBox] = group.boxes;
           const yesChecked = yesBox && yesBox.checked;
@@ -560,11 +630,16 @@
         if (!firstMissing) {
           for (const set of firstRowSets) {
             const state = firstRowState(set);
-            if (!(state.allNA || state.anyData)) {
+            if (state.incomplete || state.allBlank) {
               firstMissing = set.find(f => f && !isFilled(f)) || set[0];
               break;
             }
           }
+        }
+
+        if (!firstMissing) {
+          const incompleteRef = enforceRowCompleteness(referenceRowNames);
+          if (incompleteRef) firstMissing = incompleteRef;
         }
 
         if (!nextBtn) return null;
@@ -583,7 +658,9 @@
           if (firstMissing) {
             e.preventDefault();
             e.stopPropagation();
-            firstMissing.setCustomValidity('Please complete this field.');
+            if (!firstMissing.validationMessage) {
+              firstMissing.setCustomValidity('Please complete this field.');
+            }
             firstMissing.reportValidity();
             firstMissing.focus({ preventScroll: true });
             scrollToField(firstMissing);
@@ -735,7 +812,7 @@
           clearTimeout(timer);
           timer = setTimeout(() => {
             const formData = new FormData(form);
-            fetch('{{ route('pds.autosave') }}', {
+            fetch('{{ route('pds.autosave', [], false) }}', {
               method: 'POST',
               headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -785,7 +862,7 @@
       validateRequired();
       loadCachedPhoto();
 
-      fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
+      fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
         .then(r => r.ok ? r.json() : null)
         .then(json => {
           if (!json || !json.data) return;

@@ -102,7 +102,7 @@
                 this.employeeFieldErrors = {};
                 this.savingEmployee = true;
 
-                fetch('{{ route('registration-users.store') }}', {
+                fetch('{{ route('registration-users.store', [], false) }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

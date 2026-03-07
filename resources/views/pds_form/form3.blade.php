@@ -1,6 +1,6 @@
 <x-app-layout>
 <div id="autosaveOverlay3" class="autosave-overlay hidden">Saving…</div>
-<form id="pds-form3" method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
+<form id="pds-form3" method="POST" action="{{ route('pds.saveStep', [3], false) }}" enctype="multipart/form-data">
 @csrf
     <div class="max-w-6xl mx-auto p-4 flex justify-end">
         <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
@@ -108,37 +108,6 @@
                 return v === 'NA' || v === 'N/A' || v === 'NONE';
             };
 
-            const names = new Set();
-            document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
-                const name = el.getAttribute('name');
-                if (name) names.add(name);
-            });
-
-            names.forEach(name => {
-                const selectorName = name.replace(/["'\\]/g, '\\$&');
-                const fields = Array.from(document.querySelectorAll(`input[name="${selectorName}"]` + `, textarea[name="${selectorName}"]`));
-                if (!fields.length) return;
-
-                const refresh = () => {
-                    const firstField = fields[0];
-                    const firstIsNA = firstField ? isNA(firstField.value) : false;
-
-                    fields.forEach((f, idx) => {
-                        const shouldDisable = firstIsNA && idx > 0;
-                        f.disabled = shouldDisable;
-                        f.classList.toggle('bg-gray-200', shouldDisable);
-                        f.classList.toggle('text-gray-500', shouldDisable);
-                        f.classList.toggle('cursor-not-allowed', shouldDisable);
-                        if (shouldDisable && f.tagName === 'TEXTAREA') {
-                            f.value = '';
-                        }
-                    });
-                };
-
-                fields.forEach(f => f.addEventListener('input', refresh));
-                refresh();
-            });
-
             // First-row logic per table
             const rowGroup = (namesArr) => namesArr.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
             const voluntaryFirstRow = rowGroup(['voluntary_organization[]','voluntary_from[]','voluntary_to[]','voluntary_hours[]','voluntary_position_nature_of_work[]']);
@@ -161,22 +130,86 @@
                 });
             };
 
+            const fillRowWithNA = (namesArr, rowIndex = 0) => {
+                namesArr.forEach(n => {
+                    const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+                    const target = fields[rowIndex];
+                    if (target) target.value = 'NA';
+                });
+            };
+
+            const clearRowNA = (namesArr, rowIndex = 0) => {
+                namesArr.forEach(n => {
+                    const fields = Array.from(document.querySelectorAll(`[name="${n}"]`));
+                    const target = fields[rowIndex];
+                    if (target && isNA(target.value)) target.value = '';
+                });
+            };
+
+            let prevDisableVoluntary = null;
+            let prevDisableLearning = null;
+            let prevDisableOther = null;
+
+            const firstColIsNA = (fields) => {
+                const first = fields[0];
+                if (!first) return false;
+                return isNA(first.value);
+            };
+
             const firstRowState = (fields) => {
-                const values = fields.map(f => (f?.value || '').trim());
-                const allNA = values.length && values.every(v => isNA(v));
-                const anyData = values.some(v => v !== '' && !isNA(v));
-                return { allNA, anyData };
+                const active = fields.filter(f => f && !f.disabled && !f.readOnly);
+                const optionalNames = new Set();
+
+                const allBlank = active.every(f => (f.value || '').trim() === '');
+                const allNA = active.length && active.every(f => isNA(f.value));
+
+                let requiredMissing = false;
+                if (!(allBlank || allNA)) {
+                    requiredMissing = active.some(f => {
+                        if (optionalNames.has(f.name)) return false;
+                        return !isFilled(f);
+                    });
+                }
+
+                const incomplete = !(allBlank || allNA) && requiredMissing;
+
+                return { allBlank, allNA, incomplete };
             };
 
             const refreshRows = () => {
-                const voluntaryState = firstRowState(voluntaryFirstRow);
-                disableFollowingRows(['voluntary_organization[]','voluntary_from[]','voluntary_to[]','voluntary_hours[]','voluntary_position_nature_of_work[]'], voluntaryState.allNA);
+                const disableVoluntary = firstColIsNA(voluntaryFirstRow);
+                const disableLearning = firstColIsNA(learningFirstRow);
+                const disableOther = firstColIsNA(otherInfoFirstRow);
 
-                const learningState = firstRowState(learningFirstRow);
-                disableFollowingRows(['learning_title_of_ld[]','learning_from[]','learning_to[]','learning_hours[]','learning_type_of_ld[]','learning_conducted_sponsored_by[]'], learningState.allNA);
+                const voluntaryNames = ['voluntary_organization[]','voluntary_from[]','voluntary_to[]','voluntary_hours[]','voluntary_position_nature_of_work[]'];
+                const learningNames = ['learning_title_of_ld[]','learning_from[]','learning_to[]','learning_hours[]','learning_type_of_ld[]','learning_conducted_sponsored_by[]'];
+                const otherNames = ['special_skills_hobbies[]','non_academic_distinctions_recognition[]','membership_in_association_organization[]'];
 
-                const otherState = firstRowState(otherInfoFirstRow);
-                disableFollowingRows(['special_skills_hobbies[]','non_academic_distinctions_recognition[]','membership_in_association_organization[]'], otherState.allNA);
+                disableFollowingRows(voluntaryNames, disableVoluntary);
+                disableFollowingRows(learningNames, disableLearning);
+                disableFollowingRows(otherNames, disableOther);
+
+                if (disableVoluntary) {
+                    fillRowWithNA(voluntaryNames, 0);
+                } else if (prevDisableVoluntary === true && disableVoluntary === false) {
+                    clearRowNA(voluntaryNames.slice(1), 0);
+                }
+
+                if (disableLearning) {
+                    fillRowWithNA(learningNames, 0);
+                } else if (prevDisableLearning === true && disableLearning === false) {
+                    clearRowNA(learningNames.slice(1), 0);
+                }
+
+                if (disableOther) {
+                    fillRowWithNA(otherNames, 0);
+                } else if (prevDisableOther === true && disableOther === false) {
+                    clearRowNA(otherNames.slice(1), 0);
+                }
+
+                prevDisableVoluntary = disableVoluntary;
+                prevDisableLearning = disableLearning;
+                prevDisableOther = disableOther;
             };
 
             [...voluntaryFirstRow, ...learningFirstRow, ...otherInfoFirstRow].forEach(f => {
@@ -198,6 +231,14 @@
             };
 
             const firstRowSets = [voluntaryFirstRow, learningFirstRow, otherInfoFirstRow];
+
+            const clearValidity = () => {
+                requiredFields.forEach(el => el.setCustomValidity(''));
+                firstRowSets.flat().forEach(f => f?.setCustomValidity(''));
+                document.querySelectorAll('[name^="voluntary_"]').forEach(el => el.setCustomValidity(''));
+                document.querySelectorAll('[name^="learning_"]').forEach(el => el.setCustomValidity(''));
+                document.querySelectorAll('[name^="special_skills_hobbies"], [name^="non_academic_distinctions_recognition"], [name^="membership_in_association_organization"]').forEach(el => el.setCustomValidity(''));
+            };
 
             const scrollToField = (el) => {
                 if (!el) return;
@@ -247,7 +288,7 @@
 
                 const firstRowsIncomplete = firstRowSets.some(set => {
                     const state = firstRowState(set);
-                    return !(state.allNA || state.anyData);
+                    return state.incomplete || state.allBlank;
                 });
 
                 const incompleteVoluntary = enforceRowCompleteness(voluntaryRowNames);
@@ -271,7 +312,7 @@
 
                 for (const set of firstRowSets) {
                     const state = firstRowState(set);
-                    if (!(state.allNA || state.anyData)) {
+                    if (state.incomplete || state.allBlank) {
                         const missing = set.find(f => f && !isFilled(f));
                         const target = missing || set[0];
                         if (target) {
@@ -297,8 +338,8 @@
                 return false;
             };
 
-            document.addEventListener('input', () => { refreshRows(); }, true);
-            document.addEventListener('change', () => { refreshRows(); }, true);
+            document.addEventListener('input', () => { refreshRows(); clearValidity(); }, true);
+            document.addEventListener('change', () => { refreshRows(); clearValidity(); }, true);
 
             if (nextBtn) {
                 nextBtn.addEventListener('click', (e) => {
@@ -507,7 +548,7 @@
                 };
                 const send = () => {
                     const formData = new FormData(form);
-                    fetch('{{ route('pds.autosave') }}', {
+                    fetch('{{ route('pds.autosave', [], false) }}', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -561,7 +602,7 @@
             // Persist merged cache once so a fast refresh keeps latest values
             saveCache();
 
-            fetch('{{ route('pds.draft') }}', { headers: { 'Accept': 'application/json' } })
+            fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.ok ? r.json() : null)
                 .then(json => {
                     if (!json || !json.data) return;

@@ -358,19 +358,20 @@
       @php
         // Reindex to zero-based keys so array-style access works for all saved references
         $refRows = ($references ?? collect())->values();
+        $hasReferences = $refRows->filter(fn($ref) => !empty($ref->name) || !empty($ref->address) || !empty($ref->contact))->isNotEmpty();
         $maxRef = max(7, $refRows->count());
       @endphp
       @for ($i = 0; $i < $maxRef; $i++)
-      @php $ref = $refRows[$i] ?? null; @endphp
+      @php $ref = $hasReferences ? ($refRows[$i] ?? null) : null; @endphp
       <tr class="border border-r-0 border-l-3 border-black align-top">
         <td class="border border-black align-top p-0 w-60 text-center" style="height:25px;">
-          {{ $ref->name ?? '' }}
+          {{ !$hasReferences && $i === 0 ? 'N/A' : ($ref->name ?? '') }}
         </td>
         <td class="border border-black align-top p-0 text-center" style="height:25px;">
-          {{ $ref->address ?? '' }}
+          {{ !$hasReferences && $i === 0 ? 'N/A' : ($ref->address ?? '') }}
         </td>
         <td class="border border-r-3 align-top p-0 border-r-2 border-black text-center" style="height:25px;">
-          {{ $ref->contact ?? '' }}
+          {{ !$hasReferences && $i === 0 ? 'N/A' : ($ref->contact ?? '') }}
         </td>
       </tr>
       @endfor
@@ -429,7 +430,7 @@
           @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
           <table class="border-collapse text-xs border-3 mt-2 border-2 mb-2 w-[11.6cm]" style="margin-left: 122px;">
             <tr>
-              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative p-1">
+              <td class="h-[2.74cm] border-black text-center align-middle italic text-red-600 relative p-1">
                 @if($signatureUrl)
                   <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
                 @else

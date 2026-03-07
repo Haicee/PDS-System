@@ -126,10 +126,10 @@
                             </x-dropdown-link>
 
                             <!-- Authentication -->
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout', [], false) }}">
                                 @csrf
 
-                                <x-dropdown-link :href="route('logout')"
+                                <x-dropdown-link :href="route('logout', [], false)"
                                 onclick="event.preventDefault();
                                         localStorage.clear();
                                         this.closest('form').submit();">

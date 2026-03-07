@@ -11,7 +11,7 @@
                 <p class="text-center text-sm text-slate-500">Use your official BFAR email account to continue.</p>
             </div>
 
-            <form class="space-y-6" method="POST" action="{{ route('login') }}">
+            <form id="login-form" class="space-y-6" method="POST" action="{{ route('login', [], false) }}">
                 @csrf
 
                 <!-- Email Address -->
@@ -50,7 +50,7 @@
                     @endif
                 </div>
 
-                <button type="submit" class="group relative inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
+                <button id="login-submit" type="submit" class="group relative inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
                     <span class="absolute inset-0 rounded-2xl opacity-0 transition group-hover:opacity-20" style="background: linear-gradient(120deg, rgba(255,255,255,.7), rgba(255,255,255,0));"></span>
                     {{ __('Log in') }}
                 </button>
@@ -63,6 +63,21 @@
                     </p>
                 </div>
             </form>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const form = document.getElementById('login-form');
+                    const submitBtn = document.getElementById('login-submit');
+
+                    if (!form || !submitBtn) return;
+
+                    form.addEventListener('submit', () => {
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                        submitBtn.textContent = '{{ __('Signing in...') }}';
+                    }, { once: true });
+                });
+            </script>
         </section>
     </div>
 </x-guest-layout>

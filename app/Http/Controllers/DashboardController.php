@@ -9,6 +9,11 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // If an employee (web guard) hits /dashboard, redirect to employee dashboard
+        if (auth('web')->check()) {
+            return redirect()->route('employee.dashboard');
+        }
+
         $permanentCount = User::where('type', 'Permanent Employee')->count();
         $jobOrderCount = User::where('type', 'Job Order')->count();
 

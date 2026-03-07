@@ -968,12 +968,22 @@
           $rec = optional($eduByLevel->get($normalizeLevel($level)))->first();
           return $getField($rec, $field);
       };
+      $displaySchool = function($value) {
+          $normalized = strtoupper(trim((string) $value));
+          return ($normalized === '' || $normalized === 'NA' || $normalized === 'N/A') ? 'N/A' : $value;
+      };
+      $eduSchool = function(string $level) use ($eduVal, $displaySchool) {
+          return $displaySchool($eduVal($level, 'school_name'));
+      };
       $eduCourse = function(string $level) use ($eduVal) {
           $course = $eduVal($level, 'degree_course');
           if ($course === '') {
               $course = $eduVal($level, 'basic_education');
           }
           return $course;
+      };
+      $eduRowSchool = function($rec) use ($getField, $displaySchool) {
+          return $displaySchool($getField($rec, 'school_name'));
       };
       $eduHonors = function(string $level) use ($eduVal) {
           $honors = $eduVal($level, 'academic_honors');
@@ -1035,7 +1045,7 @@
      <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('elementary','school_name') }}
+            {{ $eduSchool('elementary') }}
           </div>
       </td>
 
@@ -1078,7 +1088,7 @@
   @foreach($extraRows('ELEMENTARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
       <td class="border text-center align-middle h-20">ELEMENTARY</td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
@@ -1096,7 +1106,8 @@
      <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('secondary','school_name') }}
+            {{ $eduSchool('secondary') }}
+          </div>
       </td>
 
       <td
@@ -1138,7 +1149,7 @@
   @foreach($extraRows('SECONDARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
       <td class="border text-center align-middle h-20">SECONDARY</td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
@@ -1155,7 +1166,7 @@
     <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('vocational','school_name') }}
+            {{ $eduSchool('vocational') }}
       </td>
 
       <td
@@ -1197,7 +1208,7 @@
   @foreach($extraRows('VOCATIONAL / TRADE COURSE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
       <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
@@ -1214,7 +1225,7 @@
     <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('college','school_name') }}
+            {{ $eduSchool('college') }}
       </td>
 
       <td
@@ -1256,7 +1267,7 @@
   @foreach($extraRows('COLLEGE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
       <td class="border text-center align-middle h-20">COLLEGE</td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
@@ -1273,7 +1284,7 @@
    <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('graduate_studies','school_name') }}
+            {{ $eduSchool('graduate_studies') }}
       </td>
 
       <td
@@ -1315,7 +1326,7 @@
   @foreach($extraRows('GRADUATE STUDIES') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
       <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'school_name') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>

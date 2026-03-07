@@ -1,6 +1,6 @@
 <x-app-layout>
 <div id="autosaveOverlay5" class="autosave-overlay hidden">Saving…</div>
-<form id="pds-form5" method="POST" action="{{ route('pds.submit') }}" class="w-full" enctype="multipart/form-data">
+<form id="pds-form5" method="POST" action="{{ route('pds.submit', [], false) }}" class="w-full" enctype="multipart/form-data">
 @csrf
 
 <div class="max-w-6xl mx-auto p-4 flex justify-end">
@@ -360,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const send = () => {
       const formData = new FormData(form);
-      fetch('{{ route('pds.autosave') }}', {
+      fetch('{{ route('pds.autosave', [], false) }}', {
         method: 'POST',
         headers: {
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content

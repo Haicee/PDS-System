@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\EmployeeController;
@@ -24,6 +25,10 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    Route::get('otp', [OtpController::class, 'show'])->name('otp.show');
+    Route::post('otp', [OtpController::class, 'verify'])->name('otp.verify');
+    Route::post('otp/cancel', [OtpController::class, 'cancel'])->name('otp.cancel');
+
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
@@ -37,17 +42,26 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
+Route::get('verify-email/{id}/{hash}', [VerifyEmailController::class, 'guestVerify'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
+
 Route::middleware('auth')->group(function () {
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
-
+    // Limit resend to once per 3 minutes (1 attempt / 3 minutes)
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:1,3')
         ->name('verification.send');
+
+    Route::post('email/verification-update', [EmailVerificationNotificationController::class, 'update'])
+        ->middleware('throttle:30,1')
+        ->name('verification.update');
+
+    Route::get('email/verification-status', [EmailVerificationNotificationController::class, 'status'])
+        ->middleware('throttle:6,1')
+        ->name('verification.status');
 
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');

@@ -23,6 +23,7 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileEditRequestController;
+use App\Http\Controllers\Auth\OtpController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -676,6 +677,19 @@ Route::middleware('auth')->group(function () {
 });
 
 
+Route::get('/verification-status', function () {
+    return ['verified' => auth()->user()->hasVerifiedEmail()];
+})->middleware(['auth'])->name('verification.status');
 
+Route::get('/otp/resend', [OtpController::class, 'resend'])
+    ->name('otp.resend')
+    ->middleware('guest');
+
+    Route::middleware('web')->group(function () {
+    Route::get('/otp', [OtpController::class, 'show'])->name('otp.show');
+    Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify');
+    Route::post('/otp/resend', [OtpController::class, 'resend'])->name('otp.resend');
+    Route::post('/otp/cancel', [OtpController::class, 'cancel'])->name('otp.cancel');
+});
 
 require __DIR__.'/auth.php';

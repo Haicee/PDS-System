@@ -17,6 +17,7 @@
         body > table + table { border-top: 0; }
         .section-table { border: 4px solid #000; margin-top: 0; }
         .section-table + .section-table { border-top: 0; }
+        .section-table thead tr, .section-table thead th { page-break-inside: avoid; break-inside: avoid; }
         .border-3 { border: 3px solid #000; }
         .border-2 { border: 2px solid #000; }
         .pds-responsive { overflow-x: auto; }
@@ -1470,14 +1471,14 @@
 </div>
 
 <div style="page-break-before: always;"></div>
-  <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;">
+  <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid;">
 
   <colgroup>
-    <col style="width:29.5%;">
-    <col style="width:5%;">
-    <col style="width:5%;">
-    <col style="width:5%;">
-    <col style="width:20%;">
+    <col style="width:35%;">
+    <col style="width:12%;">
+    <col style="width:12%;">
+    <col style="width:12%;">
+    <col style="width:29%;">
   </colgroup>
 
   <tr>
@@ -1541,13 +1542,14 @@
 
     
 
-   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;">
+   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid;">
 
   <colgroup>
-    <col style="width:45.5%;">
-    <col style="width:8%;">
-    <col style="width:7.5%;">
-    <col style="width:8%;">
+    <col style="width:40%;">
+    <col style="width:12%;">
+    <col style="width:12%;">
+    <col style="width:12%;">
+    <col style="width:12%;">
     <col style="width:12%;">
   </colgroup>
 
@@ -1647,7 +1649,7 @@
         $skills = $otherCollection->where('category', 'skills')->pluck('description')->values();
         $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->values();
         $assoc = $otherCollection->where('category', 'association')->pluck('description')->values();
-        $maxOther = max(10, $skills->count(), $recognition->count(), $assoc->count());
+        $maxOther = max(8, $skills->count(), $recognition->count(), $assoc->count());
     @endphp
 
     @for ($i = 0; $i < $maxOther; $i++)
@@ -2424,10 +2426,15 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <div class="w-full flex justify-end" style="margin-top:100px; padding-right:8px;">
   <div class="text-center" style="width:460px; margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:8px;">
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:150px; object-fit:contain;">
+      <img
+        src="{{ $signatureUrl }}"
+        alt="Signature"
+        style="max-height:140px; object-fit:contain; margin-top:0; margin-bottom:-30px;"
+      >
     @else
-      <div class="text-xs" style="color:#666;">No signature on file</div>
+      <div class="text-xs" style="color:#666; margin-top:0; margin-bottom:-15px;">No signature on file</div>
     @endif
+    <span>{{ auth()->user()->name ?? 'Employee' }}</span>
     <div class="border-b-2 border-black" style="height:20px; width:100%;"></div>
     <div class="mt-2 text-sm">(Signature over Printed Name)</div>
   </div>
