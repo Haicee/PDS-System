@@ -8,6 +8,7 @@
             display: none;
         }
     </style>
+    @vite(['resources/js/app.js', 'resources/js/register-camera.js'])
     <div class="flex items-center justify-center px-4">
         <section class="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur max-h-[75vh] overflow-y-auto hide-scrollbar">
             <div class="mb-8 space-y-2">
@@ -21,7 +22,7 @@
                 class="space-y-6"
                 enctype="multipart/form-data"
                 x-data="formCache()"
-                x-init="init()">
+                @submit="submitting = true">
                 @csrf
 
                 <!-- Name -->
@@ -67,7 +68,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-search-icon lucide-user-round-search"><circle cx="10" cy="8" r="5"/><path d="M2 21a8 8 0 0 1 10.434-7.62"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.9-1.9"/></svg>  
                             <select id="type" name="type" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>
                                 <option value="Permanent Employee" {{ old('type', 'Permanent Employee') === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
-                                <option value="Job Order" {{ old('type') === 'Job Order' ? 'selected' : '' }}>Job Order</option>
+                                <option value="EContract of Service" {{ old('type') === 'EContract of Service' ? 'selected' : '' }}>EContract of Service</option>
                             </select>
                         </div>
                         <x-input-error :messages="$errors->get('type')" class="mt-2" />
@@ -146,12 +147,19 @@
                             <video x-ref="video" class="absolute inset-0 h-full w-full object-cover" 
                                 x-show="streaming" playsinline muted></video>
 
-                            <!-- Face Guide Overlay -->
+                            <!-- Progress ring on outer border -->
                             <div x-show="streaming"
                                 class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <div class="w-24 h-32 sm:w-32 sm:h-40 md:w-36 md:h-44 
-                                            rounded-full border-4 border-white/80 
-                                            border-dashed shadow-inner">
+                                <svg class="absolute inset-[-6px] w-[calc(100%+12px)] h-[calc(100%+12px)]" viewBox="0 0 112 112" aria-hidden="true">
+                                    <circle cx="56" cy="56" r="52" stroke="rgba(255,255,255,0.25)" stroke-width="6" fill="none" />
+                                    <circle cx="56" cy="56" r="52" stroke="#38bdf8" stroke-width="6" fill="none"
+                                        stroke-linecap="round"
+                                        stroke-dasharray="326.72"
+                                        :stroke-dashoffset="`${326.72 * (1 - detectionProgress/100)}`"
+                                        transform="rotate(-90 56 56)" />
+                                </svg>
+                                <div class="relative w-24 h-32 sm:w-32 sm:h-40 md:w-36 md:h-44">
+                                    <div class="absolute inset-[6px] rounded-full bg-transparent border-4 border-white/70 border-dashed"></div>
                                 </div>
                             </div>
 
@@ -177,6 +185,9 @@
 
                         </div>
 
+                        <p x-text="detectionMessage"
+                               x-show="detectionMessage"
+                               class="text-xs font-semibold text-rose-600 text-center px-4"></p>
 
                         <div class="flex flex-col items-center gap-2">
                             <input 
@@ -196,15 +207,9 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M17 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m3 10 2.586-2.586a2 2 0 0 1 2.828 0L12 11l2.586-2.586a2 2 0 0 1 2.828 0L21 11"/><circle cx="12" cy="13" r="3"/></svg>
                                     Take Photo
                                 </button>   
-
                                 <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="chooseUpload()" x-show="!streaming">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7-7-7 7"/><path d="M5 19h14"/></svg>
                                     Upload Photo
-                                </button>
-
-                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition hover:border-emerald-500 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="captureFrame()" x-show="streaming">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-                                    Capture
                                 </button>
                             </div>
 
@@ -217,7 +222,9 @@
                     <x-input-error :messages="$errors->get('profile_photo')" class="mt-1" />
                 </div>
 
-                <button type="submit" class="group relative inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
+                <button type="submit" 
+                    class="group relative inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+                    :disabled="submitting">
                     <span class="absolute inset-0 rounded-2xl opacity-0 transition group-hover:opacity-20" style="background: linear-gradient(120deg, rgba(255,255,255,.7), rgba(255,255,255,0));"></span>
                     {{ __('Create account') }}
                 </button>
@@ -233,143 +240,7 @@
         </section>
     </div>
 
-  <script>
-function formCache() {
-    return {
-        preview: null,
-        stream: null,
-        streaming: false,
-
-        init() {
-            const form = document.querySelector("form");
-            const saved = JSON.parse(localStorage.getItem("register_cache") || "{}");
-
-            // Restore normal inputs (text/select)
-            Object.entries(saved).forEach(([name, value]) => {
-                if (name === "profile_photo_base64") return;
-                const input = form.querySelector(`[name="${name}"]`);
-                const isSelect = input?.tagName === 'SELECT';
-                if (input && input.type !== "file" && input.type !== "password" && (!input.value || isSelect)) {
-                    input.value = value;
-                    input.dispatchEvent(new Event('input'));
-                }
-            });
-
-            this.restorePhoto(saved.profile_photo_base64, form);
-
-            // Cache normal inputs
-            form.querySelectorAll("input, select, textarea").forEach(input => {
-                if (input.type === "file" || input.type === "password") return;
-                input.addEventListener("input", () => {
-                    const cache = JSON.parse(localStorage.getItem("register_cache") || "{}");
-                    cache[input.name] = input.value;
-                    localStorage.setItem("register_cache", JSON.stringify(cache));
-                });
-            });
-        },
-
-        restorePhoto(base64, form) {
-            if (!base64) return;
-            this.preview = base64;
-
-            // Recreate file for the required input so validation passes without re-upload
-            const dt = new DataTransfer();
-            const byteString = atob(base64.split(",")[1]);
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) {
-                ia[i] = byteString.charCodeAt(i);
-            }
-            const blob = new Blob([ab], { type: "image/jpeg" });
-            const file = new File([blob], "profile_photo.jpg", { type: "image/jpeg" });
-            dt.items.add(file);
-            const uploadInput = form.querySelector("[name='profile_photo']");
-            if (uploadInput) uploadInput.files = dt.files;
-        },
-
-        handlePhoto(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            this.cachePhoto(file);
-        },
-
-        cachePhoto(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.preview = e.target.result;
-                const cache = JSON.parse(localStorage.getItem("register_cache") || "{}");
-                cache.profile_photo_base64 = e.target.result;
-                localStorage.setItem("register_cache", JSON.stringify(cache));
-            };
-            reader.readAsDataURL(file);
-        },
-
-        async startCamera() {
-            try {
-                this.stopCamera();
-                const stream = await navigator.mediaDevices?.getUserMedia?.({ video: true });
-                if (!stream) return;
-                this.stream = stream;
-                this.streaming = true;
-                const video = this.$refs.video;
-                if (video) {
-                    video.srcObject = stream;
-                    await video.play();
-                }
-            } catch (e) {
-                console.error(e);
-                this.streaming = false;
-            }
-        },
-
-        stopCamera() {
-            if (this.stream) {
-                this.stream.getTracks().forEach(t => t.stop());
-            }
-            this.stream = null;
-            this.streaming = false;
-        },
-
-        chooseUpload() {
-            this.stopCamera();
-            this.$refs.uploadInput?.click();
-        },
-
-        captureFrame() {
-            if (!this.streaming) return;
-            const video = this.$refs.video;
-            const canvas = this.$refs.canvas;
-            if (!video || !canvas) return;
-            const { videoWidth: w, videoHeight: h } = video;
-            if (!w || !h) return;
-
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, w, h);
-            canvas.toBlob(blob => {
-                if (!blob) return;
-                const file = new File([blob], 'profile_photo.jpg', { type: 'image/jpeg' });
-                const dt = new DataTransfer();
-                dt.items.add(file);
-                if (this.$refs.uploadInput) this.$refs.uploadInput.files = dt.files;
-                this.cachePhoto(file);
-                this.stopCamera();
-            }, 'image/jpeg', 0.9);
-        },
-
-        clear() {
-            this.preview = null;
-            const uploadInput = this.$refs.uploadInput;
-            if (uploadInput) uploadInput.value = '';
-            this.stopCamera();
-            const cache = JSON.parse(localStorage.getItem("register_cache") || "{}");
-            delete cache.profile_photo_base64;
-            localStorage.setItem("register_cache", JSON.stringify(cache));
-        }
-    }
-}
-</script>
+  
 
 @if ($errors->any())
 <script>

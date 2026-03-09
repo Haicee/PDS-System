@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('registration_users', function (Blueprint $table) {
             $table->id();
             $table->string('full_name')->unique();
-            $table->string('email')->nullable(); // optional, to store an official email later
             $table->timestamps();
         });
     }

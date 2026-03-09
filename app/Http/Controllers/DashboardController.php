@@ -15,7 +15,7 @@ class DashboardController extends Controller
         }
 
         $permanentCount = User::where('type', 'Permanent Employee')->count();
-        $jobOrderCount = User::where('type', 'Job Order')->count();
+        $contractCount = User::where('type', 'Contract of Service')->count();
 
         $pendingCount = PdsSubmission::where('status', 'Pending')->count();
         $approvedCount = PdsSubmission::where('status', 'Approved')->count();
@@ -49,7 +49,7 @@ class DashboardController extends Controller
 
         $stats = [
             'totalEmployees' => $permanentCount,
-            'verifiedEmployees' => $jobOrderCount,
+            'verifiedEmployees' => $contractCount,
             'pendingPds' => $pendingCount,
             'approvedPds' => $approvedCount,
             'rejectedPds' => $rejectedCount,

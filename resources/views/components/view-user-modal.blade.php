@@ -163,7 +163,7 @@
                     <span class="font-semibold text-slate-500">Employee Status</span>
                     <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.type">
                         <option value="Permanent Employee">Permanent Employee</option>
-                        <option value="Job Order">Job Order</option>
+                        <option value="Contract of Service">Contract of Service</option>
                     </select>
                 </label>
 

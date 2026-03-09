@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('unit')->nullable();
             $table->string('email');
-            $table->enum('type', ['Permanent Employee', 'Job Order']);
+            $table->enum('type', ['Permanent Employee', 'Contract of Service']);
             $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
             $table->timestamp('submitted');
             $table->timestamps();

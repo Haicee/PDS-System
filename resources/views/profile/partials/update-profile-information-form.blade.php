@@ -71,7 +71,7 @@
                 <x-input-label for="type" :value="__('Employee Status')" />
                 <select id="type" name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required x-bind:disabled="!editable">
                     <option value="Permanent Employee" {{ old('type', $user->type) === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
-                    <option value="Job Order" {{ old('type', $user->type) === 'Job Order' ? 'selected' : '' }}>Job Order</option>
+                    <option value="EContract of Service" {{ old('type', $user->type) === 'EContract of Service' ? 'selected' : '' }}>EContract of Service</option>
                 </select>
                 <x-input-error class="mt-2" :messages="$errors->get('type')" />
             </div>

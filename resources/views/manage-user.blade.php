@@ -271,7 +271,7 @@
                         <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
                             <option value="">Employee Status: All</option>
                             <option value="Permanent Employee">Permanent</option>
-                            <option value="Job Order">Job Order</option>
+                            <option value="Contract of Service">Contract of Service</option>
                         </select>
                         <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                             <option value="created_at">Sort: Date</option>

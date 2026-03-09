@@ -61,7 +61,7 @@ class RegisteredUserController extends Controller
             'phone' => ['required', 'digits:11'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'type' => ['required', 'in:Permanent Employee,Job Order'],
+            'type' => ['required', 'in:Permanent Employee,Contract of Service'],
             'location_assigned' => ['required', 'string', 'max:255'],
             'profile_photo' => ['required', 'image', 'max:3072'],
         ]);

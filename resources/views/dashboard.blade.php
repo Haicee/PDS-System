@@ -22,7 +22,7 @@
 
                     <div class="rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-md shadow-emerald-200/40 border border-white/10 w-72 h-36 flex">
                         <div class="p-5 sm:p-6 flex flex-col justify-between w-full">
-                            <p class="text-lg font-semibold">Job Order</p>
+                            <p class="text-lg font-semibold">Contract of Service</p>
                             <div class="mt-4 flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/15">
