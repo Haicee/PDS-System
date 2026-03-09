@@ -169,13 +169,13 @@
         5. SEX AT BIRTH
       </td>
       <td class="border px-2 text-base">
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-10">
           <label class="inline-flex items-center gap-2">
-            <input class="ml-10" type="checkbox" value="male" disabled {{ $personal->sex == 'male' ? 'checked' : '' }}>
+            <input class="ml-2.5" type="checkbox" value="male" disabled {{ $personal->sex == 'male' ? 'checked' : '' }}>
             Male
           </label>
           <label class="inline-flex items-center gap-2">
-            <input type="checkbox" value="female" disabled {{ $personal->sex == 'female' ? 'checked' : '' }}>
+            <input class="ml-7" type="checkbox" value="female" disabled {{ $personal->sex == 'female' ? 'checked' : '' }}>
             Female
           </label>
         </div>
@@ -1087,7 +1087,7 @@
   </tr>
   @foreach($extraRows('ELEMENTARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">ELEMENTARY</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
@@ -1148,7 +1148,7 @@
   </tr>
   @foreach($extraRows('SECONDARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">SECONDARY</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
@@ -1207,7 +1207,7 @@
   </tr>
   @foreach($extraRows('VOCATIONAL / TRADE COURSE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
@@ -1266,7 +1266,7 @@
   </tr>
   @foreach($extraRows('COLLEGE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">COLLEGE</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
@@ -1325,7 +1325,7 @@
   </tr>
   @foreach($extraRows('GRADUATE STUDIES') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>

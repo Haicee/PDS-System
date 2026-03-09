@@ -438,13 +438,13 @@
     5. SEX AT BIRTH
   </td>
   <td class="border" style="padding:4px; vertical-align:middle; text-align:center;">
-    <div style="display:grid; grid-template-columns: repeat(2, 1fr); column-gap:80px; justify-items:center;">
-      <label style="display:flex; align-items:center; gap:6px; margin-right:35px;">
+    <div style="display:grid; grid-template-columns: repeat(2, 1fr); column-gap:50px; justify-items:center;">
+      <label style="display:flex; align-items:center; gap:6px; margin-right:12px;">
         <input class="checkbox-large" type="checkbox" value="male" disabled {{ $personal->sex == 'male' ? 'checked' : '' }}>
         Male
       </label>
 
-      <label style="display:flex; align-items:center; gap:6px; margin-right:21px;">
+      <label style="display:flex; align-items:center; gap:6px; margin-right:25px;">
         <input class="checkbox-large" type="checkbox" value="female" disabled {{ $personal->sex == 'female' ? 'checked' : '' }}>
         Female
       </label>
@@ -493,7 +493,7 @@
 <td rowspan="3" colspan="2"
       class="border p-0 align-top bg-[#e7e7e7]">
 
-    <div class="flex w-full h-full">
+    <div class="flex" style="width:100%; height: 100%;">
       
       <!-- LEFT TABLE -->
       <table style="width:38%; padding:0px;">
@@ -1034,7 +1034,7 @@
   </tr>
   @foreach($extraRows('ELEMENTARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">ELEMENTARY</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1094,7 +1094,7 @@
   </tr>
   @foreach($extraRows('SECONDARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">SECONDARY</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1153,7 +1153,7 @@
   </tr>
   @foreach($extraRows('VOCATIONAL / TRADE COURSE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1176,7 +1176,7 @@
 
       <td
           class="border h-10">
-          <div class="edu-cell h-full w-full px-2 text-center">
+          <div class="edu-cell h-full w-full text-center">
             {{ $eduCourse('college') }}
       </td>
 
@@ -1212,7 +1212,7 @@
   </tr>
   @foreach($extraRows('COLLEGE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">COLLEGE</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1235,7 +1235,7 @@
 
       <td
           class="border h-10">
-          <div class="edu-cell h-full w-full px-2 text-center">
+          <div class="edu-cell h-full w-full text-center">
             {{ $eduCourse('graduate_studies') }}
       </td>
 
@@ -1271,7 +1271,7 @@
   </tr>
   @foreach($extraRows('GRADUATE STUDIES') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
+      <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -2361,13 +2361,24 @@
 </div>
   </div>
 <div style="page-break-before: always;"></div>
+<div class="page-wrap">
 <table>
   <th class="flex text-left font-['Arial_Narrow','Arial',sans-serif] italic font-semibold">
     Attachment to CS Form No. 212
   </th>
 </table>
 
-<table class="section-table w-full font-['Arial_Narrow','Arial',sans-serif]" style="border-collapse:collapse;">
+<style>
+  /* Allow long remarks to naturally flow across PDF pages */
+  .remarks-table { page-break-inside: auto; page-break-after: auto; }
+  .remarks-table tr, .remarks-table td { page-break-inside: auto; }
+  .remarks-content { page-break-inside: auto; page-break-after: auto; }
+  body { margin: 0; padding: 0; }
+  .section-table { width: 100% !important; }
+  .page-wrap { width: 100%; margin: 0 auto; box-sizing: border-box; }
+</style>
+
+<table class="section-table remarks-table w-full font-['Arial_Narrow','Arial',sans-serif]" style="border-collapse:collapse;">
 
 <tr>
   <th class="text-base font-semibold italic bg-[#8a8a8a] text-white border border-black border-b-2" style="font-weight:700;">
@@ -2393,28 +2404,12 @@
 @for ($i = 0; $i < $maxRemark; $i++)
 @php $remark = $remarkRows[$i]->remarks ?? ''; @endphp
 <tr>
-<td class="border-2 h-20 border-black relative">
-<textarea
-id="remarks-prototype"
-name="remarks[]"
-class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
-style="min-height:350px; white-space:pre-wrap;"
-placeholder="Sample: If applying to Supervising Administrative Officer
-
-•\tDuration:  February 11, 2011 – present
-•\tPosition:  Human Resource Management Officer III
-•\tName of Office/Unit: Finance and Administrative Service
-•\tImmediate Supervisor: Maria Estrada
-•\t Name of Agency/Organization and Location: Department of Human Resources, Metro Manila
-
-•\tList of Accomplishments and Contributions (if any)
- - Developed recruitment plan
- - Designed training program for retirees under EO 366
- 
-•\tSummary of Actual Duties
-  - Responsible for the management of the recruitment and selection process and the coordination of training activities of the Department; provides assistance in the management of the Division’s programs and activities and performs other related functions.
-"
->{{ $remark }}</textarea>
+<td class="border-2 border-black relative align-top">
+  <div
+    id="remarks-prototype"
+    class="remarks-content border-none w-full p-5 text-sm"
+    style="min-height:350px; white-space:pre-wrap; box-sizing:border-box; page-break-inside:auto; overflow:visible;"
+  >{{ $remark ?: "Sample: If applying to Supervising Administrative Officer\n\n•\tDuration:  February 11, 2011 – present\n•\tPosition:  Human Resource Management Officer III\n•\tName of Office/Unit: Finance and Administrative Service\n•\tImmediate Supervisor: Maria Estrada\n•\t Name of Agency/Organization and Location: Department of Human Resources, Metro Manila\n\n•\tList of Accomplishments and Contributions (if any)\n - Developed recruitment plan\n - Designed training program for retirees under EO 366\n \n•\tSummary of Actual Duties\n  - Responsible for the management of the recruitment and selection process and the coordination of training activities of the Department; provides assistance in the management of the Division’s programs and activities and performs other related functions." }}</div>
 </td>
 </tr>
 @endfor
@@ -2454,38 +2449,8 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <div class="w-full text-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 5 of 5
 </div>
+</div>
 @if(!empty($pdfMode))
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const targetWidthPx = (210 / 25.4) * 96;  // A4 width in px
-    const targetHeightPx = (297 / 25.4) * 96; // A4 height in px
-
-    // Wrap each top-level table into its own PDF page and auto-scale to fit (skip no-scale tables)
-    const topLevelTables = Array.from(document.querySelectorAll('table')).filter((t) => t.closest('table') === null && !t.classList.contains('no-scale'));
-
-    topLevelTables.forEach((table) => {
-      const page = document.createElement('div');
-      page.className = 'pdf-page';
-
-      const scaleWrap = document.createElement('div');
-      scaleWrap.className = 'pdf-scale';
-
-      // Insert wrapper before table and move only this table inside
-      table.parentNode.insertBefore(page, table);
-      page.appendChild(scaleWrap);
-      scaleWrap.appendChild(table);
-
-      // Measure content and scale down if it overflows the page
-      const contentWidth = scaleWrap.scrollWidth;
-      const contentHeight = scaleWrap.scrollHeight;
-      const widthScale = targetWidthPx / contentWidth;
-      const heightScale = targetHeightPx / contentHeight;
-      const scale = Math.min(1, widthScale, heightScale);
-
-      scaleWrap.style.transform = `scale(${scale})`;
-    });
-  });
-</script>
 </body>
 </html>
 @endif

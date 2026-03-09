@@ -175,50 +175,10 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsDataURL(file);
   };
 
-  const ensureRemarkRows = (values = []) => {
-    const tbody = document.getElementById('remarks-rows');
-    const proto = document.getElementById('remarks-prototype');
-    if (!tbody || !proto) return [];
-
-    const existing = getRemarks();
-    const targetCount = Math.max(values.length, existing.length || 1);
-
-    const makeRow = (val = '') => {
-      const clone = proto.cloneNode(true);
-      clone.id = '';
-      clone.value = val;
-      attachReactive(clone);
-
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.className = 'border-2 h-20 border-black relative';
-      td.appendChild(clone);
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = '✕';
-      btn.className = 'text-red-600 font-bold text-lg px-1';
-      btn.style.position = 'absolute';
-      btn.style.right = '-34px';
-      btn.style.top = '10px';
-
-      btn.onclick = () => {
-        tbody.removeChild(tr);
-        validateRequired();
-        saveCache();
-        autoSaveToServer();
-      };
-
-      td.appendChild(btn);
-      tr.appendChild(td);
-      tbody.appendChild(tr);
-    };
-
-    while (getRemarks().length < targetCount) {
-      makeRow(values[getRemarks().length] ?? '');
-    }
-
-    return getRemarks();
+  const autoSize = (el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
   };
 
   const loadCache = (overrideData = null) => {
@@ -246,12 +206,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     Object.entries(data).forEach(([name, stored]) => {
       if (name === 'remarks[]' && Array.isArray(stored)) {
-        const rows = ensureRemarkRows(stored);
-        rows.forEach((el, idx) => {
-          const val = stored[idx] ?? '';
-          el.value = val;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-        });
+        const rows = getRemarks();
+        if (rows.length) {
+          const val = stored[0] ?? '';
+          rows[0].value = val;
+          rows[0].dispatchEvent(new Event('input', { bubbles: true }));
+        }
         return;
       }
 
@@ -433,21 +393,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const attachReactive = (el) => {
-    el.addEventListener('input', () => { validateRequired(); saveCache(); autoSaveToServer(); });
-    el.addEventListener('change', () => { validateRequired(); saveCache(); autoSaveToServer(); });
-  };
-
-  // expose addCell for button onclick
-  window.addCell = () => {
-    const rows = ensureRemarkRows([...getRemarks()].map(r => r.value).concat(''));
-    const newRow = rows[rows.length - 1];
-    if (newRow) {
-      newRow.value = '';
-      newRow.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    validateRequired();
-    saveCache();
-    autoSaveToServer();
+    autoSize(el);
+    el.addEventListener('input', () => { autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
+    el.addEventListener('change', () => { autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
   };
 
   // Initial hooks
@@ -535,12 +483,12 @@ document.addEventListener('DOMContentLoaded', () => {
 </tr>
 
 <tr>
-<td class="border-2 h-20 border-black relative">
+<td class="border-2 border-black relative align-top">
 <textarea
 id="remarks-prototype"
 name="remarks[]"
 class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
-style="min-height:350px; white-space:pre-wrap;"
+style="min-height:350px; white-space:pre-wrap; overflow:hidden;"
 placeholder="Sample: If applying to Supervising Administrative Officer
 
 •	Duration:  February 11, 2011 – present
@@ -611,14 +559,6 @@ CS FORM 212 (Revised 2025), Page 5 of 5
 <a href="{{ route('pds.form4') }}"
 class="px-4 py-2 bg-blue-600 text-white rounded">
 Previous Page</a>
-
-<div class="mt-5 flex justify-end mr-2">
-<button type="button"
-class="px-4 py-2 bg-blue-600 text-white rounded"
-onclick="addCell()">
-Add Row
-</button>
-</div>
 
 <div class="mt-3 flex justify-end">
 <button id="submit-pds-btn"

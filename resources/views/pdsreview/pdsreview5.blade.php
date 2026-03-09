@@ -27,73 +27,18 @@ td, th { padding: 4px; vertical-align: middle; white-space: normal; word-break: 
 </style>
 
 <script>
-// ===============================
-// CHECK IF ALL REMARKS ARE FILLED
-// ===============================
-function checkRemarksFilled() {
-  const submitBtn = document.getElementById('submit-pds-btn');
-  const remarks = document.querySelectorAll('textarea[name="remarks[]"]');
-
-  const hasEmpty = Array.from(remarks)
-    .some(t => t.value.trim() === '');
-
-  if (hasEmpty) {
-    submitBtn.disabled = true;
-    submitBtn.classList.add('opacity-50','cursor-not-allowed','pointer-events-none');
-  } else {
-    submitBtn.disabled = false;
-    submitBtn.classList.remove('opacity-50','cursor-not-allowed','pointer-events-none');
-  }
+// Auto-size textareas so content expands the container (no scrollbars)
+function autoSize(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
 }
 
-// ===============================
-// ADD NEW TEXTAREA ROW
-// ===============================
-function addCell() {
-  const tbody = document.getElementById('remarks-rows');
-  const proto = document.getElementById('remarks-prototype');
-  if (!tbody || !proto) return;
-
-  const clone = proto.cloneNode(true);
-  clone.id = '';
-  clone.value = '';
-  clone.addEventListener('input', checkRemarksFilled);
-
-  const tr = document.createElement('tr');
-
-  const td = document.createElement('td');
-  td.className = 'border-2 h-20 border-black relative';
-  td.appendChild(clone);
-
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.textContent = '✕';
-  btn.className = 'text-red-600 font-bold text-lg px-1';
-  btn.style.position = 'absolute';
-  btn.style.right = '-34px';
-  btn.style.top = '10px';
-
-  btn.onclick = () => {
-    tbody.removeChild(tr);
-    checkRemarksFilled();
-  };
-
-  td.appendChild(btn);
-  tr.appendChild(td);
-  tbody.appendChild(tr);
-
-  checkRemarksFilled();
-}
-
-// ===============================
-// INITIAL LOAD
-// ===============================
 window.addEventListener('load', () => {
-  document
-    .querySelector('textarea[name="remarks[]"]')
-    .addEventListener('input', checkRemarksFilled);
-
-  checkRemarksFilled();
+  document.querySelectorAll('textarea').forEach(el => {
+    autoSize(el);
+    el.addEventListener('input', () => autoSize(el));
+  });
 });
 </script>
 
@@ -137,12 +82,12 @@ window.addEventListener('load', () => {
 @for ($i = 0; $i < $maxRemark; $i++)
 @php $remark = $remarkRows[$i]->remarks ?? ''; @endphp
 <tr>
-<td class="border-2 h-20 border-black relative">
+<td class="border-2 border-black relative align-top">
 <textarea
 id="remarks-prototype"
 name="remarks[]"
 class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
-style="min-height:350px; white-space:pre-wrap;"
+style="min-height:350px; white-space:pre-wrap; overflow:hidden;"
 disabled
 placeholder="Sample: If applying to Supervising Administrative Officer
 

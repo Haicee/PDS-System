@@ -48,25 +48,83 @@
     textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
     textarea:focus { outline: none; box-shadow: none; }
   </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script>
-    
-    
-    // PHOTO capture helpers
+    // PHOTO capture helpers with face detection gating
     let photoStream;
-    const photoConstraints = { video: { width: { ideal: 640 }, height: { ideal: 480 } } };
+    let faceModelsLoaded = false;
+    let detectTimer = null;
+    let brightnessOkFlag = false;
+    let detectionProgress = 0;
+    let readyTicks = 0;
+    const requiredReadyTicks = 8;
+    const minDetectionScore = 0.9;
+    let autoCaptureScheduled = false;
+    let segmentation;
+    let segmentationReady = false;
+    const photoConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } } };
     const photoCacheKey = 'pds_form4_photo_data';
+    const statusEl = () => document.getElementById('photoStatus');
+    const brightnessThreshold = 100;
+    const ringEl = () => document.getElementById('photoProgressRing');
+    const overlayEl = () => document.getElementById('photoOverlay');
+    const segmentationBase = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/';
+
+    async function waitForFaceApi(retries = 50) {
+      if (window.faceapi) return true;
+      let attempts = 0;
+      while (!window.faceapi && attempts < retries) {
+        await new Promise(res => setTimeout(res, 100));
+        attempts++;
+      }
+      return !!window.faceapi;
+    }
+
+    async function loadFaceModels() {
+      if (faceModelsLoaded) return;
+      const ready = await waitForFaceApi();
+      if (!ready) throw new Error('faceapi not loaded');
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models')
+      ]);
+      faceModelsLoaded = true;
+    }
+
+    function setStatus(msg, color = 'text-rose-600') {
+      const el = statusEl();
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = `text-xs font-semibold ${color} text-center`;
+    }
+
+    function updateProgressRing() {
+      const ring = ringEl();
+      if (!ring) return;
+      const circumference = 616; // stroke-dasharray value for outer rectangle ring
+      const offset = circumference - (detectionProgress / 100) * circumference;
+      ring.setAttribute('stroke-dashoffset', `${offset}`);
+    }
 
     async function startPhotoCamera() {
       const video = document.getElementById('photoVideo');
       if (!video) return;
 
       try {
+        await loadFaceModels();
         photoStream = await navigator.mediaDevices.getUserMedia(photoConstraints);
         video.srcObject = photoStream;
-        video.play();
+        await video.play();
         video.classList.remove('hidden');
-        document.getElementById('photoCaptureBtn')?.classList.remove('hidden');
+        overlayEl()?.classList.remove('hidden');
         document.getElementById('photoStartBtn')?.classList.add('hidden');
+        detectionProgress = 0;
+        readyTicks = 0;
+        autoCaptureScheduled = false;
+        updateProgressRing();
+        setStatus('Center your face in the guide.');
+        startDetectionLoop();
       } catch (err) {
         alert('Unable to access camera. Please check permissions or use file upload.');
         console.error(err);
@@ -78,6 +136,134 @@
         photoStream.getTracks().forEach(t => t.stop());
         photoStream = null;
       }
+      stopDetectionLoop();
+      setStatus('');
+      overlayEl()?.classList.add('hidden');
+      autoCaptureScheduled = false;
+    }
+
+    function startDetectionLoop() {
+      stopDetectionLoop();
+      detectTimer = setInterval(runDetectionTick, 700);
+    }
+
+    function stopDetectionLoop() {
+      if (detectTimer) {
+        clearInterval(detectTimer);
+        detectTimer = null;
+      }
+    }
+
+    async function checkEligibility() {
+      const video = document.getElementById('photoVideo');
+      if (!video) return false;
+      const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
+      if (!detections || detections.length === 0) {
+        setStatus('No clear face detected.');
+        detectionProgress = Math.max(0, detectionProgress - 25);
+        readyTicks = 0;
+        updateProgressRing();
+        autoCaptureScheduled = false;
+        return false;
+      }
+
+      if (detections.length > 1) {
+        setStatus('Only one face allowed. Move others out of frame.');
+        detectionProgress = Math.max(0, detectionProgress - 25);
+        readyTicks = 0;
+        updateProgressRing();
+        autoCaptureScheduled = false;
+        return false;
+      }
+
+      const detection = detections[0];
+
+      const box = detection.box;
+      const ratioW = box.width / (video.videoWidth || 1);
+      const ratioH = box.height / (video.videoHeight || 1);
+      const faceRatio = Math.max(ratioW, ratioH);
+      if (faceRatio < 0.45) {
+        setStatus('Move closer so your face fills the circle.');
+        detectionProgress = Math.max(0, detectionProgress - 15);
+        readyTicks = 0;
+        updateProgressRing();
+        autoCaptureScheduled = false;
+        return false;
+      }
+      if (faceRatio > 0.50) {
+        setStatus('Move back slightly so your face fits the circle.');
+        detectionProgress = Math.max(0, detectionProgress - 15);
+        readyTicks = 0;
+        updateProgressRing();
+        autoCaptureScheduled = false;
+        return false;
+      }
+
+      const faceCenterX = (box.x + box.width / 2) / (video.videoWidth || 1);
+      const faceCenterY = (box.y + box.height / 2) / (video.videoHeight || 1);
+      if (Math.abs(faceCenterX - 0.5) > 0.12 || Math.abs(faceCenterY - 0.5) > 0.12) {
+        setStatus('Center your face in the guide.');
+        detectionProgress = Math.max(0, detectionProgress - 15);
+        readyTicks = 0;
+        updateProgressRing();
+        autoCaptureScheduled = false;
+        return false;
+      }
+
+      const brightness = checkLighting(video);
+      brightnessOkFlag = brightness >= brightnessThreshold + 5;
+      if (!brightnessOkFlag) {
+        setStatus('Lighting too low. Move to a brighter spot.');
+        detectionProgress = Math.max(0, detectionProgress - 20);
+        readyTicks = 0;
+        updateProgressRing();
+        autoCaptureScheduled = false;
+        return false;
+      }
+
+      if (detection.score && detection.score < minDetectionScore) {
+        setStatus('Face not clear. Hold steady.');
+        detectionProgress = Math.max(0, detectionProgress - 20);
+        readyTicks = 0;
+        updateProgressRing();
+        autoCaptureScheduled = false;
+        return false;
+      }
+
+      setStatus('Ready. Hold still.', 'text-emerald-600');
+      return true;
+    }
+
+    async function runDetectionTick() {
+      const ok = await checkEligibility();
+      if (!ok) return;
+
+      const brightnessGood = brightnessOkFlag === true;
+      const step = brightnessGood ? 20 : 10;
+      detectionProgress = Math.min(100, detectionProgress + step);
+      readyTicks += 1;
+      updateProgressRing();
+
+      if (detectionProgress >= 100 && readyTicks >= requiredReadyTicks && brightnessGood && !autoCaptureScheduled) {
+        autoCaptureScheduled = true;
+        setStatus('Capturing…', 'text-emerald-600');
+        capturePhoto();
+      }
+    }
+
+    function checkLighting(video) {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let brightness = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        brightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+      }
+      brightness /= data.length / 4;
+      return brightness;
     }
 
     function dataUrlToFile(dataUrl, fileName) {
@@ -90,7 +276,7 @@
       return new File([u8arr], fileName, { type: mime });
     }
 
-    function capturePhoto() {
+    async function capturePhoto() {
       const video = document.getElementById('photoVideo');
       const canvas = document.createElement('canvas');
       const img = document.getElementById('photoPreview');
@@ -100,11 +286,38 @@
       if (!video || !img || !placeholder || !hiddenInput || !fileInput) return;
       if (!photoStream) return alert('Camera is not active. Click "Open camera" first.');
 
+      const ok = await checkEligibility();
+      if (!ok || detectionProgress < 100 || readyTicks < requiredReadyTicks || !brightnessOkFlag) {
+        setStatus('Please meet the face and lighting guide before capturing.');
+        return;
+      }
+
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      let dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      // Optional background removal via Mediapipe Selfie Segmentation (post-capture)
+      try {
+        setStatus('Removing background…', 'text-sky-600');
+        const cutout = await removeBackgroundWithSegmentation(canvas, dataUrl);
+        if (cutout) dataUrl = cutout;
+        // Compress segmented output to reduce upload size
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.width;
+        tmp.height = canvas.height;
+        const tctx = tmp.getContext('2d');
+        const imgObj = new Image();
+        await new Promise((res) => {
+          imgObj.onload = res;
+          imgObj.src = dataUrl;
+        });
+        tctx.drawImage(imgObj, 0, 0, tmp.width, tmp.height);
+        dataUrl = tmp.toDataURL('image/jpeg', 0.7);
+      } catch (e) {
+        console.warn('Background removal failed, using original', e);
+      }
 
       img.src = dataUrl;
       img.classList.remove('hidden');
@@ -113,16 +326,92 @@
       try { localStorage.setItem(photoCacheKey, dataUrl); } catch (e) { console.warn('Photo cache failed', e); }
       hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-      // Populate the hidden file input so the server still receives a file
-      const file = dataUrlToFile(dataUrl, 'photo.jpg');
+      const file = dataUrlToFile(dataUrl, 'photo.png');
       const transfer = new DataTransfer();
       transfer.items.add(file);
       fileInput.files = transfer.files;
 
       stopPhotoCamera();
       document.getElementById('photoStartBtn')?.classList.remove('hidden');
-      document.getElementById('photoCaptureBtn')?.classList.add('hidden');
       video.classList.add('hidden');
+      overlayEl()?.classList.add('hidden');
+      detectionProgress = 0;
+      readyTicks = 0;
+      autoCaptureScheduled = false;
+      updateProgressRing();
+    }
+
+    async function ensureSegmentation() {
+      if (segmentationReady) return;
+      const ns = window.SelfieSegmentation || window.selfieSegmentation || {};
+      const SegClass = ns.SelfieSegmentation || ns; // handle both namespace and direct constructor
+      if (typeof SegClass !== 'function') throw new Error('SelfieSegmentation constructor not found');
+      segmentation = new SegClass({
+        locateFile: (file) => `${segmentationBase}${file}`
+      });
+      segmentation.setOptions({ modelSelection: 1 }); // higher quality
+      segmentationReady = true;
+    }
+
+    function runSegmentation(imageCanvas) {
+      return new Promise((resolve, reject) => {
+        if (!segmentationReady) return reject(new Error('Segmentation not ready'));
+        segmentation.onResults((results) => resolve(results));
+        segmentation.send({ image: imageCanvas });
+      });
+    }
+
+    async function removeBackgroundWithSegmentation(imageCanvas, fallbackDataUrl) {
+      await ensureSegmentation();
+      const results = await runSegmentation(imageCanvas);
+      if (!results || !results.segmentationMask) return fallbackDataUrl;
+
+      const w = imageCanvas.width;
+      const h = imageCanvas.height;
+
+      // Create blurred mask and threshold it (alpha channel)
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = w;
+      maskCanvas.height = h;
+      const mctx = maskCanvas.getContext('2d');
+      mctx.filter = 'blur(3px)';
+      mctx.drawImage(results.segmentationMask, 0, 0, w, h);
+      mctx.filter = 'none';
+      const maskData = mctx.getImageData(0, 0, w, h);
+      const data = maskData.data;
+      const threshold = 0.8 * 255; // remove weak pixels
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3];
+        const a = alpha > threshold ? 255 : 0;
+        data[i + 3] = a;
+        data[i] = data[i + 1] = data[i + 2] = 255;
+      }
+      mctx.putImageData(maskData, 0, 0);
+      // slight feather
+      mctx.filter = 'blur(1px)';
+      mctx.drawImage(maskCanvas, 0, 0, w, h);
+      mctx.filter = 'none';
+
+      // Composite: apply mask then white background
+      const personCanvas = document.createElement('canvas');
+      personCanvas.width = w;
+      personCanvas.height = h;
+      const pctx = personCanvas.getContext('2d');
+      pctx.drawImage(imageCanvas, 0, 0, w, h);
+      pctx.globalCompositeOperation = 'destination-in';
+      pctx.drawImage(maskCanvas, 0, 0, w, h);
+      pctx.globalCompositeOperation = 'destination-over';
+      pctx.fillStyle = '#ffffff';
+      pctx.fillRect(0, 0, w, h);
+      pctx.globalCompositeOperation = 'source-over';
+
+      const output = document.createElement('canvas');
+      output.width = w;
+      output.height = h;
+      const outCtx = output.getContext('2d');
+      outCtx.drawImage(personCanvas, 0, 0, w, h);
+
+      return output.toDataURL('image/png');
     }
 
     let validateRequired;
@@ -250,6 +539,18 @@
         reader.readAsDataURL(file);
       };
 
+      // Auto-size all textareas so content grows the box instead of showing scrollbars
+      const autoSizeAllTextareas = () => {
+        document.querySelectorAll('textarea').forEach(el => {
+          autoSize(el);
+          el.removeEventListener('input', el._autoSizeHandler || (() => {}));
+          const handler = () => autoSize(el);
+          el._autoSizeHandler = handler;
+          el.addEventListener('input', handler);
+        });
+      };
+
+      autoSizeAllTextareas();
       document.querySelectorAll('.ref-field, .grow-field').forEach(el => {
         autoSize(el);
         el.addEventListener('input', () => autoSize(el));
@@ -1157,11 +1458,20 @@
           4.5 cm × 3.5 cm
         </div>
         <video id="photoVideo" class="absolute inset-0 w-full h-full object-cover hidden" playsinline></video>
+        <div id="photoOverlay" class="pointer-events-none absolute inset-0 flex items-center justify-center hidden">
+          <svg id="photoProgressSvg" class="absolute inset-0 w-full h-full" viewBox="0 0 140 180" fill="none">
+            <rect x="4" y="4" width="132" height="172" rx="12" stroke="rgba(255,255,255,0.25)" stroke-width="6"></rect>
+            <rect id="photoProgressRing" x="4" y="4" width="132" height="172" rx="12" stroke="#0ea5e9" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="616" stroke-dashoffset="616"></rect>
+          </svg>
+          <div class="absolute w-[70%] h-[70%] rounded-full border-4 border-white/70 border-dashed"></div>
+        </div>
       </div>
+
+      <p id="photoStatus" class="text-xs text-center text-rose-600 font-semibold min-h-[18px]"></p>
 
       <div class="flex flex-col items-center gap-2 text-xs w-full">
         <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
-        <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-sky-600 text-white rounded shadow hidden" onclick="capturePhoto()">Capture photo</button>
         <!-- Upload option -->
         <label class="px-3 py-1 bg-indigo-600 text-white rounded shadow cursor-pointer">
           Upload photo
@@ -1170,7 +1480,7 @@
         <input type="hidden" id="photoData" name="photo_data">
       </div>
 
-      <div class="mt-2 text-xs">PHOTO</div>
+      <div class="mt-1 text-xs">PHOTO</div>
     </div>
 
     <!-- THUMB MARK -->
