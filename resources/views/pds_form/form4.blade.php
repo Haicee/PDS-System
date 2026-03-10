@@ -57,19 +57,16 @@
     let faceModelsLoaded = false;
     let detectTimer = null;
     let brightnessOkFlag = false;
-    let detectionProgress = 0;
-    let readyTicks = 0;
-    const requiredReadyTicks = 8;
     const minDetectionScore = 0.9;
-    let autoCaptureScheduled = false;
+    let identifying = false;
     let segmentation;
     let segmentationReady = false;
     const photoConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } } };
     const photoCacheKey = 'pds_form4_photo_data';
     const statusEl = () => document.getElementById('photoStatus');
     const brightnessThreshold = 100;
-    const ringEl = () => document.getElementById('photoProgressRing');
     const overlayEl = () => document.getElementById('photoOverlay');
+    const captureBtn = () => document.getElementById('photoCaptureBtn');
     const segmentationBase = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/';
 
     async function waitForFaceApi(retries = 50) {
@@ -99,18 +96,9 @@
       el.className = `text-xs font-semibold ${color} text-center`;
     }
 
-    function updateProgressRing() {
-      const ring = ringEl();
-      if (!ring) return;
-      const circumference = 616; // stroke-dasharray value for outer rectangle ring
-      const offset = circumference - (detectionProgress / 100) * circumference;
-      ring.setAttribute('stroke-dashoffset', `${offset}`);
-    }
-
     async function startPhotoCamera() {
       const video = document.getElementById('photoVideo');
       if (!video) return;
-
       try {
         await loadFaceModels();
         photoStream = await navigator.mediaDevices.getUserMedia(photoConstraints);
@@ -119,10 +107,8 @@
         video.classList.remove('hidden');
         overlayEl()?.classList.remove('hidden');
         document.getElementById('photoStartBtn')?.classList.add('hidden');
-        detectionProgress = 0;
-        readyTicks = 0;
-        autoCaptureScheduled = false;
-        updateProgressRing();
+        captureBtn()?.classList.remove('hidden');
+        captureBtn()?.removeAttribute('disabled');
         setStatus('Center your face in the guide.');
         startDetectionLoop();
       } catch (err) {
@@ -139,7 +125,8 @@
       stopDetectionLoop();
       setStatus('');
       overlayEl()?.classList.add('hidden');
-      autoCaptureScheduled = false;
+      captureBtn()?.classList.add('hidden');
+      captureBtn()?.setAttribute('disabled', 'true');
     }
 
     function startDetectionLoop() {
@@ -157,26 +144,11 @@
     async function checkEligibility() {
       const video = document.getElementById('photoVideo');
       if (!video) return false;
-      const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
-      if (!detections || detections.length === 0) {
+      const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+      if (!detection) {
         setStatus('No clear face detected.');
-        detectionProgress = Math.max(0, detectionProgress - 25);
-        readyTicks = 0;
-        updateProgressRing();
-        autoCaptureScheduled = false;
         return false;
       }
-
-      if (detections.length > 1) {
-        setStatus('Only one face allowed. Move others out of frame.');
-        detectionProgress = Math.max(0, detectionProgress - 25);
-        readyTicks = 0;
-        updateProgressRing();
-        autoCaptureScheduled = false;
-        return false;
-      }
-
-      const detection = detections[0];
 
       const box = detection.box;
       const ratioW = box.width / (video.videoWidth || 1);
@@ -184,29 +156,26 @@
       const faceRatio = Math.max(ratioW, ratioH);
       if (faceRatio < 0.45) {
         setStatus('Move closer so your face fills the circle.');
-        detectionProgress = Math.max(0, detectionProgress - 15);
-        readyTicks = 0;
-        updateProgressRing();
-        autoCaptureScheduled = false;
         return false;
       }
-      if (faceRatio > 0.50) {
+      if (faceRatio > 0.55) {
         setStatus('Move back slightly so your face fits the circle.');
-        detectionProgress = Math.max(0, detectionProgress - 15);
-        readyTicks = 0;
-        updateProgressRing();
-        autoCaptureScheduled = false;
         return false;
       }
 
       const faceCenterX = (box.x + box.width / 2) / (video.videoWidth || 1);
       const faceCenterY = (box.y + box.height / 2) / (video.videoHeight || 1);
-      if (Math.abs(faceCenterX - 0.5) > 0.12 || Math.abs(faceCenterY - 0.5) > 0.12) {
+      const dx = Math.abs(faceCenterX - 0.5);
+      const dy = Math.abs(faceCenterY - 0.6);
+      const dyWeight = 1.15;
+      const faceRadius = faceRatio / 2;
+      const circleRadius = 0.5;
+      const margin = 0.0;
+      const maxCenterDistance = Math.max(0.005, circleRadius - margin - faceRadius);
+      const centerDistance = Math.hypot(dx, dy * dyWeight);
+      const strictDistance = maxCenterDistance * 0.3;
+      if (centerDistance > strictDistance) {
         setStatus('Center your face in the guide.');
-        detectionProgress = Math.max(0, detectionProgress - 15);
-        readyTicks = 0;
-        updateProgressRing();
-        autoCaptureScheduled = false;
         return false;
       }
 
@@ -214,41 +183,22 @@
       brightnessOkFlag = brightness >= brightnessThreshold + 5;
       if (!brightnessOkFlag) {
         setStatus('Lighting too low. Move to a brighter spot.');
-        detectionProgress = Math.max(0, detectionProgress - 20);
-        readyTicks = 0;
-        updateProgressRing();
-        autoCaptureScheduled = false;
         return false;
       }
 
       if (detection.score && detection.score < minDetectionScore) {
         setStatus('Face not clear. Hold steady.');
-        detectionProgress = Math.max(0, detectionProgress - 20);
-        readyTicks = 0;
-        updateProgressRing();
-        autoCaptureScheduled = false;
         return false;
       }
 
-      setStatus('Ready. Hold still.', 'text-emerald-600');
+      setStatus('Face looks good. Tap Capture.', 'text-emerald-600');
       return true;
     }
 
     async function runDetectionTick() {
       const ok = await checkEligibility();
       if (!ok) return;
-
-      const brightnessGood = brightnessOkFlag === true;
-      const step = brightnessGood ? 20 : 10;
-      detectionProgress = Math.min(100, detectionProgress + step);
-      readyTicks += 1;
-      updateProgressRing();
-
-      if (detectionProgress >= 100 && readyTicks >= requiredReadyTicks && brightnessGood && !autoCaptureScheduled) {
-        autoCaptureScheduled = true;
-        setStatus('Capturing…', 'text-emerald-600');
-        capturePhoto();
-      }
+      setStatus('Face looks good. Tap Capture.', 'text-emerald-600');
     }
 
     function checkLighting(video) {
@@ -277,6 +227,11 @@
     }
 
     async function capturePhoto() {
+      if (!faceModelsLoaded) {
+        setStatus('Loading face detection… please wait.');
+        return;
+      }
+      if (identifying) return;
       const video = document.getElementById('photoVideo');
       const canvas = document.createElement('canvas');
       const img = document.getElementById('photoPreview');
@@ -286,17 +241,25 @@
       if (!video || !img || !placeholder || !hiddenInput || !fileInput) return;
       if (!photoStream) return alert('Camera is not active. Click "Open camera" first.');
 
-      const ok = await checkEligibility();
-      if (!ok || detectionProgress < 100 || readyTicks < requiredReadyTicks || !brightnessOkFlag) {
-        setStatus('Please meet the face and lighting guide before capturing.');
-        return;
-      }
+      identifying = true;
+      captureBtn()?.setAttribute('disabled', 'true');
+      setStatus('Identifying…', 'text-sky-600');
 
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      let dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      try {
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrlRaw = canvas.toDataURL('image/jpeg', 0.9);
+
+        const ok = await checkEligibility();
+        if (!ok || !brightnessOkFlag) {
+          setStatus('Center and lighten your face, then recapture.');
+          captureBtn()?.removeAttribute('disabled');
+          return;
+        }
+
+        let dataUrl = dataUrlRaw;
 
       // Optional background removal via Mediapipe Selfie Segmentation (post-capture)
       try {
@@ -335,10 +298,14 @@
       document.getElementById('photoStartBtn')?.classList.remove('hidden');
       video.classList.add('hidden');
       overlayEl()?.classList.add('hidden');
-      detectionProgress = 0;
-      readyTicks = 0;
-      autoCaptureScheduled = false;
-      updateProgressRing();
+      captureBtn()?.classList.add('hidden');
+    }
+      finally {
+        identifying = false;
+        if (photoStream) {
+          captureBtn()?.removeAttribute('disabled');
+        }
+      }
     }
 
     async function ensureSegmentation() {
@@ -1472,6 +1439,7 @@
 
       <div class="flex flex-col items-center gap-2 text-xs w-full">
         <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
+        <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow hidden disabled:opacity-60" onclick="capturePhoto()" disabled>Capture</button>
         <!-- Upload option -->
         <label class="px-3 py-1 bg-indigo-600 text-white rounded shadow cursor-pointer">
           Upload photo

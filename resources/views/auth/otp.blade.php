@@ -21,9 +21,11 @@
             </div>
 
             @if (session('status'))
-                <div class="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                <div id="statusAlert" class="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                     {{ session('status') }}
                 </div>
+            @else
+                <div id="statusAlert" class="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" style="display: none;"></div>
             @endif
 
             <form method="POST" action="{{ route('otp.verify', [], false) }}" class="space-y-5" id="otpForm">
@@ -74,6 +76,7 @@ const otpForm = document.getElementById('otpForm');
 const resendBtn = document.getElementById('resendBtn');
 const countdownEl = document.getElementById('countdown');
 const otpBoxes = document.getElementById('otpBoxes');
+const statusAlert = document.getElementById('statusAlert');
 const COUNTDOWN_SEC = 180; // 3 minutes
 const COUNTDOWN_MS = COUNTDOWN_SEC * 1000;
 const RESEND_KEY = 'otp_resend_expires_at';
@@ -164,7 +167,12 @@ function startCountdown(expiryTs) {
     }, 1000);
 }
 
-// Resend button click
+function updateStatusMessage(message) {
+    if (!statusAlert) return;
+    statusAlert.textContent = message;
+    statusAlert.style.display = 'block';
+}
+
 // Resend button click
 resendBtn.addEventListener('click', () => {
     // Immediately hide the resend button and show countdown
@@ -183,6 +191,8 @@ resendBtn.addEventListener('click', () => {
         if (!res.ok) {
             // Optional: show error to user
             alert('Failed to resend OTP. Please try again.');
+        } else {
+            updateStatusMessage('A new code has been sent to your email.');
         }
     }).catch(() => {
         alert('Failed to resend OTP. Please try again.');

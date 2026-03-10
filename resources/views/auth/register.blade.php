@@ -138,17 +138,8 @@
                             <video x-ref="video" class="absolute inset-0 h-full w-full object-cover" 
                                 x-show="streaming" playsinline muted></video>
 
-                            <!-- Progress ring on outer border -->
-                            <div x-show="streaming"
-                                class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <svg class="absolute inset-[-6px] w-[calc(100%+12px)] h-[calc(100%+12px)]" viewBox="0 0 112 112" aria-hidden="true">
-                                    <circle cx="56" cy="56" r="52" stroke="rgba(255,255,255,0.25)" stroke-width="6" fill="none" />
-                                    <circle cx="56" cy="56" r="52" stroke="#38bdf8" stroke-width="6" fill="none"
-                                        stroke-linecap="round"
-                                        stroke-dasharray="326.72"
-                                        :stroke-dashoffset="`${326.72 * (1 - detectionProgress/100)}`"
-                                        transform="rotate(-90 56 56)" />
-                                </svg>
+                            <!-- Guide overlay (no progress) -->
+                            <div x-show="streaming" class="pointer-events-none absolute inset-0 flex items-center justify-center">
                                 <div class="relative w-24 h-32 sm:w-32 sm:h-40 md:w-36 md:h-44">
                                     <div class="absolute inset-[6px] rounded-full bg-transparent border-4 border-white/70 border-dashed"></div>
                                 </div>
@@ -159,6 +150,11 @@
                                 <img :src="preview" alt="Profile preview" 
                                     class="h-full w-full object-cover" />
                             </template>
+
+                            <!-- Identifying overlay -->
+                            <div x-show="identifying" class="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm text-white text-sm font-semibold">
+                                Identifying...
+                            </div>
 
                             <!-- Placeholder -->
                             <template x-if="!preview && !streaming">
@@ -194,13 +190,17 @@
                             <canvas x-ref="canvas" class="hidden"></canvas>
 
                             <div class="flex flex-wrap items-center justify-center gap-3">
-                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="startCamera()" x-show="!streaming">
+                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60" @click="startCamera()" x-show="!streaming" :disabled="identifying || !modelsReady">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M17 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m3 10 2.586-2.586a2 2 0 0 1 2.828 0L12 11l2.586-2.586a2 2 0 0 1 2.828 0L21 11"/><circle cx="12" cy="13" r="3"/></svg>
                                     Take Photo
                                 </button>   
-                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="chooseUpload()" x-show="!streaming">
+                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60" @click="chooseUpload()" x-show="!streaming" :disabled="identifying || !modelsReady">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7-7-7 7"/><path d="M5 19h14"/></svg>
                                     Upload Photo
+                                </button>
+                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-emerald-500 bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60" @click="captureFrame()" x-show="streaming" :disabled="identifying || !modelsReady">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" ry="2"/><circle cx="12" cy="12" r="3"/></svg>
+                                    Capture
                                 </button>
                             </div>
 
