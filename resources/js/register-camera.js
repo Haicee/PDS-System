@@ -13,12 +13,11 @@ window.formCache = function () {
         detectionState: 'idle', // idle | searching | no_face | dark | ready | captured
         detectionMessage: null,
         detectTimer: null,
-        autoCaptureScheduled: false,
-        brightnessThreshold: 120,
+        brightnessThreshold: 100,
         detectionProgress: 0,
-        readyTicks: 0,
-        requiredReadyTicks: 7,
-        minDetectionScore: 0.90,
+        identifying: false,
+        modelsReady: false,
+        minDetectionScore: 0.60,
 
         async init() {
             const form = document.querySelector('form')
@@ -56,6 +55,7 @@ window.formCache = function () {
             if (!video) return
             this.face = new FaceService(video, { modelPath: '/models', brightnessThreshold: 80 })
             await this.face.loadModels()
+            this.modelsReady = true
         },
 
         async waitForFaceApi(retries = 50) {
@@ -116,13 +116,16 @@ window.formCache = function () {
         },
 
         async startCamera() {
-            if (!this.face) return
+            if (!this.face || !this.modelsReady) {
+                this.detectionMessage = 'Loading face detection… please wait.'
+                return
+            }
             try {
                 await this.face.startCamera()
                 this.stream = this.face.stream
                 this.streaming = this.face.streaming
                 this.detectionState = 'searching'
-                this.detectionMessage = 'Center your face in the circle.'
+                this.detectionMessage = 'Center your face in the circle, then tap Capture.'
                 this.detectionProgress = 0
                 this.startDetectionLoop()
             } catch (e) {
@@ -137,20 +140,39 @@ window.formCache = function () {
         },
 
         async captureFrame() {
-            const eligibility = await this.checkEligibility()
-            if (!eligibility) return
-            const blob = await this.face.captureIfValid()
-            if (!blob) return
-            const file = new File([blob], 'profile_photo.jpg', { type: 'image/jpeg' })
-            const dt = new DataTransfer()
-            dt.items.add(file)
-            if (this.$refs.uploadInput) this.$refs.uploadInput.files = dt.files
-            this.cachePhoto(file)
-            this.stopCamera()
-            this.detectionState = 'captured'
-            this.detectionMessage = null
-            this.detectionProgress = 0
-            this.autoCaptureScheduled = false
+            if (!this.modelsReady) {
+                this.detectionMessage = 'Loading face detection… please wait.'
+                return
+            }
+            if (this.identifying) return
+            this.identifying = true
+            this.detectionState = 'identifying'
+            this.detectionMessage = 'Identifying…'
+            try {
+                const blob = await this.face.captureRawFrame()
+                if (!blob) {
+                    this.detectionState = 'recapture'
+                    this.detectionMessage = 'Capture failed. Please try again.'
+                    return
+                }
+                const eligibility = await this.checkEligibility()
+                if (!eligibility) {
+                    this.detectionState = 'recapture'
+                    this.detectionMessage = this.detectionMessage || 'Face not ready. Please recenter and try again.'
+                    return
+                }
+                const file = new File([blob], 'profile_photo.jpg', { type: 'image/jpeg' })
+                const dt = new DataTransfer()
+                dt.items.add(file)
+                if (this.$refs.uploadInput) this.$refs.uploadInput.files = dt.files
+                this.cachePhoto(file)
+                this.stopCamera()
+                this.detectionState = 'captured'
+                this.detectionMessage = null
+                this.detectionProgress = 0
+            } finally {
+                this.identifying = false
+            }
         },
 
         startDetectionLoop() {
@@ -163,29 +185,18 @@ window.formCache = function () {
                 clearInterval(this.detectTimer)
                 this.detectTimer = null
             }
-            this.autoCaptureScheduled = false
             this.detectionProgress = 0
-            this.readyTicks = 0
         },
 
         async runDetectionTick() {
+            if (this.identifying) return
             if (!this.streaming || !this.face) return
             const eligible = await this.checkEligibility(true)
             if (!eligible) return
 
             this.detectionState = 'ready'
-            this.detectionMessage = 'Hold still… capturing in a moment.'
-            // incorporate brightness headroom into progress
-            const brightnessOk = this.brightnessOk === true
-            const lightFactor = brightnessOk ? 1 : 0
-            const step = brightnessOk ? 20 : 10
-            this.detectionProgress = Math.min(100, this.detectionProgress + step)
-            this.readyTicks += 1
-
-            if (this.detectionProgress >= 100 && this.readyTicks >= this.requiredReadyTicks && brightnessOk && !this.autoCaptureScheduled) {
-                this.autoCaptureScheduled = true
-                this.captureFrame()
-            }
+            this.detectionMessage = 'Face looks good. Tap Capture.'
+            this.detectionProgress = 0
         },
 
         async checkEligibility(fromTick = false) {
@@ -193,18 +204,14 @@ window.formCache = function () {
             if (!detection) {
                 this.detectionState = 'no_face'
                 this.detectionMessage = 'No face detected. Please center your face.'
-                this.autoCaptureScheduled = false
                 this.detectionProgress = Math.max(0, this.detectionProgress - 8)
-                this.readyTicks = 0
                 return false
             }
 
             if (detection.score && detection.score < this.minDetectionScore) {
                 this.detectionState = 'no_face'
                 this.detectionMessage = 'Face not clear. Hold steady.'
-                this.autoCaptureScheduled = false
                 this.detectionProgress = Math.max(0, this.detectionProgress - 2)
-                this.readyTicks = Math.max(0, this.readyTicks - 1)
                 return false
             }
 
@@ -212,9 +219,7 @@ window.formCache = function () {
             if (brightness < this.brightnessThreshold) {
                 this.detectionState = 'dark'
                 this.detectionMessage = 'Lighting too low. Move to a brighter spot.'
-                this.autoCaptureScheduled = false
                 this.detectionProgress = Math.max(0, this.detectionProgress - 5)
-                this.readyTicks = 0
                 return false
             }
 
@@ -231,18 +236,14 @@ window.formCache = function () {
             if (faceRatio < minRatio) {
                 this.detectionState = 'too_far'
                 this.detectionMessage = 'Move closer so your face fills the circle.'
-                this.autoCaptureScheduled = false
                 this.detectionProgress = Math.max(0, this.detectionProgress - 5)
-                this.readyTicks = 0
                 return false
             }
 
             if (faceRatio > maxRatio) {
                 this.detectionState = 'too_close'
                 this.detectionMessage = 'Move back slightly so your face fits the circle.'
-                this.autoCaptureScheduled = false
                 this.detectionProgress = Math.max(0, this.detectionProgress - 5)
-                this.readyTicks = 0
                 return false
             }
 
@@ -254,22 +255,14 @@ window.formCache = function () {
             // Tie centering to the visible circle: face center plus its radius must remain within the circle (with a tighter margin)
             const faceRadius = faceRatio / 2
             const circleRadius = 0.5
-            const margin = 0.04
+            const margin = 0.0
             const maxCenterDistance = Math.max(0.005, circleRadius - margin - faceRadius)
             const centerDistance = Math.hypot(dx, dy * dyWeight)
-            if (centerDistance > maxCenterDistance) {
+            const strictDistance = maxCenterDistance * 0.4
+            if (centerDistance > strictDistance) {
                 this.detectionState = 'off_center'
                 this.detectionMessage = 'Center your face in the guide.'
-                this.autoCaptureScheduled = false
                 this.detectionProgress = 0
-                this.readyTicks = 0
-                return false
-            }
-
-            // If near the edge, slow progress accumulation
-            if (centerDistance > maxCenterDistance * 0.6) {
-                this.detectionProgress = Math.max(0, this.detectionProgress - 5)
-                this.readyTicks = Math.max(0, this.readyTicks - 1)
                 return false
             }
 

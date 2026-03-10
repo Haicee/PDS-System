@@ -56,6 +56,17 @@ export default class FaceService {
         return brightness
     }
 
+    async captureRawFrame() {
+        if (!this.streaming) return null
+        const canvas = document.createElement("canvas")
+        canvas.width = this.video.videoWidth
+        canvas.height = this.video.videoHeight
+        canvas.getContext("2d").drawImage(this.video, 0, 0)
+        return await new Promise(resolve => {
+            canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.9)
+        })
+    }
+
     async captureIfValid() {
         const detection = await this.detectFace()
         if (!detection) {
@@ -67,13 +78,6 @@ export default class FaceService {
             return null
         }
 
-        // Capture frame as blob
-        const canvas = document.createElement("canvas")
-        canvas.width = this.video.videoWidth
-        canvas.height = this.video.videoHeight
-        canvas.getContext("2d").drawImage(this.video, 0, 0)
-        return await new Promise(resolve => {
-            canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.9)
-        })
+        return await this.captureRawFrame()
     }
 }

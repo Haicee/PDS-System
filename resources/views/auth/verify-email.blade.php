@@ -92,7 +92,8 @@
             const statusUrl = '{{ route('verification.status', [], false) }}';
             const buildStatusUrl = () => `${statusUrl}?t=${Date.now()}`; // bust caches
             const CHECK_INTERVAL_MS = 300;
-            const REDIRECT_DELAY_MS = 3000;
+            // Redirect immediately after verification to avoid perceived lag
+            const REDIRECT_DELAY_MS = 0;
             const RESEND_KEY = 'verify_resend_at';
             const COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
             const resendBtn = document.getElementById('resend-btn');

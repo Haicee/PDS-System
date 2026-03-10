@@ -367,6 +367,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const requiredFields = Array.from(form.querySelectorAll('[required]'));
 
+  const MAX_REMARKS_CHARS = 60 * 1024; // ~60 KB cap (below DB text limit)
+
+  const updateRemarksCounter = (el) => {
+    const counterEl = document.getElementById('remarksCounter');
+    if (!counterEl || !el) return;
+    const len = el.value.length;
+    counterEl.textContent = `${len.toLocaleString()} / ${MAX_REMARKS_CHARS.toLocaleString()}`;
+  };
+
   const getRemarks = () => Array.from(form.querySelectorAll('textarea[name="remarks[]"]'));
 
   const validateRequired = () => {
@@ -393,9 +402,26 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const attachReactive = (el) => {
+    const isRemarksField = el.name === 'remarks[]';
     autoSize(el);
-    el.addEventListener('input', () => { autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
-    el.addEventListener('change', () => { autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
+    const enforceLimit = () => {
+      if (!isRemarksField) return;
+      if (el.value.length > MAX_REMARKS_CHARS) {
+        const { selectionStart, selectionEnd } = el;
+        el.value = el.value.slice(0, MAX_REMARKS_CHARS);
+        // restore cursor where possible
+        if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+          el.selectionStart = Math.min(selectionStart, MAX_REMARKS_CHARS);
+          el.selectionEnd = Math.min(selectionEnd, MAX_REMARKS_CHARS);
+        }
+      }
+      updateRemarksCounter(el);
+    };
+
+    el.addEventListener('input', () => { enforceLimit(); autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
+    el.addEventListener('change', () => { enforceLimit(); autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
+
+    if (isRemarksField) enforceLimit();
   };
 
   // Initial hooks
@@ -491,25 +517,22 @@ class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
 style="min-height:350px; white-space:pre-wrap; overflow:hidden;"
 placeholder="Sample: If applying to Supervising Administrative Officer
 
-•	Duration:  February 11, 2011 – present
-•	Position:  Human Resource Management Officer III
-•	Name of Office/Unit: Finance and Administrative Service
-•	Immediate Supervisor: Maria Estrada
-•	 Name of Agency/Organization and Location: Department of Human Resources, Metro Manila
+Duration:  February 11, 2011 – present
 
-•	List of Accomplishments and Contributions (if any)
- - Developed recruitment plan
- - Designed training program for retirees under EO 366
- 
-•	Summary of Actual Duties
-  - Responsible for the management of the recruitment and selection process and the coordination of training activities of the Department; provides assistance in the management of the Division’s programs and activities and performs other related functions.
-"
-></textarea>
+Position Title:  Administrative Officer IV
+
+Department/Agency/Office/Company:  Civil Service Commission – Regional Office No. IV
+
+Immediate Supervisor:  Division Chief   and highlight your key duties/responsibilities
+
+For more spaces, type as many roles as needed in the box." aria-label="Work Experience Remarks"></textarea>
 </td>
 </tr>
 
 </tbody>
 </table>
+
+<div class="max-w-6xl mx-auto flex justify-end text-xs text-gray-600 pr-3 pb-2" id="remarksCounter">0 / 61,440</div>
 
 <!-- SIGNATURE -->
 <div class="w-full flex justify-end mt-[3cm] pr-6">
