@@ -61,7 +61,11 @@ export default class FaceService {
         const canvas = document.createElement("canvas")
         canvas.width = this.video.videoWidth
         canvas.height = this.video.videoHeight
-        canvas.getContext("2d").drawImage(this.video, 0, 0)
+        const ctx = canvas.getContext("2d")
+        // Flip horizontally so capture matches the unmirrored preview
+        ctx.translate(canvas.width, 0)
+        ctx.scale(-1, 1)
+        ctx.drawImage(this.video, 0, 0, canvas.width, canvas.height)
         return await new Promise(resolve => {
             canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.9)
         })

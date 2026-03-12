@@ -34,6 +34,32 @@
 
                     submissions: {{ Js::from($submissions ?? []) }},
 
+                    init() {
+                        window.addEventListener('pds-submissions-update', (event) => {
+                            const next = event.detail?.submissions;
+                            if (Array.isArray(next)) {
+                                if (this.modalOpen) {
+                                    const map = new Map(this.submissions.map((s) => [s.id, s]));
+                                    next.forEach((n) => {
+                                        const existing = map.get(n.id);
+                                        if (existing) {
+                                            Object.assign(existing, n);
+                                        }
+                                    });
+
+                                    if (this.selected) {
+                                        const updated = map.get(this.selected.id);
+                                        if (updated) {
+                                            this.selected = updated;
+                                        }
+                                    }
+                                } else {
+                                    this.submissions = next;
+                                }
+                            }
+                        });
+                    },
+
                     normalized(v) {
                         return (v ?? '').toString().trim().toLowerCase();
                     },

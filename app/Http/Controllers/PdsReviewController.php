@@ -12,7 +12,19 @@ class PdsReviewController extends Controller
 {
     public function index()
     {
-        $submissions = PdsSubmission::with('user')
+        $submissions = $this->mappedSubmissions();
+
+        return view('pds-form', compact('submissions'));
+    }
+
+    public function latest(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json($this->mappedSubmissions());
+    }
+
+    private function mappedSubmissions(): array
+    {
+        return PdsSubmission::with('user')
             ->orderBy('submitted', 'desc')
             ->get()
             ->map(function ($submission) {
@@ -33,8 +45,6 @@ class PdsReviewController extends Controller
                 ];
             })
             ->toArray();
-
-        return view('pds-form', compact('submissions'));
     }
 
     public function updateStatus(Request $request, $id)

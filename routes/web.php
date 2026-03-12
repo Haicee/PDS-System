@@ -34,12 +34,26 @@ Route::get('/employee', [EmployeeController::class, 'dashboard'])
     ->middleware(['auth:web'])
     ->name('employee.dashboard');
 
+Route::post('/employee/rejection/dismiss', [EmployeeController::class, 'dismissRejection'])
+    ->middleware(['auth:web'])
+    ->name('employee.rejection.dismiss');
+
+Route::post('/employee/approval/dismiss', [EmployeeController::class, 'dismissApproval'])
+    ->middleware(['auth:web'])
+    ->name('employee.approval.dismiss');
+
+Route::get('/employee/pds/status', [EmployeeController::class, 'latestPdsStatus'])
+    ->middleware(['auth:web'])
+    ->name('employee.pds.status');
+
 // Notifications (admin/web authenticated)
 Route::middleware(['auth:admin,web'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])
         ->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
         ->name('notifications.readAll');
+    Route::get('/notifications/latest', [NotificationController::class, 'latest'])
+        ->name('notifications.latest');
 });
 
 // Dashboard Route
@@ -169,6 +183,10 @@ if (! function_exists('pdsSubmissions')) {
 Route::get('/pds-form', [App\Http\Controllers\PdsReviewController::class, 'index'])
     ->middleware(['auth:admin', 'verified'])
     ->name('pds.form');
+
+Route::get('/pds-form/latest', [App\Http\Controllers\PdsReviewController::class, 'latest'])
+    ->middleware(['auth:admin', 'verified'])
+    ->name('pds.form.latest');
 
 Route::post('/pds-form/{id}/status', [App\Http\Controllers\PdsReviewController::class, 'updateStatus'])
     ->middleware(['auth:admin', 'verified'])

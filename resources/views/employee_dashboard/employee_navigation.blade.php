@@ -72,7 +72,7 @@
                                     @endif
                                 </div>
 
-                                <div id="notification-list" class="max-h-[460px] overflow-y-auto" x-on:click.stop>
+                                <div id="notification-list" class="max-h-[460px] overflow-y-auto hide-scrollbar" x-on:click.stop>
                                 @forelse($recentNotifications as $notification)
                                     @php
                                         $data = $notification->data ?? [];

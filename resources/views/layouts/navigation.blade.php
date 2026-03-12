@@ -30,6 +30,7 @@
                         {{ __('Manage Employees') }}
                     </x-nav-link>
                 </div>
+
             </div>
 
             <!-- Settings Dropdown + Notifications -->
@@ -73,7 +74,7 @@
                                 @endif
                             </div>
 
-                            <div id="notification-list" class="max-h-[460px] overflow-y-auto" x-on:click.stop>
+                            <div id="notification-list" class="max-h-[460px] overflow-y-auto hide-scrollbar" x-on:click.stop>
                             @forelse($recentNotifications as $notification)
                                 @php
                                     $data = $notification->data ?? [];
@@ -93,7 +94,7 @@
                                                     <span class="text-[11px] text-gray-400 shrink-0">{{ $notification->created_at->diffForHumans() }}</span>
                                                 </div>
                                             <div class="flex items-start justify-between gap-3">
-                                                <div class="text-xs text-gray-600 mt-1 leading-relaxed">{{ $message }}</div>
+                                                <div class="text-xs text-gray-600 mt-1 leading-relaxed">{!! nl2br(e($message)) !!}</div>
                                                     <div class="mt-3 flex items-center gap-4 text-xs font-semibold">
                                                         @if($link)
                                                             <a href="{{ $link }}" onclick="return viewNotification(event, '{{ $notification->id }}', '{{ $link }}')" class="text-indigo-600 hover:text-indigo-800">View</a>
@@ -165,6 +166,7 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
         </div>
 
         <!-- Responsive Settings Options -->

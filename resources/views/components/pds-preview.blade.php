@@ -71,7 +71,7 @@
                                         ? 'border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm'
                                         : 'border-slate-200 text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'"
                                     @click.stop="requestConfirm('approved')">
-                                    Approved
+                                    Approve
                                 </button>
                                 <button type="button"
                                     class="rounded-full px-3 py-1.5 text-xs font-semibold border"
@@ -79,7 +79,7 @@
                                         ? 'border-rose-200 bg-rose-50 text-rose-700 shadow-sm'
                                         : 'border-slate-200 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700'"
                                     @click.stop="requestConfirm('rejected')">
-                                    Rejected
+                                    Reject
                                 </button>
                             </div>
                         </div>

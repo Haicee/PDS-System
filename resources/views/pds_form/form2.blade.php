@@ -8,7 +8,6 @@
         </a>
     </div>
     <style>
-        body { margin: 24px; }
         table { border-collapse: collapse; width: 100%; }
         td, th { padding: 4px; vertical-align: top; }
 
@@ -824,7 +823,7 @@
     </div>
 
         <div class="flex justify-between mt-4">
-            <a href="{{ route('pds.form1') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300">Previous Page</a>
+            <a href="{{ route('pds.form1') }}" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Previous Page</a>
             <button type="submit" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</button>
         </div>
 </form>

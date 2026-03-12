@@ -94,7 +94,12 @@ class PdsPdfController extends Controller
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->get();
         $training = DB::table('pds_training_programs')->where('user_id', $userId)->get();
         $otherInfo = DB::table('pds_other_info')->where('user_id', $userId)->get();
-        $references = DB::table('pds_references')->where('user_id', $userId)->get();
+        // Limit to the on-form capacity (7 rows) and keep stable insertion order
+        $references = DB::table('pds_references')
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->limit(7)
+            ->get();
         $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
 
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
