@@ -263,17 +263,17 @@
                 x-init="init()">
                 <div class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
                     <div class="flex flex-wrap items-center gap-2">
-                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
+                        <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
                             <option value="">Status: All</option>
                             <option value="Active">Active</option>
                             <option value="Inactive">Inactive</option>
                         </select>
-                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
+                        <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
                             <option value="">Employee Status: All</option>
                             <option value="Permanent Employee">Permanent</option>
                             <option value="Contract of Service">Contract of Service</option>
                         </select>
-                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
+                        <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                             <option value="created_at">Sort: Date</option>
                             <option value="name">Sort: Name</option>
                             <option value="unit">Sort: Division/Section/Unit/Office</option>
@@ -309,21 +309,21 @@
                 </div>
 
                 <div class="flex-1 overflow-hidden">
-                    <div class="overflow-x-auto h-full">
+                    <div class="overflow-x-auto lg:overflow-visible h-full">
                         <div class="max-h-full min-h-full overflow-y-auto rounded-b-2xl bg-white">
                             <table class="w-full divide-y divide-slate-100">
-                                <thead class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
+                                <thead class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-[11px] sm:text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
-                                        <th class="px-6 py-3">Employee</th>
-                                        <th class="px-6 py-3">Division/Section/Unit/Office</th>
-                                        <th class="px-6 py-3">Email</th>
-                                        <th class="px-6 py-3">Phone</th>
-                                        <th class="px-6 py-3">Status</th>
-                                        <th class="px-6 py-3">Place Of Assignment</th>
-                                        <th class="px-6 py-3 text-center">Action</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Employee</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]">Division/Section/Unit/Office</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]">Email</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Phone</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Status</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]">Place Of Assignment</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 text-center">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                                <tbody class="divide-y divide-slate-100 bg-white text-[11px] sm:text-xs text-slate-700">
                                     <template x-for="employee in filteredSorted()" :key="employee.id">
                                         <tr class="hover:bg-slate-50"
                                             x-data="{
@@ -333,26 +333,26 @@
                                             }"
                                             x-init="window.addEventListener('employee-updated', e => { if (e.detail?.key === key) { employee = e.detail.employee; } })"
                                             x-cloak>
-                                            <td class="px-6 py-4">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
                                                 <div class="flex items-center gap-3">
-                                                    <img :src="employee.avatar" :alt="employee.name + ' avatar'" class="h-10 w-10 rounded-full object-cover shadow-sm">
+                                                    <img :src="employee.avatar" :alt="employee.name + ' avatar'" class="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover shadow-sm">
                                                     <div>
-                                                        <p class="font-semibold text-slate-900" x-text="employee.name"></p>
-                                                        <span class="text-slate-500" x-text="employee.type"></span>
+                                                        <p class="font-semibold text-slate-900 text-xs sm:text-sm whitespace-nowrap min-w-[9.5rem]" x-text="employee.name"></p>
+                                                        <span class="text-slate-500 text-[11px] sm:text-xs" x-text="employee.type"></span>
                                                     </div>
                                                 </div>
                                             </td>
 
-                                            <td class="px-6 py-4" x-text="employee.unit"></td>
-                                            <td class="px-6 py-4 text-slate-500" x-text="employee.email"></td>
-                                            <td class="px-6 py-4" x-text="employee.phone"></td>
-                                            <td class="px-6 py-4">
-                                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="statusClass()" x-text="employee.status"></span>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="employee.unit"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="employee.email"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4" x-text="employee.phone"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] sm:text-xs font-semibold" :class="statusClass()" x-text="employee.status"></span>
                                             </td>
-                                            <td class="px-6 py-4 text-slate-500" x-text="employee.location"></td>
-                                            <td class="px-6 py-4 text-center">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="employee.location"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
                                                 <div class="inline-flex items-center gap-2 justify-center">
-                                                    <button type="button" class="inline-flex items-center rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                                                    <button type="button" class="inline-flex items-center rounded-full border border-rose-200 px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-rose-600 hover:bg-rose-50"
                                                         x-on:click.prevent="$dispatch('open-delete', employee)" title="Delete">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                             <path d="M3 6h18" />
@@ -362,7 +362,7 @@
                                                             <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" />
                                                         </svg>
                                                     </button>
-                                                    <button type="button" class="inline-flex items-center rounded-full border border-indigo-200 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                                                    <button type="button" class="inline-flex items-center rounded-full border border-indigo-200 px-3.5 sm:px-4 py-1.5 text-[10px] sm:text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50"
                                                         x-on:click.prevent="window.dispatchEvent(new CustomEvent('open-modal', { detail: key }));">
                                                         View
                                                     </button>

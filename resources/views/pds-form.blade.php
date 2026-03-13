@@ -214,7 +214,7 @@
                         <div class="max-h-full min-h-full overflow-y-auto rounded-b-2xl bg-white">
                             <table class="w-full divide-y divide-slate-100">
                                 <thead
-                                    class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
+                                    class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-sm font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
                                         <th class="px-6 py-3">Employee</th>
                                         <th class="px-6 py-3">Division/Section/Unit/Office</th>
