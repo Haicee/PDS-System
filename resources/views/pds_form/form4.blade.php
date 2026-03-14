@@ -7,7 +7,7 @@
         </a>
     </div>
   <style>
-    body { margin: 24px; font-family: 'Arial Narrow','Arial',sans-serif; }
+    body { font-family: 'Arial Narrow','Arial',sans-serif; }
     table { border-collapse: collapse; }
     .border-3 { border: 3px solid #000; }
     .border-2 { border: 2px solid #000; }
@@ -61,11 +61,13 @@
     let identifying = false;
     let segmentation;
     let segmentationReady = false;
+    let guideReady = false;
     const photoConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } } };
     const photoCacheKey = 'pds_form4_photo_data';
     const statusEl = () => document.getElementById('photoStatus');
     const brightnessThreshold = 100;
     const overlayEl = () => document.getElementById('photoOverlay');
+    const guideCircle = () => document.querySelector('#photoOverlay .guide-circle');
     const captureBtn = () => document.getElementById('photoCaptureBtn');
     const segmentationBase = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/';
 
@@ -104,11 +106,13 @@
         photoStream = await navigator.mediaDevices.getUserMedia(photoConstraints);
         video.srcObject = photoStream;
         await video.play();
+        video.style.transform = 'scaleX(-1)';
         video.classList.remove('hidden');
         overlayEl()?.classList.remove('hidden');
         document.getElementById('photoStartBtn')?.classList.add('hidden');
+        guideReady = false;
+        setGuideState(false);
         captureBtn()?.classList.remove('hidden');
-        captureBtn()?.removeAttribute('disabled');
         setStatus('Center your face in the guide.');
         startDetectionLoop();
       } catch (err) {
@@ -126,7 +130,7 @@
       setStatus('');
       overlayEl()?.classList.add('hidden');
       captureBtn()?.classList.add('hidden');
-      captureBtn()?.setAttribute('disabled', 'true');
+      setGuideState(false);
     }
 
     function startDetectionLoop() {
@@ -141,12 +145,33 @@
       }
     }
 
+    function setGuideState(isReady) {
+      guideReady = !!isReady;
+      const circle = guideCircle();
+      const btn = captureBtn();
+      if (circle) {
+        circle.className = 'absolute w-[70%] h-[70%] rounded-full border-4 border-dashed guide-circle';
+        circle.style.borderColor = isReady ? '#10b981' : '#f43f5e';
+        circle.style.boxShadow = isReady
+          ? '0 0 0 2px rgba(16,185,129,0.25)'
+          : '0 0 0 2px rgba(244,63,94,0.25)';
+      }
+      if (btn) {
+        if (isReady) {
+          btn.removeAttribute('disabled');
+        } else {
+          btn.setAttribute('disabled', 'true');
+        }
+      }
+    }
+
     async function checkEligibility() {
       const video = document.getElementById('photoVideo');
       if (!video) return false;
       const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
       if (!detection) {
         setStatus('No clear face detected.');
+        setGuideState(false);
         return false;
       }
 
@@ -156,10 +181,12 @@
       const faceRatio = Math.max(ratioW, ratioH);
       if (faceRatio < 0.45) {
         setStatus('Move closer so your face fills the circle.');
+        setGuideState(false);
         return false;
       }
       if (faceRatio > 0.55) {
         setStatus('Move back slightly so your face fits the circle.');
+        setGuideState(false);
         return false;
       }
 
@@ -176,6 +203,7 @@
       const strictDistance = maxCenterDistance * 0.3;
       if (centerDistance > strictDistance) {
         setStatus('Center your face in the guide.');
+        setGuideState(false);
         return false;
       }
 
@@ -183,15 +211,18 @@
       brightnessOkFlag = brightness >= brightnessThreshold + 5;
       if (!brightnessOkFlag) {
         setStatus('Lighting too low. Move to a brighter spot.');
+        setGuideState(false);
         return false;
       }
 
       if (detection.score && detection.score < minDetectionScore) {
         setStatus('Face not clear. Hold steady.');
+        setGuideState(false);
         return false;
       }
 
       setStatus('Face looks good. Tap Capture.', 'text-emerald-600');
+      setGuideState(true);
       return true;
     }
 
@@ -199,6 +230,7 @@
       const ok = await checkEligibility();
       if (!ok) return;
       setStatus('Face looks good. Tap Capture.', 'text-emerald-600');
+      setGuideState(true);
     }
 
     function checkLighting(video) {
@@ -249,13 +281,15 @@
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrlRaw = canvas.toDataURL('image/jpeg', 0.9);
 
         const ok = await checkEligibility();
         if (!ok || !brightnessOkFlag) {
           setStatus('Center and lighten your face, then recapture.');
-          captureBtn()?.removeAttribute('disabled');
+          setGuideState(false);
           return;
         }
 
@@ -299,6 +333,7 @@
       video.classList.add('hidden');
       overlayEl()?.classList.add('hidden');
       captureBtn()?.classList.add('hidden');
+      setGuideState(false);
     }
       finally {
         identifying = false;
@@ -1424,22 +1459,22 @@
           the last 6 months<br>
           4.5 cm × 3.5 cm
         </div>
-        <video id="photoVideo" class="absolute inset-0 w-full h-full object-cover hidden" playsinline></video>
+        <video id="photoVideo" class="absolute inset-0 w-full h-full object-cover hidden" playsinline style="transform: scaleX(-1);"></video>
         <div id="photoOverlay" class="pointer-events-none absolute inset-0 flex items-center justify-center hidden">
           <svg id="photoProgressSvg" class="absolute inset-0 w-full h-full" viewBox="0 0 140 180" fill="none">
             <rect x="4" y="4" width="132" height="172" rx="12" stroke="rgba(255,255,255,0.25)" stroke-width="6"></rect>
             <rect id="photoProgressRing" x="4" y="4" width="132" height="172" rx="12" stroke="#0ea5e9" stroke-width="6" stroke-linecap="round"
               stroke-dasharray="616" stroke-dashoffset="616"></rect>
           </svg>
-          <div class="absolute w-[70%] h-[70%] rounded-full border-4 border-white/70 border-dashed"></div>
+          <div class="absolute w-[70%] h-[70%] rounded-full border-4 border-dashed border-rose-500 shadow-[0_0_0_2px_rgba(244,63,94,0.25)] guide-circle"></div>
         </div>
       </div>
 
       <p id="photoStatus" class="text-xs text-center text-rose-600 font-semibold min-h-[18px]"></p>
 
-      <div class="flex flex-col items-center gap-2 text-xs w-full">
-        <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
-        <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow hidden disabled:opacity-60" onclick="capturePhoto()" disabled>Capture</button>
+        <div class="flex flex-col items-center gap-2 text-xs w-full">
+          <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
+          <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow hidden disabled:opacity-60" onclick="capturePhoto()" disabled>Capture</button>
         <!-- Upload option -->
         <label class="px-3 py-1 bg-indigo-600 text-white rounded shadow cursor-pointer">
           Upload photo
@@ -1489,11 +1524,11 @@
         </td>
       </tr>
       <tr>
-        <td class="pr-5 p-0 align-top w-[40%] border-l border-black border-r-0 flex-1">
-        <table class="border-collapse text-xs border-2 ml-2 mt-2 h-[5.6cm] w-full">
+        <td class="pr-5 p-0 align-top w-[40%] border-l border-black border-r-0">
+        <table class="text-xs border-2 border-black ml-2 mt-2 mb-2 w-full border-collapse">
   <!-- HEADER -->
   <tr>
-    <td class="border px-2 py-1 font-semibold h-5 border-black" colspan="2">
+    <td class="border px-2 py-1 font-semibold h-[1.06cm] align-top border-black" colspan="2">
       Government Issued ID (i.e. Passport, GSIS, SSS, PRC, Driver's License, etc.)<br>
       <span class="italic font-normal">
         PLEASE INDICATE ID Number and Date of Issuance
@@ -1503,31 +1538,31 @@
 
   <!-- ROW 1 -->
   <tr>
-    <td class="border px-2 py-1 h-5 align-middle border-black">
+    <td class="border px-2 py-1 h-8 align-middle border-black">
       Government Issued ID:
     </td>
-    <td class="border px-2 py-1 w-2/3 border-black">
-      <textarea class="text-base w-full h-8 resize-none outline-none align-middle" name="gov_id"></textarea>
+    <td class="border px-2 py-1 h-8 align-middle border-black">
+      <textarea class="text-base w-full h-full resize-none outline-none align-middle" name="gov_id"></textarea>
     </td>
   </tr>
 
   <!-- ROW 2 -->
   <tr>
-    <td class="border px-2 py-1 h-5 align-middle border-black">
+    <td class="border px-2 py-1 h-10 align-middle border-black">
       ID/License/Passport No.:
     </td>
-    <td class="border px-2 py-1 border-black">
-      <textarea class="text-base w-full h-8 resize-none outline-none" name="licence_passport_id"></textarea>
+    <td class="border px-2 py-1 h-10 align-middle border-black">
+      <textarea class="text-base w-full h-full resize-none outline-none" name="licence_passport_id"></textarea>
     </td>
   </tr>
 
   <!-- ROW 3 -->
   <tr>
-    <td class="border px-2 py-1 h-5 align-middle border-black">
+    <td class="border px-2 py-1 h-8 align-middle border-black">
       Date/Place of Issuance:
     </td>
-    <td class="border px-2 py-1 border-black">
-      <textarea class="text-base w-full h-8 resize-none outline-none" name="id_issue_date_place"></textarea>
+    <td class="border px-2 py-1 h-8 align-middle border-black">
+      <textarea class="text-base w-full h-full resize-none outline-none" name="id_issue_date_place"></textarea>
     </td>
   </tr>
 
@@ -1536,7 +1571,7 @@
         <td class="p-0 align-top w-[35%] border-b-0 border-l-0 border-r-0 border-black" colspan="2">
           <table class="w-full border-collapse text-xs border-3 mt-2 border-2 mb-2">
             <tr>
-              <td class="h-[3.06cm] border-black text-center align-middle italic text-red-600 relative p-1">
+              <td class="h-[4.45cm] border-black text-center align-middle italic text-red-600 relative p-1">
                 <label id="signatureBox4a" class="signature-box block h-full w-full cursor-default relative">
                   <input
                     type="file"
@@ -1625,7 +1660,7 @@
     CS FORM 212 (Revised 2025), Page 4 of 5
     </div>
       <div class="flex justify-between mt-4">
-    <a href="{{ route('pds.form3') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded shadow border border-gray-300 hover:bg-gray-300 print:text-white print:bg-gray-600">Previous Page</a>
+    <a href="{{ route('pds.form3') }}" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Previous Page</a>
     <button type="submit" id="pds4-next" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700 print:text-white print:bg-blue-600">Next Page</button>
   </div>
   </div>

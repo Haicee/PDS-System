@@ -838,15 +838,15 @@
 
     <tr>
         <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
-        <td colspan="3" style="border:1px solid black;">{{ $father->middlename ?? '—' }}</td>
+        <td colspan="3" style="border:1px solid black;" class="border-b-0">{{ $father->middlename ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;"></td>
+        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
     <!-- Mother -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px;" colspan="4">25. MOTHER'S MAIDEN NAME</td>
+        <td style="background:#e7e7e7; padding-left:4px; border:1px solid black; border-top:1px solid black;" colspan="4">25. MOTHER'S MAIDEN NAME</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
         @php $childIndex++; @endphp

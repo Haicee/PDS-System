@@ -30,6 +30,7 @@
                         {{ __('Manage Employees') }}
                     </x-nav-link>
                 </div>
+
             </div>
 
             <!-- Settings Dropdown + Notifications -->
@@ -75,19 +76,19 @@
                                     @endif
                                 </div>
 
-                                <div id="notification-list" class="max-h-[460px] overflow-y-auto" x-on:click.stop>
-                                @forelse($recentNotifications as $notification)
-                                    @php
-                                        $data = $notification->data ?? [];
-                                        $title = $data['title'] ?? 'Notification';
-                                        $message = $data['message'] ?? '';
-                                        $link = $data['link'] ?? null;
-                                        $isUnread = is_null($notification->read_at);
-                                        $pill = $isUnread ? 'bg-indigo-600' : 'bg-gray-300';
-                                        $initial = strtoupper(mb_substr($data['name'] ?? $title ?? 'N', 0, 1));
-                                    @endphp
-                                        <div class="px-6 py-5 {{ $isUnread ? 'bg-indigo-50' : 'bg-white' }} hover:bg-indigo-50/70 transition" data-notification-id="{{ $notification->id }}">
-                                            <div class="flex items-start gap-4">
+                            <div id="notification-list" class="max-h-[460px] overflow-y-auto hide-scrollbar" x-on:click.stop>
+                            @forelse($recentNotifications as $notification)
+                                @php
+                                    $data = $notification->data ?? [];
+                                    $title = $data['title'] ?? 'Notification';
+                                    $message = $data['message'] ?? '';
+                                    $link = $data['link'] ?? null;
+                                    $isUnread = is_null($notification->read_at);
+                                    $pill = $isUnread ? 'bg-indigo-600' : 'bg-gray-300';
+                                    $initial = strtoupper(mb_substr($data['name'] ?? $title ?? 'N', 0, 1));
+                                @endphp
+                                    <div class="px-6 py-5 {{ $isUnread ? 'bg-indigo-50' : 'bg-white' }} hover:bg-indigo-50/70 transition" data-notification-id="{{ $notification->id }}">
+                                        <div class="flex items-start gap-4">
 
                                                 <div class="flex-1 min-w-0">
                                                     <div class="flex items-start justify-between gap-3">
@@ -95,12 +96,15 @@
                                                         <span class="text-[11px] text-gray-400 shrink-0">{{ $notification->created_at->diffForHumans() }}</span>
                                                     </div>
                                                 <div class="flex items-start justify-between gap-3">
-                                                    <div class="text-xs text-gray-600 mt-1 leading-relaxed">{{ $message }}</div>
-                                                        <div class="mt-3 flex items-center gap-4 text-xs font-semibold">
-                                                            @if($link)
-                                                                <a href="{{ $link }}" onclick="return viewNotification(event, '{{ $notification->id }}', '{{ $link }}')" class="text-indigo-600 hover:text-indigo-800">View</a>
-                                                            @endif
-                                                        </div>
+                                                    <div class="text-sm font-semibold text-gray-900 leading-snug">{{ $title }}</div>
+                                                    <span class="text-[11px] text-gray-400 shrink-0">{{ $notification->created_at->diffForHumans() }}</span>
+                                                </div>
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="text-xs text-gray-600 mt-1 leading-relaxed">{!! nl2br(e($message)) !!}</div>
+                                                    <div class="mt-3 flex items-center gap-4 text-xs font-semibold">
+                                                        @if($link)
+                                                            <a href="{{ $link }}" onclick="return viewNotification(event, '{{ $notification->id }}', '{{ $link }}')" class="text-indigo-600 hover:text-indigo-800">View</a>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>

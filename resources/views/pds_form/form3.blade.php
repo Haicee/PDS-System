@@ -8,7 +8,6 @@
         </a>
     </div>
     <style>
-  body { margin: 24px; }
   table {
     border-collapse: collapse;
     width: 100%;

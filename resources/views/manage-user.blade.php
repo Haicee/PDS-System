@@ -191,6 +191,8 @@
                     filterType: '',
                     sortKey: 'created_at',
                     sortDir: 'desc',
+                    filtersOpen: false,
+                    searchOpen: false,
                     employees: @js($employees),
                     units: @js($units ?? []),
                     init() {
@@ -261,8 +263,29 @@
                     }
                 }"
                 x-init="init()">
-                <div class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
-                    <div class="flex flex-wrap items-center gap-2">
+                <div class="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col gap-2.5 sm:gap-3 lg:gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
+                    <!-- Mobile controls toggle row -->
+                    <div class="flex items-center justify-between lg:hidden">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                            @click="filtersOpen = !filtersOpen"
+                            :aria-expanded="filtersOpen">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14M3 12h18M3 18h10" />
+                            </svg>
+                            Filters / Sort
+                        </button>
+                        <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                            @click="searchOpen = !searchOpen"
+                            :aria-expanded="searchOpen">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                            </svg>
+                            Search
+                        </button>
+                    </div>
+
+                    <!-- Desktop filters -->
+                    <div class="hidden lg:flex flex-wrap items-center gap-2">
                         <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
                             <option value="">Status: All</option>
                             <option value="Active">Active</option>
@@ -297,8 +320,66 @@
                             Reset
                         </button>
                     </div>
-                    <div class="relative w-full lg:w-72">
+
+                    <!-- Desktop search -->
+                    <div class="hidden lg:block relative w-full lg:w-72">
                         <input type="text" placeholder="Search employee" class="w-full rounded-2xl border border-slate-200/90 bg-white py-2.5 ps-10 pe-3 text-sm font-medium text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                            x-model.debounce.200ms="search" x-on:keydown.escape="search = ''" />
+                        <span class="absolute left-3 top-2.5 text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <!-- Mobile filters panel -->
+                    <div x-show="filtersOpen" x-transition class="lg:hidden rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-3 space-y-2 shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
+                                <option value="">Status: All</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                            <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
+                                <option value="">Employee Status: All</option>
+                                <option value="Permanent Employee">Permanent</option>
+                                <option value="Contract of Service">Contract of Service</option>
+                            </select>
+                            <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
+                                <option value="created_at">Sort: Date</option>
+                                <option value="name">Sort: Name</option>
+                                <option value="unit">Sort: Division/Section/Unit/Office</option>
+                                <option value="email">Sort: Email</option>
+                                <option value="phone">Sort: Phone</option>
+                            </select>
+                            <button type="button" class="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                                x-on:click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m8 9 4-4 4 4m0 6-4 4-4-4" />
+                                </svg>
+                                <span x-text="sortDir === 'asc' ? 'Ascending' : 'Descending'"></span>
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-between">
+                            <button type="button" class="inline-flex items-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-rose-600 hover:border-rose-200 hover:bg-rose-100"
+                                x-on:click="clearFilters()">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m4 4 16 16" />
+                                    <path d="M10 4h10v2a2 2 0 0 1-2 2h-2" />
+                                    <path d="m8 8-4 4v2a2 2 0 0 0 2 2h6" />
+                                </svg>
+                                Reset
+                            </button>
+                            <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                                @click="filtersOpen = false">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mobile search input -->
+                    <div x-show="searchOpen" x-transition class="lg:hidden relative w-full">
+                        <input type="text" placeholder="Search employee" class="w-full rounded-2xl border border-slate-200/90 bg-white py-2 sm:py-2.5 ps-9 sm:ps-10 pe-3 text-xs sm:text-sm font-medium text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                             x-model.debounce.200ms="search" x-on:keydown.escape="search = ''" />
                         <span class="absolute left-3 top-2.5 text-slate-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">

@@ -26,6 +26,7 @@ class PdsSubmitted extends Notification implements ShouldBroadcast
         return [
             'title' => 'PDS Submitted',
             'message' => sprintf('%s submitted their PDS.', $this->user->name),
+            'kind' => 'pds_submitted',
             'name' => $this->user->name,
             'user_id' => $this->user->id,
             'email' => $this->user->email,

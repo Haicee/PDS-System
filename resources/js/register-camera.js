@@ -230,8 +230,8 @@ window.formCache = function () {
             const ratioW = box.width / (video?.videoWidth || 1)
             const ratioH = box.height / (video?.videoHeight || 1)
             const faceRatio = Math.max(ratioW, ratioH)
-            const minRatio = 0.40
-            const maxRatio = 0.60
+            const minRatio = 0.35
+            const maxRatio = 0.50
 
             if (faceRatio < minRatio) {
                 this.detectionState = 'too_far'
@@ -250,15 +250,16 @@ window.formCache = function () {
             const faceCenterX = (box.x + box.width / 2) / (video?.videoWidth || 1)
             const faceCenterY = (box.y + box.height / 2) / (video?.videoHeight || 1)
             const dx = Math.abs(faceCenterX - 0.5)
-            const dy = Math.abs(faceCenterY - 0.5)
-            const dyWeight = 1.15 // slightly tighter vertical tolerance without biasing upward
+            const dy = Math.abs(faceCenterY - 0.6) // slight downward bias to counter top-heavy framing
+            const dxWeight = 1.1
+            const dyWeight = 1.2 // tighter vertical tolerance without biasing upward
             // Tie centering to the visible circle: face center plus its radius must remain within the circle (with a tighter margin)
             const faceRadius = faceRatio / 2
             const circleRadius = 0.5
             const margin = 0.0
             const maxCenterDistance = Math.max(0.005, circleRadius - margin - faceRadius)
-            const centerDistance = Math.hypot(dx, dy * dyWeight)
-            const strictDistance = maxCenterDistance * 0.4
+            const centerDistance = Math.hypot(dx * dxWeight, dy * dyWeight)
+            const strictDistance = maxCenterDistance * 0.15 
             if (centerDistance > strictDistance) {
                 this.detectionState = 'off_center'
                 this.detectionMessage = 'Center your face in the guide.'

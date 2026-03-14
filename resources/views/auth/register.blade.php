@@ -145,6 +145,7 @@
                         <div class="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full overflow-hidden border border-gray-200 shadow-sm bg-white">
                             <!-- Live Camera -->
                             <video x-ref="video" class="absolute inset-0 h-full w-full object-cover" 
+                                style="transform: scaleX(-1);" 
                                 x-show="streaming" playsinline muted></video>
 
                             <!-- Progress ring on outer border -->
@@ -159,7 +160,12 @@
                                         transform="rotate(-90 56 56)" />
                                 </svg>
                                 <div class="relative w-24 h-32 sm:w-32 sm:h-40 md:w-36 md:h-44">
-                                    <div class="absolute inset-[6px] rounded-full bg-transparent border-4 border-white/70 border-dashed"></div>
+                                    <div
+                                        class="absolute inset-[6px] rounded-full bg-transparent border-4 border-dashed"
+                                        :class="detectionState === 'ready'
+                                            ? 'border-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]'
+                                            : 'border-rose-500 shadow-[0_0_0_2px_rgba(244,63,94,0.25)]'"
+                                    ></div>
                                 </div>
                             </div>
 
@@ -180,7 +186,11 @@
 
                         <p x-text="detectionMessage"
                                x-show="detectionMessage"
-                               class="text-xs font-semibold text-rose-600 text-center px-4"></p>
+                               :class="{
+                                   'text-emerald-600': detectionState === 'ready',
+                                   'text-rose-600': detectionState !== 'ready'
+                               }"
+                               class="text-xs font-semibold text-center px-4"></p>
 
                         <div class="flex flex-col items-center gap-2">
                             <input 
@@ -203,6 +213,10 @@
                                 <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" @click="chooseUpload()" x-show="!streaming">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7-7-7 7"/><path d="M5 19h14"/></svg>
                                     Upload Photo
+                                </button>
+                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-emerald-500 bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60" @click="captureFrame()" x-show="streaming" :disabled="identifying || !modelsReady || detectionState !== 'ready'">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" ry="2"/><circle cx="12" cy="12" r="3"/></svg>
+                                    Capture
                                 </button>
                             </div>
 
