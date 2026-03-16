@@ -382,7 +382,6 @@ class PdsSubmissionController extends Controller
                 DB::table('pds_education_records')->insert($allEdu->all());
             }
 
-            DB::table('pds_eligibilities')->where('user_id', $userId)->delete();
             $elig = collect($req->input('eligibility', []))->map(function ($val, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -396,10 +395,32 @@ class PdsSubmissionController extends Controller
             })->filter($rowHasData);
             if ($elig->isNotEmpty()) {
                 $validateNa([$req->input('eligibility', [])], 'Eligibilities');
-                DB::table('pds_eligibilities')->insert($elig->all());
+
+                $existingElig = DB::table('pds_eligibilities')
+                    ->where('user_id', $userId)
+                    ->orderBy('id')
+                    ->get();
+
+                $elig->each(function ($row, $idx) use ($existingElig) {
+                    $existing = $existingElig[$idx] ?? null;
+                    if ($existing) {
+                        DB::table('pds_eligibilities')->where('id', $existing->id)->update($row);
+                    }
+                });
+
+                if ($elig->count() > $existingElig->count()) {
+                    $toInsert = $elig->slice($existingElig->count());
+                    DB::table('pds_eligibilities')->insert($toInsert->all());
+                }
+
+                if ($elig->count() < $existingElig->count()) {
+                    $excessIds = $existingElig->slice($elig->count())->pluck('id');
+                    DB::table('pds_eligibilities')->whereIn('id', $excessIds)->delete();
+                }
+            } else {
+                DB::table('pds_eligibilities')->where('user_id', $userId)->delete();
             }
 
-            DB::table('pds_work_experiences')->where('user_id', $userId)->delete();
             $work = collect($req->input('work_from', []))->map(function ($from, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -413,10 +434,32 @@ class PdsSubmissionController extends Controller
             })->filter($rowHasData);
             if ($work->isNotEmpty()) {
                 $validateNa([$req->input('work_from', [])], 'Work experience');
-                DB::table('pds_work_experiences')->insert($work->all());
+
+                $existingWork = DB::table('pds_work_experiences')
+                    ->where('user_id', $userId)
+                    ->orderBy('id')
+                    ->get();
+
+                $work->each(function ($row, $idx) use ($existingWork) {
+                    $existing = $existingWork[$idx] ?? null;
+                    if ($existing) {
+                        DB::table('pds_work_experiences')->where('id', $existing->id)->update($row);
+                    }
+                });
+
+                if ($work->count() > $existingWork->count()) {
+                    $toInsert = $work->slice($existingWork->count());
+                    DB::table('pds_work_experiences')->insert($toInsert->all());
+                }
+
+                if ($work->count() < $existingWork->count()) {
+                    $excessIds = $existingWork->slice($work->count())->pluck('id');
+                    DB::table('pds_work_experiences')->whereIn('id', $excessIds)->delete();
+                }
+            } else {
+                DB::table('pds_work_experiences')->where('user_id', $userId)->delete();
             }
 
-            DB::table('pds_voluntary_work')->where('user_id', $userId)->delete();
             $vol = collect($req->input('voluntary_organization', []))->map(function ($org, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -430,10 +473,32 @@ class PdsSubmissionController extends Controller
             })->filter($rowHasData);
             if ($vol->isNotEmpty()) {
                 $validateNa([$req->input('voluntary_organization', [])], 'Voluntary work');
-                DB::table('pds_voluntary_work')->insert($vol->all());
+
+                $existingVol = DB::table('pds_voluntary_work')
+                    ->where('user_id', $userId)
+                    ->orderBy('id')
+                    ->get();
+
+                $vol->each(function ($row, $idx) use ($existingVol) {
+                    $existing = $existingVol[$idx] ?? null;
+                    if ($existing) {
+                        DB::table('pds_voluntary_work')->where('id', $existing->id)->update($row);
+                    }
+                });
+
+                if ($vol->count() > $existingVol->count()) {
+                    $toInsert = $vol->slice($existingVol->count());
+                    DB::table('pds_voluntary_work')->insert($toInsert->all());
+                }
+
+                if ($vol->count() < $existingVol->count()) {
+                    $excessIds = $existingVol->slice($vol->count())->pluck('id');
+                    DB::table('pds_voluntary_work')->whereIn('id', $excessIds)->delete();
+                }
+            } else {
+                DB::table('pds_voluntary_work')->where('user_id', $userId)->delete();
             }
 
-            DB::table('pds_training_programs')->where('user_id', $userId)->delete();
             $train = collect($req->input('learning_title_of_ld', []))->map(function ($title, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -447,17 +512,62 @@ class PdsSubmissionController extends Controller
             })->filter($rowHasData);
             if ($train->isNotEmpty()) {
                 $validateNa([$req->input('learning_title_of_ld', [])], 'Training');
-                DB::table('pds_training_programs')->insert($train->all());
+
+                $existingTrain = DB::table('pds_training_programs')
+                    ->where('user_id', $userId)
+                    ->orderBy('id')
+                    ->get();
+
+                $train->each(function ($row, $idx) use ($existingTrain) {
+                    $existing = $existingTrain[$idx] ?? null;
+                    if ($existing) {
+                        DB::table('pds_training_programs')->where('id', $existing->id)->update($row);
+                    }
+                });
+
+                if ($train->count() > $existingTrain->count()) {
+                    $toInsert = $train->slice($existingTrain->count());
+                    DB::table('pds_training_programs')->insert($toInsert->all());
+                }
+
+                if ($train->count() < $existingTrain->count()) {
+                    $excessIds = $existingTrain->slice($train->count())->pluck('id');
+                    DB::table('pds_training_programs')->whereIn('id', $excessIds)->delete();
+                }
+            } else {
+                DB::table('pds_training_programs')->where('user_id', $userId)->delete();
             }
 
-            DB::table('pds_other_info')->where('user_id', $userId)->delete();
             $skills = collect($req->input('special_skills_hobbies', []))->map(fn ($v) => ['category' => 'skills', 'description' => $v]);
             $recognition = collect($req->input('non_academic_distinctions_recognition', []))->map(fn ($v) => ['category' => 'recognition', 'description' => $v]);
             $assoc = collect($req->input('membership_in_association_organization', []))->map(fn ($v) => ['category' => 'association', 'description' => $v]);
             $otherCombined = $skills->concat($recognition)->concat($assoc)->map(fn ($row) => array_merge($row, ['user_id' => $userId]))->filter($rowHasData);
             if ($otherCombined->isNotEmpty()) {
                 $validateNa([$req->input('special_skills_hobbies', []), $req->input('non_academic_distinctions_recognition', []), $req->input('membership_in_association_organization', [])], 'Other info');
-                DB::table('pds_other_info')->insert($otherCombined->all());
+
+                $existingOther = DB::table('pds_other_info')
+                    ->where('user_id', $userId)
+                    ->orderBy('id')
+                    ->get();
+
+                $otherCombined->values()->each(function ($row, $idx) use ($existingOther) {
+                    $existing = $existingOther[$idx] ?? null;
+                    if ($existing) {
+                        DB::table('pds_other_info')->where('id', $existing->id)->update($row);
+                    }
+                });
+
+                if ($otherCombined->count() > $existingOther->count()) {
+                    $toInsert = $otherCombined->slice($existingOther->count());
+                    DB::table('pds_other_info')->insert($toInsert->all());
+                }
+
+                if ($otherCombined->count() < $existingOther->count()) {
+                    $excessIds = $existingOther->slice($otherCombined->count())->pluck('id');
+                    DB::table('pds_other_info')->whereIn('id', $excessIds)->delete();
+                }
+            } else {
+                DB::table('pds_other_info')->where('user_id', $userId)->delete();
             }
 
             $refs = collect($req->input('reference_name', []))->map(function ($name, $i) use ($req, $userId) {
@@ -475,15 +585,10 @@ class PdsSubmissionController extends Controller
                 return $rowHasData($row);
             });
 
+            // Replace references outright to avoid stale/duplicate rows showing in PDF
+            DB::table('pds_references')->where('user_id', $userId)->delete();
             if ($refs->isNotEmpty()) {
-                // Use upsert to avoid PK collisions
-                DB::table('pds_references')->upsert($refs->all(), ['id'], ['name','address','contact','user_id']);
-                // ensure only current user's refs remain
-                DB::table('pds_references')->where('user_id', $userId)->whereNotIn('id', function ($q) use ($refs, $userId) {
-                    $q->select('id')->from('pds_references')->where('user_id', $userId)->orderBy('id')->limit($refs->count());
-                });
-            } else {
-                DB::table('pds_references')->where('user_id', $userId)->delete();
+                DB::table('pds_references')->insert($refs->all());
             }
 
             DB::table('pds_form5_remarks')->where('user_id', $userId)->delete();

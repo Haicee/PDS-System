@@ -25,10 +25,10 @@ class PdsStatusUpdated extends Notification implements ShouldBroadcastNow
     {
         $status = $this->submission->status ?? 'Pending';
 
-        $message = sprintf('Your PDS was marked %s.', $status);
+        $message = sprintf("Your PDS was marked %s.", $status);
 
         if ($status === 'Rejected' && $this->note) {
-            $message .= '<br>Note: ' . $this->note;
+            $message .= "\nNote: " . $this->note;
         }
 
         return [
@@ -37,6 +37,7 @@ class PdsStatusUpdated extends Notification implements ShouldBroadcastNow
             'status' => $status,
             'note' => ($status === 'Rejected') ? $this->note : null,
             'submission_id' => $this->submission->id,
+            'updated_at_ts' => $this->submission->updated_at?->getTimestamp(),
             'link' => route('employee.dashboard'),
         ];
     }

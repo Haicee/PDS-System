@@ -188,7 +188,12 @@ class PdsController extends Controller
 
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
         $idInfo = DB::table('pds_id_infos')->where('user_id', $userId)->first();
-        $references = DB::table('pds_references')->where('user_id', $userId)->get();
+        // Limit to the on-form capacity (7 rows) and keep stable insertion order
+        $references = DB::table('pds_references')
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->limit(7)
+            ->get();
         $passportPhotoPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('photo_file_path');
 
         $passportPhotoUrl = null;

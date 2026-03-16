@@ -63,7 +63,7 @@ class ManageUserController extends Controller
             'unit' => ['required', Rule::in($units)],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'phone' => ['required', 'digits:11'],
-            'type' => ['required', 'in:Permanent Employee,EContract of Service'],
+            'type' => ['required', 'in:Permanent Employee,Contract of Service'],
             'status' => ['required', 'in:Active,Inactive'],
             'location_assigned' => ['required', 'string', 'max:255'],
         ]);

@@ -12,7 +12,19 @@ class PdsReviewController extends Controller
 {
     public function index()
     {
-        $submissions = PdsSubmission::with('user')
+        $submissions = $this->mappedSubmissions();
+
+        return view('pds-form', compact('submissions'));
+    }
+
+    public function latest(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json($this->mappedSubmissions());
+    }
+
+    private function mappedSubmissions(): array
+    {
+        return PdsSubmission::with('user')
             ->orderBy('submitted', 'desc')
             ->get()
             ->map(function ($submission) {
@@ -33,8 +45,6 @@ class PdsReviewController extends Controller
                 ];
             })
             ->toArray();
-
-        return view('pds-form', compact('submissions'));
     }
 
     public function updateStatus(Request $request, $id)
@@ -46,6 +56,12 @@ class PdsReviewController extends Controller
 
         $submission = PdsSubmission::findOrFail($id);
         $submission->status = $data['status'];
+
+        // Reset approval dismissal so modals can surface on any new decision.
+        // If approved: ensure prior dismissal doesn't suppress the modal.
+        // If not approved: clear dismissal for future approvals.
+        $submission->approval_dismissed_at = null;
+
         $submission->save();
 
         if ($submission->status === 'Rejected' && $submission->user_id) {

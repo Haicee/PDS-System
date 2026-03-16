@@ -3,67 +3,159 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class EmployeeController extends Controller
 {
     public function dashboard()
     {
+        $userId = auth()->id();
+
+        $pendingCount = \App\Models\PdsSubmission::where('user_id', $userId)
+            ->where(function ($query) {
+                $query->whereNull('status')->orWhereRaw('LOWER(status) = ?', ['pending']);
+            })
+            ->count();
+
+        $approvedCount = \App\Models\PdsSubmission::where('user_id', $userId)
+            ->whereRaw('LOWER(status) = ?', ['approved'])
+            ->count();
+
+        $rejectedCount = \App\Models\PdsSubmission::where('user_id', $userId)
+            ->whereRaw('LOWER(status) = ?', ['rejected'])
+            ->count();
+
+        $latestSubmission = \App\Models\PdsSubmission::where('user_id', $userId)
+            ->orderByDesc('submitted')
+            ->orderByDesc('id')
+            ->first();
+
+        $latestEditRequest = \App\Models\ProfileEditRequest::where('user_id', $userId)
+            ->latest()
+            ->first();
+
+        $latestSubmissionStatus = strtolower($latestSubmission->status ?? '') ?: null;
+        $latestRequestStatus = strtolower($latestEditRequest->status ?? '') ?: null;
+
+        $hasSubmission = (bool) $latestSubmission;
+        $hasApprovedSubmission = $latestSubmissionStatus === 'approved';
+        $editAllowed = !$hasApprovedSubmission || $latestRequestStatus === 'approved';
+
+        $pdsModalData = $this->buildPdsModalData($userId);
+
         $stats = [
             'overview' => [
-                ['label' => 'My submissions', 'value' => 8, 'accent' => 'from-sky-500 to-blue-500'],
-                ['label' => 'Pending review', 'value' => 3, 'accent' => 'from-amber-400 to-orange-400'],
-                ['label' => 'Approved', 'value' => 4, 'accent' => 'from-emerald-400 to-teal-500'],
-                ['label' => 'Returned for edit', 'value' => 1, 'accent' => 'from-rose-400 to-pink-500'],
+                ['label' => 'Pending', 'value' => $pendingCount, 'accent' => 'from-amber-400 to-orange-400'],
+                ['label' => 'Approved', 'value' => $approvedCount, 'accent' => 'from-emerald-400 to-teal-500'],
+                ['label' => 'Rejected', 'value' => $rejectedCount, 'accent' => 'from-rose-400 to-pink-500'],
             ],
-            'quickLinks' => [
-                ['label' => 'Start new PDS', 'href' => '#', 'icon' => 'file-plus'],
-                ['label' => 'Upload supporting docs', 'href' => '#', 'icon' => 'upload'],
-                ['label' => 'View submission history', 'href' => '#', 'icon' => 'clock'],
-            ],
-            'recentSubmissions' => [
-                [
-                    'name' => 'Darlene Robertson',
-                    'avatar' => 'https://i.pravatar.cc/96?img=47',
-                    'department' => 'NSAP',
-                    'type' => 'Permanent',
-                    'email' => 'alma.lawson@example.com',
-                    'phone' => '09514785214',
-                    'location' => 'Lagao District, General Santos City',
-                    'submitted_at' => 'Jan 20, 2026 • 8:15 AM',
-                ],
-                [
-                    'name' => 'Annette Black',
-                    'avatar' => 'https://i.pravatar.cc/96?img=32',
-                    'department' => 'NSAP',
-                    'type' => 'Job On Call',
-                    'email' => 'bill.sanders@example.com',
-                    'phone' => '09514785214',
-                    'location' => 'Purok Malakas, General Santos City',
-                    'submitted_at' => 'Jan 19, 2026 • 4:42 PM',
-                ],
-                [
-                    'name' => 'Ronald Richards',
-                    'avatar' => 'https://i.pravatar.cc/96?img=12',
-                    'department' => 'NSAP',
-                    'type' => 'Permanent',
-                    'email' => 'weaver@example.com',
-                    'phone' => '09514785214',
-                    'location' => 'Barangay City Heights, General Santos City',
-                    'submitted_at' => 'Jan 18, 2026 • 9:05 AM',
-                ],
-                [
-                    'name' => 'Ralph Edwards',
-                    'avatar' => 'https://i.pravatar.cc/96?img=5',
-                    'department' => 'ODP',
-                    'type' => 'Job On Call',
-                    'email' => 'simmons@example.com',
-                    'phone' => '09514785214',
-                    'location' => 'Barangay Fatima, General Santos City',
-                    'submitted_at' => 'Jan 18, 2026 • 9:05 AM',
-                ],
+            'pds' => [
+                'has_submission' => $hasSubmission,
+                'latest_status' => $latestSubmissionStatus,
+                'edit_allowed' => $editAllowed,
+                'edit_request_status' => $latestRequestStatus,
             ],
         ];
 
-        return view('employee_dashboard.employee_dashboard', compact('stats'));
+        return view('employee_dashboard.employee_dashboard', compact('stats', 'pdsModalData'));
+    }
+
+    public function dismissRejection(Request $request)
+    {
+        $submissionId = $request->integer('submission_id');
+        $submissionUpdatedAt = $request->integer('submission_updated_at');
+
+        if ($submissionId) {
+            session([
+                'dismissed_rejection' => [
+                    'id' => $submissionId,
+                    'updated_at' => $submissionUpdatedAt,
+                ],
+            ]);
+        }
+
+        return back();
+    }
+
+    public function dismissApproval(Request $request)
+    {
+        $submissionId = $request->integer('submission_id');
+        $userId = auth()->id();
+
+        if ($submissionId && $userId) {
+            $submission = \App\Models\PdsSubmission::where('id', $submissionId)
+                ->where('user_id', $userId)
+                ->first();
+
+            if ($submission && strtolower($submission->status ?? '') === 'approved') {
+                $submission->update([
+                    'approval_dismissed_at' => Carbon::now(),
+                ]);
+
+                session([
+                    'dismissed_approval' => [
+                        'id' => $submissionId,
+                        'updated_at' => $submission->updated_at?->getTimestamp(),
+                    ],
+                ]);
+            }
+        }
+
+        return $request->wantsJson()
+            ? response()->json(['ok' => true])
+            : back();
+    }
+
+    public function latestPdsStatus(Request $request)
+    {
+        $userId = auth()->id();
+
+        if (! $userId) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $data = $this->buildPdsModalData($userId);
+
+        return response()->json($data ?? []);
+    }
+
+    private function buildPdsModalData(int $userId): ?array
+    {
+        $latestSubmission = \App\Models\PdsSubmission::where('user_id', $userId)
+            ->orderByDesc('submitted')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $latestSubmission) {
+            return null;
+        }
+
+        $latestStatus = strtolower($latestSubmission->status ?? '') ?: null;
+        $latestId = $latestSubmission?->id;
+        $latestUpdatedAt = $latestSubmission?->updated_at?->getTimestamp();
+        $approvalDismissedAt = $latestSubmission?->approval_dismissed_at;
+
+        $dismissedRejection = session('dismissed_rejection', []);
+        $dismissedApproval = session('dismissed_approval', []);
+
+        $hasMatchingRejection = $latestId
+            && (int) ($dismissedRejection['id'] ?? null) === (int) $latestId
+            && $latestUpdatedAt
+            && (int) ($dismissedRejection['updated_at'] ?? null) === (int) $latestUpdatedAt;
+
+        $hasMatchingApproval = $latestId
+            && (int) ($dismissedApproval['id'] ?? null) === (int) $latestId
+            && $latestUpdatedAt
+            && (int) ($dismissedApproval['updated_at'] ?? null) === (int) $latestUpdatedAt;
+
+        $isApprovedDismissed = (bool) $approvalDismissedAt;
+
+        return [
+            'latest_status' => $latestStatus,
+            'latest_id' => $latestId,
+            'latest_updated_at' => $latestUpdatedAt,
+            'show_rejected_modal' => $latestStatus === 'rejected' && $latestId && ! $hasMatchingRejection,
+            'show_approved_modal' => $latestStatus === 'approved' && $latestId && ! $hasMatchingApproval && ! $isApprovedDismissed,
+        ];
     }
 }

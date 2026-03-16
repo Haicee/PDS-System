@@ -3108,7 +3108,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // AUTOSAVE to server (throttled with retry + overlay until OK)
   const autoSaveToServer = (() => {
     let timer;
-    const retryDelay = 1200;
+    let failureCount = 0;
+    const baseDelay = 1200;
+    const maxDelay = 8000;
+    const maxRetries = 4; // avoid runaway spamming
     const showOverlay = (flag) => {
       if (!autosaveOverlay) return;
       autosaveOverlay.classList.toggle('hidden', !flag);
@@ -3159,7 +3162,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!response.ok) {
           console.error('Auto-save failed:', response.status, response.statusText);
           showOverlay(true);
-          setTimeout(send, retryDelay);
+          if (response.status === 419 || response.status === 401) {
+            // Stop retrying when session/CSRF is invalid; user should refresh/login again
+            throw new Error('Auto-save halted: auth/CSRF');
+          }
+          failureCount += 1;
+          const delay = Math.min(baseDelay * Math.pow(2, failureCount - 1), maxDelay);
+          if (failureCount <= maxRetries) {
+            setTimeout(send, delay);
+          }
           throw new Error('Auto-save failed');
         }
         return response.json();
@@ -3169,15 +3180,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const ok = data && data.status === 'ok';
         if (ok) {
           showOverlay(false);
+          failureCount = 0;
         } else {
           showOverlay(true);
-          setTimeout(send, retryDelay);
+          failureCount += 1;
+          const delay = Math.min(baseDelay * Math.pow(2, failureCount - 1), maxDelay);
+          if (failureCount <= maxRetries) {
+            setTimeout(send, delay);
+          }
         }
       })
       .catch(error => {
         console.error('Auto-save error:', error);
         showOverlay(true);
-        setTimeout(send, retryDelay);
+        if (String(error).includes('auth/CSRF')) return; // already halted above
+        failureCount += 1;
+        const delay = Math.min(baseDelay * Math.pow(2, failureCount - 1), maxDelay);
+        if (failureCount <= maxRetries) {
+          setTimeout(send, delay);
+        }
       });
     };
 

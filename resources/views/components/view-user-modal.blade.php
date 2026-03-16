@@ -7,7 +7,7 @@
 ])
 
 <x-modal :name="$name" :max-width="$width">
-    <div class="p-10 space-y-6"
+    <div class="p-5 sm:p-8 lg:p-10 space-y-6 w-full max-w-full"
         x-data="{
             key: @js($key ?? $name),
             employee: @js($employee),
@@ -112,43 +112,43 @@
             statusClass() { return this.working.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'; },
             typeClass() { return this.working.type === 'Permanent Employee' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'; },
         }">
-            <div class="flex items-start justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="relative" style="height: 120px; width: 120px;">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 w-full max-w-full">
+                <div class="flex items-center gap-4 sm:gap-5 min-w-0">
+                    <div class="relative h-24 w-24 sm:h-28 sm:w-28 lg:h-30 lg:w-30 rounded-full overflow-hidden border border-slate-200 shadow flex-shrink-0">
                         <img :src="working.avatar"
                             :alt="working.name + ' avatar'" 
-                            class="rounded-full object-cover shadow" style="height: 120px; width: 120px;">
+                            class="object-cover h-full w-full">
                         
                     </div>
-                    <div class="space-y-2">
+                    <div class="space-y-1.5 sm:space-y-2">
                         <div class="flex-col gap-1">
-                            <input type="text" class="px-2 py-1 text-2xl font-semibold text-slate-900 border-slate-200 rounded-xl p-0 focus:ring-0 focus:outline-none uppercase"
+                            <input type="text" class="px-2 py-1 text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-900 border-slate-200 rounded-xl p-0 focus:ring-0 focus:outline-none uppercase truncate w-full max-w-full"
                                 x-model="working.name"
                                 x-on:input="working.name = (working.name || '').toUpperCase()" />
                         </div>
-                        <div class="flex items-center gap-2 text-sm text-slate-500">
-                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="typeClass()" x-text="working.type"></span>
+                        <div class="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
+                            <span class="inline-flex items-center rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold" :class="typeClass()" x-text="working.type"></span>
                         </div>
-                        <div class="flex items-center gap-2 text-sm text-slate-500">
-                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" x-text="working.unit"></span>
+                        <div class="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
+                            <span class="inline-flex items-center rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold" x-text="working.unit"></span>
                         </div>
                     </div>
                 </div>
             </div>
 
-        <div class="grid gap-4 text-sm text-slate-700">
+        <div class="grid gap-3 sm:gap-4 text-xs sm:text-sm text-slate-700 min-w-0">
             
 
-            <div class="grid gap-3 sm:grid-cols-2 sm:gap-4">
+            <div class="grid gap-3 sm:grid-cols-2 sm:gap-4 min-w-0">
                 <label class="flex flex-col gap-1">
-                    <span class="font-semibold text-slate-500">Email</span>
-                    <input type="email" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.email" />
+                    <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Email</span>
+                    <input type="email" class="rounded-xl border border-slate-200 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-500 w-full max-w-full truncate" x-model="working.email" />
                 </label>
 
                 <label class="flex flex-col gap-1">
-                    <span class="font-semibold text-slate-500">Phone</span>
+                    <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Phone</span>
                     <input type="tel"
-                        class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+                        class="rounded-xl border border-slate-200 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-500 w-full max-w-full truncate"
                         x-model="working.phone"
                         maxlength="11"
                         pattern="\d{11}"
@@ -158,18 +158,18 @@
                 </label>
             </div>
 
-            <div class="grid gap-3 sm:grid-cols-2 sm:gap-4">
+            <div class="grid gap-3 sm:grid-cols-2 sm:gap-4 min-w-0">
                 <label class="flex flex-col gap-1">
-                    <span class="font-semibold text-slate-500">Employee Status</span>
-                    <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.type">
+                    <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Employee Status</span>
+                    <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-500 w-full max-w-full" x-model="working.type">
                         <option value="Permanent Employee">Permanent Employee</option>
                         <option value="Contract of Service">Contract of Service</option>
                     </select>
                 </label>
 
                 <label class="flex flex-col gap-1">
-                    <span class="font-semibold text-slate-500">Status</span>
-                    <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.status">
+                    <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Status</span>
+                    <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-500 w-full max-w-full" x-model="working.status">
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
                     </select>
@@ -177,14 +177,14 @@
             </div>
 
             <label class="flex flex-col gap-1">
-                <span class="font-semibold text-slate-500">Place of Assignment</span>
-                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500 uppercase" x-model="working.location"
+                <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Place of Assignment</span>
+                <input type="text" class="rounded-xl border border-slate-200 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-500 uppercase w-full max-w-full truncate" x-model="working.location"
                 x-on:input="working.location = (working.location || '').toUpperCase()" />
             </label>
 
             <label class="flex flex-col gap-1">
-                <span class="font-semibold text-slate-500">Division/Section/Unit/Office</span>
-                <select class="rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500" x-model="working.unit">
+                <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Division/Section/Unit/Office</span>
+                <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-500 w-full max-w-full truncate" x-model="working.unit">
                     <option value="" disabled>Select Division/Section/Unit/Office</option>
                     <template x-for="option in units" :key="option">
                         <option :value="option" x-text="option"></option>
@@ -193,25 +193,25 @@
             </label>
 
             <template x-if="working.edit_request && working.edit_request.status === 'pending'">
-                <div class="flex flex-wrap items-center gap-4 rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-50 px-4 py-5 shadow-sm">
+                <div class="flex flex-wrap items-center gap-4 rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-50 px-3.5 py-4 shadow-sm">
                     <div class="flex items-start gap-3 flex-1 min-w-[220px]">
                         <span class="mt-1 h-2.5 w-2.5 rounded-full bg-amber-400"></span>
                         <div class="space-y-1">
                             <div class="flex items-center gap-2">
-                                <span class="text-base uppercase tracking-wide text-amber-700 font-semibold">Profile Edit Request</span>
+                                <span class="text-sm sm:text-base uppercase tracking-wide text-amber-700 font-semibold">Profile Edit Request</span>
                             </div>
-                            <p class="text-base font-medium text-slate-700">Employee wants to edit its profile.</p>
+                            <p class="text-sm sm:text-base font-medium text-slate-700">Employee wants to edit its profile.</p>
                         </div>
                     </div>
 
                     <div class="flex flex-col items-end min-w-[180px] ml-auto">
                         <div class="flex items-center gap-2" x-show="working.edit_request?.status === 'pending'" x-cloak>
-                            <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3.5 py-2 text-base font-semibold text-slate-700 hover:bg-white disabled:opacity-60"
+                            <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-sm sm:text-base font-semibold text-slate-700 hover:bg-white disabled:opacity-60"
                                 :disabled="requestWorking"
                                 x-on:click="updateRequest('reject')">
                                 Reject
                             </button>
-                            <button type="button" class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3.5 py-2 text-base font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60"
+                            <button type="button" class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1.5 text-sm sm:text-base font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60"
                                 :disabled="requestWorking"
                                 x-on:click="updateRequest('approve')">
                                 Accept
@@ -235,13 +235,13 @@
             <p class="text-sm text-rose-600" x-text="saveError"></p>
         </template>
 
-        <div class="flex items-center justify-between gap-3 pt-2">
-            <div class="flex items-center gap-6">
-                <button type="button" class="text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Undo</button>
+        <div class="flex items-center justify-between gap-3 pt-2 text-sm sm:text-base">
+            <div class="flex items-center gap-4 sm:gap-6">
+                <button type="button" class="text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Undo</button>
             </div>
-            <div class="flex gap-3">
-                <x-secondary-button x-on:click="$dispatch('close')">Cancel</x-secondary-button>
-                <x-primary-button x-on:click="save()" x-bind:disabled="saving">
+            <div class="flex gap-2 sm:gap-3">
+                <x-secondary-button class="px-4 py-2 text-xs sm:text-sm" x-on:click="$dispatch('close')">Cancel</x-secondary-button>
+                <x-primary-button class="px-4 py-2 text-xs sm:text-sm" x-on:click="save()" x-bind:disabled="saving">
                     <span x-show="!saving">Save changes</span>
                     <span x-show="saving">Saving...</span>
                 </x-primary-button>
