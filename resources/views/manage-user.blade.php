@@ -1,6 +1,6 @@
 <x-app-layout>
 
-    <div class="py-10"
+    <div class="py-5 md:py-8 lg:py-10"
         x-data="{
             addEmployeeOpen: false,
             confirmOpen: false,
@@ -162,22 +162,36 @@
         x-on:open-delete.window="requestDelete($event.detail)">
         
 
-        <div class="mx-auto sm:px-6 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-180px)]">
+        <div class="mx-auto px-2 sm:px-6 md:px-12 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)]">
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm uppercase tracking-wide text-indigo-500 font-semibold">Team Directory</p>
-                    <h1 class="text-2xl font-bold text-slate-900">Manage Employees</h1>
-                    <p class="text-slate-500 text-sm">Review account status, employee status, and contact details in one place.</p>
+            <div class="flex flex-row flex-nowrap items-center justify-between gap-2 sm:gap-3 lg:gap-4">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs sm:text-sm uppercase tracking-wide text-indigo-500 font-semibold">Team Directory</p>
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">Manage Employees</h1>
+                    <p class="text-slate-500 text-xs sm:text-sm lg:text-base">Review account status, employee status, and contact details in one place.</p>
                 </div>
-                <div class="flex gap-3">
+                <!-- Icon buttons for mobile/tablet -->
+                <div class="flex items-center gap-2 lg:hidden flex-shrink-0">
                     <button type="button"
                         @click="openEmployee()"
-                        class="inline-flex items-center rounded-xl border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-600 bg-white hover:bg-indigo-50 shadow-sm">
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-indigo-200 bg-white text-indigo-600 shadow-sm hover:bg-indigo-50"
+                        title="Add Employee">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 item-center"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-plus-icon lucide-user-round-plus"><path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/></svg>
+                    </button>
+                    <a href="{{ route('manage-user.export') }}" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm hover:bg-indigo-500" title="Export Excel">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    </a>
+                </div>
+
+                <!-- Full buttons for desktop -->
+                <div class="hidden lg:flex flex-row gap-3">
+                    <button type="button"
+                        @click="openEmployee()"
+                        class="inline-flex items-center justify-center rounded-xl border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-600 bg-white hover:bg-indigo-50 shadow-sm">
                         Add Employee
                     </button>
 
-                    <a href="{{ route('manage-user.export') }}" class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">
+                    <a href="{{ route('manage-user.export') }}" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">
                         Export Excel
                     </a>
                 </div>
@@ -272,7 +286,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14M3 12h18M3 18h10" />
                             </svg>
-                            Filters / Sort
+                            Filters 
                         </button>
                         <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
                             @click="searchOpen = !searchOpen"
