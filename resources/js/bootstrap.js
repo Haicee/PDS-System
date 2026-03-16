@@ -29,22 +29,6 @@ function getCsrfToken() {
     return meta ? meta.getAttribute('content') : null;
 }
 
-async function refreshPdsStatus() {
-    try {
-        const res = await fetch('/employee/pds/status', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                Accept: 'application/json',
-            },
-        });
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data = await res.json();
-        window.dispatchEvent(new CustomEvent('pds-modal-update', { detail: data }));
-    } catch (e) {
-        console.warn('Failed to refresh PDS status', e);
-    }
-}
-
 async function markNotificationAsRead(notificationId, triggerEl, { keepalive = false, skipDom = false } = {}) {
     if (!notificationId) return;
     const token = getCsrfToken();
@@ -230,25 +214,14 @@ function initNotificationChannel() {
                             latest_updated_at: latestUpdatedAt,
                         },
                     }));
-
-                    // Also sync from server in case of timestamp mismatches
-                    refreshPdsStatus();
                 }
             });
     }
 }
 
-function initPdsStatusPolling() {
-    if (!window.currentUserId) return;
-    // Fallback poll to ensure the modal shows even if a broadcast is missed
-    refreshPdsStatus();
-    setInterval(refreshPdsStatus, 5000);
-}
-
 function initNotificationPolling() {
     if (!window.currentUserId && !window.currentAdminId) return;
     refreshNotifications();
-    setInterval(refreshNotifications, 5000);
 }
 
 async function refreshAdminSubmissions() {
@@ -279,6 +252,5 @@ if (document.readyState === 'loading') {
     initNotificationChannel();
 }
 
-initPdsStatusPolling();
 initNotificationPolling();
 initAdminSubmissionsPolling();

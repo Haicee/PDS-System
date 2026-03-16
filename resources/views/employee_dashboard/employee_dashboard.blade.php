@@ -4,46 +4,26 @@
 
             <!-- Personal Data Sheet quick access card -->
             <section class="w-full">
+                @php
+                    $pdsSubmitted = $stats['pds']['has_submission'] ?? false;
+                    $pdsStatus = $stats['pds']['latest_status'] ?? null;
+                    $canEditPds = !$pdsSubmitted || $pdsStatus === 'rejected';
+                @endphp
+
                 <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="space-y-1">
                         <p class="text-sm uppercase tracking-wide text-emerald-600 font-semibold">Personal Data Sheet</p>
-                        <h2 class="text-xl font-bold text-slate-900">View or edit your PDS</h2>
-                        <p class="text-sm text-slate-600">Open your PDS to review details or continue editing any section.</p>
+                        <h2 class="text-xl font-bold text-slate-900">
+                            {{ $canEditPds ? 'View or edit your PDS' : 'View your PDS' }}
+                        </h2>
+                        @if($canEditPds)
+                            <p class="text-sm text-slate-600">Open your PDS to review details or continue editing any section.</p>
+                        @endif
                     </div>
                     <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                        @php
-                            $pdsInfo = $stats['pds'] ?? [];
-                            $hasSubmission = $pdsInfo['has_submission'] ?? false;
-                            $latestStatus = $pdsInfo['latest_status'] ?? null;
-                            $editAllowed = $pdsInfo['edit_allowed'] ?? true;
-                            $editRequestStatus = $pdsInfo['edit_request_status'] ?? null;
-                            $isPendingRequest = $editRequestStatus === 'pending';
-                            $isRejectedRequest = $editRequestStatus === 'rejected';
-                        @endphp
-
-                        @if($editAllowed)
-                            <a href="{{ route('pds.form1') }}" class="inline-flex justify-center items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500">
-                                Edit / Resume PDS
-                            </a>
-                        @else
-                            <form method="POST" action="{{ route('profile.requestEdit') }}" class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                                @csrf
-                                <button type="submit" {{ $isPendingRequest ? 'disabled' : '' }}
-                                    class="inline-flex justify-center items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow-sm border border-slate-200 {{ $isPendingRequest ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200' }}">
-                                    {{ $isPendingRequest ? 'Edit request pending' : 'Request PDS edit' }}
-                                </button>
-                            </form>
-
-                            <div class="text-xs text-slate-500">
-                                @if($isPendingRequest)
-                                    Waiting for admin approval to edit your submitted PDS.
-                                @elseif($isRejectedRequest)
-                                    Your previous edit request was rejected. You may send a new request.
-                                @else
-                                    Your PDS is approved. Request admin approval to edit.
-                                @endif
-                            </div>
-                        @endif
+                        <a href="{{ $canEditPds ? route('pds.form1') : route('pds.view') }}" class="inline-flex justify-center items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500">
+                            {{ $canEditPds ? 'Edit/Resume PDS' : 'View PDS' }}
+                        </a>
                     </div>
                 </div>
             </section>

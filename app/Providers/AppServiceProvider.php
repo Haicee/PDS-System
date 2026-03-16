@@ -45,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
                 $latestStatus = strtolower($latestSubmission->status ?? '') ?: null;
                 $latestId = $latestSubmission?->id;
                 $latestUpdatedAt = $latestSubmission?->updated_at?->getTimestamp();
+                $approvalDismissedAt = $latestSubmission?->approval_dismissed_at;
 
                 $dismissedRejection = session('dismissed_rejection', []);
                 $dismissedApproval = session('dismissed_approval', []);
@@ -59,12 +60,14 @@ class AppServiceProvider extends ServiceProvider
                     && $latestUpdatedAt
                     && (int) ($dismissedApproval['updated_at'] ?? null) === (int) $latestUpdatedAt;
 
+                $isApprovedDismissed = (bool) $approvalDismissedAt;
+
                 $pdsModalData = [
                     'latest_status' => $latestStatus,
                     'latest_id' => $latestId,
                     'latest_updated_at' => $latestUpdatedAt,
                     'show_rejected_modal' => $latestStatus === 'rejected' && $latestId && ! $hasMatchingRejection,
-                    'show_approved_modal' => $latestStatus === 'approved' && $latestId && ! $hasMatchingApproval,
+                    'show_approved_modal' => $latestStatus === 'approved' && $latestId && ! $hasMatchingApproval && ! $isApprovedDismissed,
                 ];
             }
 
