@@ -17,10 +17,12 @@ class PdsSubmission extends Model
         'type',
         'status',
         'submitted',
+        'approval_dismissed_at',
     ];
 
     protected $casts = [
         'submitted' => 'datetime',
+        'approval_dismissed_at' => 'datetime',
     ];
 
     public function user()

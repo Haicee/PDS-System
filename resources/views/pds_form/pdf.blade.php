@@ -269,7 +269,7 @@
   $photoUrl = $photoUrl ?? (!empty($photoPath) ? asset('storage/'.$photoPath) : null);
 @endphp
 
-<table style="width:100%; border-collapse:collapse;" class="no-scale">
+<table style="width:100%; border-collapse:collapse; border-bottom:0;" class="no-scale">
 <td class="border-black" style="border:4px solid black; border-bottom:0;">
 <div class="p-0 font-serif text-sm" @if(!empty($pdfMode)) style="width:100%;max-width:100%;" @endif>
   <!-- HEADER -->
@@ -304,7 +304,7 @@
 
 
   <!-- MAIN TABLE -->
-  <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-family:'Arial Narrow', Arial, sans-serif; font-size:14px; border:4px solid black; border-bottom:0;">
+  <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow', Arial, sans-serif; font-size:14px; border:4px solid black; border-bottom:0;">
     <!-- FIXED GRID -->
     <colgroup>
       <col style="width:8%">
@@ -315,7 +315,7 @@
 
     <!-- SECTION HEADER -->
     <tr>
-      <td colspan="4" class="font-['Arial_Narrow','Arial',sans-serif] text-white  italic text-3xl px-2 border-3 border-black font-bold" style="background-color:#8a8a8a;color:white;">
+      <td colspan="4" class="font-['Arial_Narrow','Arial',sans-serif] text-white  italic text-3xl px-2 border-black font-bold" style="background-color:#8a8a8a;color:white; border:4px solid black;">
         I. PERSONAL INFORMATION
       </td>
     </tr>
@@ -736,7 +736,7 @@
 
     <!-- SECTION HEADER -->
     <tr>
-        <td colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-weight:bold; padding:6px;" class="text-3xl border-3">
+        <td colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-weight:bold; padding:6px; border:4px solid black;" class="text-3xl">
             II. FAMILY BACKGROUND
         </td>
     </tr>

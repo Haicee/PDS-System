@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class EmployeeController extends Controller
 {
@@ -79,18 +80,30 @@ class EmployeeController extends Controller
     public function dismissApproval(Request $request)
     {
         $submissionId = $request->integer('submission_id');
-        $submissionUpdatedAt = $request->integer('submission_updated_at');
+        $userId = auth()->id();
 
-        if ($submissionId) {
-            session([
-                'dismissed_approval' => [
-                    'id' => $submissionId,
-                    'updated_at' => $submissionUpdatedAt,
-                ],
-            ]);
+        if ($submissionId && $userId) {
+            $submission = \App\Models\PdsSubmission::where('id', $submissionId)
+                ->where('user_id', $userId)
+                ->first();
+
+            if ($submission && strtolower($submission->status ?? '') === 'approved') {
+                $submission->update([
+                    'approval_dismissed_at' => Carbon::now(),
+                ]);
+
+                session([
+                    'dismissed_approval' => [
+                        'id' => $submissionId,
+                        'updated_at' => $submission->updated_at?->getTimestamp(),
+                    ],
+                ]);
+            }
         }
 
-        return back();
+        return $request->wantsJson()
+            ? response()->json(['ok' => true])
+            : back();
     }
 
     public function latestPdsStatus(Request $request)
@@ -120,6 +133,7 @@ class EmployeeController extends Controller
         $latestStatus = strtolower($latestSubmission->status ?? '') ?: null;
         $latestId = $latestSubmission?->id;
         $latestUpdatedAt = $latestSubmission?->updated_at?->getTimestamp();
+        $approvalDismissedAt = $latestSubmission?->approval_dismissed_at;
 
         $dismissedRejection = session('dismissed_rejection', []);
         $dismissedApproval = session('dismissed_approval', []);
@@ -134,12 +148,14 @@ class EmployeeController extends Controller
             && $latestUpdatedAt
             && (int) ($dismissedApproval['updated_at'] ?? null) === (int) $latestUpdatedAt;
 
+        $isApprovedDismissed = (bool) $approvalDismissedAt;
+
         return [
             'latest_status' => $latestStatus,
             'latest_id' => $latestId,
             'latest_updated_at' => $latestUpdatedAt,
             'show_rejected_modal' => $latestStatus === 'rejected' && $latestId && ! $hasMatchingRejection,
-            'show_approved_modal' => $latestStatus === 'approved' && $latestId && ! $hasMatchingApproval,
+            'show_approved_modal' => $latestStatus === 'approved' && $latestId && ! $hasMatchingApproval && ! $isApprovedDismissed,
         ];
     }
 }

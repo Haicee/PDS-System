@@ -17,20 +17,40 @@
     <body class="font-sans antialiased" x-data="{
         pdsModal: { show: false, status: null, latest_id: null, latest_updated_at: null },
         sessionSeed: {{ json_encode(session()->getId()) }},
+        storageFor(status) {
+            return status === 'approved' ? window.localStorage : window.sessionStorage;
+        },
+        clearDismissed(key, status) {
+            if (!key) return;
+            const storage = this.storageFor(status);
+            storage?.removeItem(key);
+        },
         keyFor(data) {
             if (!data) return null;
             const id = data.latest_id ?? null;
             const updated = data.latest_updated_at ?? null;
             const status = (data.status || '').toLowerCase();
-            if (!id || !updated || !status) return null;
+            if (!id || !status) return null;
+
+            // Approved: stable key per submission id, persists across logins.
+            if (status === 'approved') {
+                return `pds_approved_persist_${id}`;
+            }
+
+            // Rejected: session-scoped with timestamp to re-show after updates.
+            if (!updated) return null;
             const seed = this.sessionSeed || 'sess';
-            return `pds_${status}_${seed}_${id}_${updated}`;
+            return `pds_rejected_${seed}_${id}_${updated}`;
         },
-        isDismissed(key) {
-            return key && sessionStorage.getItem(key) === '1';
+        isDismissed(key, status) {
+            if (!key) return false;
+            const storage = this.storageFor(status);
+            return storage?.getItem(key) === '1';
         },
-        markDismissed(key) {
-            if (key) sessionStorage.setItem(key, '1');
+        markDismissed(key, status) {
+            if (!key) return;
+            const storage = this.storageFor(status);
+            storage?.setItem(key, '1');
         },
         setModalFromData(detail) {
             const status = detail?.show_approved_modal
@@ -44,7 +64,23 @@
             };
 
             const key = this.keyFor({ ...payload, status });
-            const shouldShow = !!status && !this.isDismissed(key);
+            const shouldShow = !!status && !this.isDismissed(key, status);
+
+            // If approved is already dismissed locally but server still flags to show, sync dismissal to server once.
+            if (status === 'approved' && detail?.show_approved_modal && key && !shouldShow) {
+                fetch('{{ route('employee.approval.dismiss') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        submission_id: payload.latest_id,
+                        submission_updated_at: payload.latest_updated_at,
+                    }),
+                }).catch(() => {});
+            }
 
             this.pdsModal = {
                 ...payload,
@@ -53,7 +89,15 @@
         },
         dismissModal() {
             const key = this.keyFor(this.pdsModal);
-            this.markDismissed(key);
+
+            // Rejected: clear/mark only the rejected dismissal key (do not touch approved dismissal).
+            if (this.pdsModal.status === 'rejected') {
+                this.clearDismissed(key, 'rejected');
+                this.markDismissed(key, 'rejected');
+            } else {
+                // Approved: mark dismissed so it only shows once until next approval event.
+                this.markDismissed(key, this.pdsModal.status);
+            }
             this.pdsModal.show = false;
         }
     }"
@@ -111,7 +155,7 @@
                                 x-show="pdsModal.status === 'rejected'"
                                 method="POST"
                                 action="{{ route('employee.rejection.dismiss') }}"
-                                x-on:submit="markDismissed(keyFor(pdsModal))"
+                                x-on:submit="markDismissed(keyFor(pdsModal), pdsModal.status)"
                             >
                                 @csrf
                                 <input type="hidden" name="submission_id" :value="pdsModal.latest_id">
@@ -129,7 +173,7 @@
                                 x-show="pdsModal.status === 'approved'"
                                 method="POST"
                                 action="{{ route('employee.approval.dismiss') }}"
-                                x-on:submit="markDismissed(keyFor(pdsModal))"
+                                x-on:submit="markDismissed(keyFor(pdsModal), pdsModal.status)"
                             >
                                 @csrf
                                 <input type="hidden" name="submission_id" :value="pdsModal.latest_id">

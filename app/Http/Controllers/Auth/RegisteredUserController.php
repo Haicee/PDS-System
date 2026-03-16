@@ -68,7 +68,7 @@ class RegisteredUserController extends Controller
         
     $role = str_starts_with($request->email, 'admin1@gmail.com') ? 'admin' : 'employee';
 
-        $approved = RegistrationUser::whereRaw('LOWER(full_name) = ?', [mb_strtolower($request->name)])->first();
+        $approved = RegistrationUser::whereRaw('LOWER(full_name) = LOWER(?)', [$request->name])->first();
 
         if (! $approved) {
             return back()

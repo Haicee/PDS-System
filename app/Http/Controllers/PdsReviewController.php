@@ -56,6 +56,12 @@ class PdsReviewController extends Controller
 
         $submission = PdsSubmission::findOrFail($id);
         $submission->status = $data['status'];
+
+        // Reset approval dismissal so modals can surface on any new decision.
+        // If approved: ensure prior dismissal doesn't suppress the modal.
+        // If not approved: clear dismissal for future approvals.
+        $submission->approval_dismissed_at = null;
+
         $submission->save();
 
         if ($submission->status === 'Rejected' && $submission->user_id) {

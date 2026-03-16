@@ -60,6 +60,7 @@
     const minDetectionScore = 0.9;
     let identifying = false;
     let segmentation;
+    let segmentationScriptPromise = null;
     let segmentationReady = false;
     let guideReady = false;
     const photoConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } } };
@@ -70,6 +71,23 @@
     const guideCircle = () => document.querySelector('#photoOverlay .guide-circle');
     const captureBtn = () => document.getElementById('photoCaptureBtn');
     const segmentationBase = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/';
+
+    function loadSegmentationBundle() {
+      if (segmentationScriptPromise) return segmentationScriptPromise;
+      segmentationScriptPromise = new Promise((resolve, reject) => {
+        if (window.SelfieSegmentation || window.selfieSegmentation) return resolve();
+        const script = document.createElement('script');
+        script.src = `${segmentationBase}selfie_segmentation.js`;
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => {
+          segmentationScriptPromise = null;
+          reject(new Error('Failed to load Mediapipe SelfieSegmentation'));
+        };
+        document.head.appendChild(script);
+      });
+      return segmentationScriptPromise;
+    }
 
     async function waitForFaceApi(retries = 50) {
       if (window.faceapi) return true;
@@ -345,6 +363,7 @@
 
     async function ensureSegmentation() {
       if (segmentationReady) return;
+      await loadSegmentationBundle();
       const ns = window.SelfieSegmentation || window.selfieSegmentation || {};
       const SegClass = ns.SelfieSegmentation || ns; // handle both namespace and direct constructor
       if (typeof SegClass !== 'function') throw new Error('SelfieSegmentation constructor not found');
@@ -364,7 +383,12 @@
     }
 
     async function removeBackgroundWithSegmentation(imageCanvas, fallbackDataUrl) {
-      await ensureSegmentation();
+      try {
+        await ensureSegmentation();
+      } catch (e) {
+        console.warn('Segmentation unavailable, using original', e);
+        return fallbackDataUrl;
+      }
       const results = await runSegmentation(imageCanvas);
       if (!results || !results.segmentationMask) return fallbackDataUrl;
 
