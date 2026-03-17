@@ -706,12 +706,11 @@ document.addEventListener('DOMContentLoaded', () => {
            <textarea
       name="employee_name_extension"
       id="name_extension"
-      required
       rows="1"
       class="w-full px-2 text-lg resize-none
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden"
-      placeholder="Enter Name Extension"
+      placeholder="Enter Name Extension (optional)"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>

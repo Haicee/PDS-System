@@ -5,10 +5,10 @@ namespace App\Notifications;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Notifications\Notification;
 
-class PdsSubmitted extends Notification implements ShouldBroadcast
+class PdsResubmitted extends Notification implements ShouldBroadcast
 {
     use Queueable;
 
@@ -24,18 +24,18 @@ class PdsSubmitted extends Notification implements ShouldBroadcast
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => 'PDS Submitted',
-            'message' => sprintf('%s submitted their PDS.', $this->user->name),
-            'kind' => 'pds_submitted',
+            'title' => 'PDS Re-submitted',
+            'message' => sprintf('%s updated and resubmitted their PDS.', $this->user->name),
+            'kind' => 'pds_resubmitted',
             'name' => $this->user->name,
             'user_id' => $this->user->id,
             'email' => $this->user->email,
             'role' => $this->user->role,
             'type' => $this->user->type,
-            'link' => route('pds.form', ['view_user' => $user?->id]),
+            'link' => route('pds.preview', ['view_user' => $this->user?->id]),
         ];
     }
-    
+
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
         return new BroadcastMessage($this->toArray($notifiable));

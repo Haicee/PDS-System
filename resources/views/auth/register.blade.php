@@ -8,7 +8,7 @@
             display: none;
         }
     </style>
-    @vite(['resources/js/app.js', 'resources/js/register-camera.js'])
+    @vite(['resources/js/app.js'])
     <div class="flex items-center justify-center px-4">
         <section class="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur max-h-[75vh] overflow-y-auto hide-scrollbar">
             <div class="mb-8 space-y-2">
@@ -30,7 +30,7 @@
                     <label for="name" class="text-md font-medium text-slate-700">{{ __('Full name') }}</label>
                     <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
-                        <input id="name" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name" placeholder="Juan Dela Cruz" oninput="this.value = this.value.toUpperCase();" />
+                        <input id="name" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name" placeholder="Santos, Paulino S." oninput="this.value = this.value.toUpperCase();" />
                     </div>
                     <x-input-error :messages="$errors->get('name')" class="mt-2" />
                 </div>
@@ -233,7 +233,14 @@
                     class="group relative inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
                     :disabled="submitting">
                     <span class="absolute inset-0 rounded-2xl opacity-0 transition group-hover:opacity-20" style="background: linear-gradient(120deg, rgba(255,255,255,.7), rgba(255,255,255,0));"></span>
-                    {{ __('Create account') }}
+                    <span x-show="!submitting">{{ __('Create account') }}</span>
+                    <span x-show="submitting" class="inline-flex items-center gap-2" aria-live="polite">
+                        <svg class="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" class="opacity-25"></circle>
+                            <path d="M22 12a10 10 0 0 1-10 10" class="opacity-75"></path>
+                        </svg>
+                        {{ __('Creating...') }}
+                    </span>
                 </button>
 
                 <div class="sticky bottom-0 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-md text-slate-600">

@@ -194,7 +194,7 @@
                 </div>
             </div>
 
-            <x-pds-preview x-show="modalOpen" @close="close()" />
+            <x-pds-preview x-show="modalOpen" @close="close()" class="!mt-0" />
             </div>
 
         </div>

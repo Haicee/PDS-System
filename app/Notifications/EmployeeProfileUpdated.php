@@ -33,7 +33,7 @@ class EmployeeProfileUpdated extends Notification implements ShouldBroadcastNow
             'user_id' => $this->user->id,
             'name' => $this->user->name,
             'email' => $this->user->email,
-            'link' => route('manage-user'),
+            'link' => route('manage-user', ['view_user' => $this->user?->id]),
         ];
     }
 

@@ -32,7 +32,7 @@ class EmployeeInfoUpdated extends Notification implements ShouldBroadcastNow
             'message' => sprintf('Your Profile %s %s changed.', $fieldList, $verb),
             'fields' => $fields,
             'user_id' => $this->user->id,
-            'link' => route('employee.dashboard'),
+            'link' => route('profile.edit'),
         ];
     }
 
