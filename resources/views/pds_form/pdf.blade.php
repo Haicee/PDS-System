@@ -353,7 +353,7 @@
 
     <!-- MIDDLE NAME -->
     <tr class="text-xl">
-      <td class="bg-[#e7e7e7] align-middle" style="padding-left: 26px;background-color:#e7e7e7;">
+      <td class="bg-[#e7e7e7] align-middle" style="padding-left: 18px;background-color:#e7e7e7;">
         MIDDLE NAME
     </td>
       <td colspan="3" class="border border-black h-10 align-middle">
@@ -708,23 +708,23 @@
         {{ $personal->tin_no ?? '—' }}
       </td>
       <td class="px-2 align-middle border" style="background-color:#e7e7e7; width:35%;">20. MOBILE NO.</td>
-      <td class="border px-2 align-middle" style="width:65%;">{{ $contact->mobile_no ?? '—' }}</td>
+      <td class="  px-2 align-middle border" style="width:65%;">{{ $contact->mobile_no ?? '—' }}</td>
     </tr>
 
     <tr>
-      <td class="bg-[#e7e7e7] border font-['Arial_Narrow','Arial',sans-serif] px-2" style="background-color:#e7e7e7;">15. AGENCY EMPLOYEE ID</td>
-      <td class="border px-2 align-middle">
+      <td class="bg-[#e7e7e7]    font-['Arial_Narrow','Arial',sans-serif] px-2" style="background-color:#e7e7e7; border:1px solid black; border-bottom:0;">15. AGENCY EMPLOYEE ID</td>
+      <td class="  px-2 align-middle">
          {{ $personal->agency_employee_no ?? '—' }}
       </td>
-      <td class="bg-[#e7e7e7] px-2 align-middle border" style="background-color:#e7e7e7; width:35%;">21. E-MAIL ADDRESS (if any)</td>
-      <td class="border px-2 align-middle" style="width:65%;">{{ $contact->email_address ?? '—' }}</td>
+      <td class="bg-[#e7e7e7] px-2 align-middle " style="background-color:#e7e7e7; width:35%; border:1px solid black; border-bottom:0;">21. E-MAIL ADDRESS (if any)</td>
+      <td class=" px-2 align-middle" style="width:65%;">{{ $contact->email_address ?? '—' }}</td>
     </tr>
 
   </table>
 
 
   {{-- II. FAMILY BACKGROUND --}}
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:14px; border-bottom:0; border-top:0; border:4px solid black;" class="border-black">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:14px; border:4px solid black; border-bottom:0;" class="border-black border-b-0">
     <colgroup>
       <col style="width:25%">
       <col style="width:10%">
@@ -868,9 +868,9 @@
         @php $childIndex++; @endphp
     </tr>
 
-    <tr>
-        <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
-        <td colspan="3" style="border:1px solid black;" class="border-b-0">{{ $mother->middlename ?? '—' }}</td>
+    <tr style="border-bottom:0;">
+        <td style="background:#e7e7e7; padding-left:8px; border-bottom:0;">MIDDLE NAME</td>
+        <td colspan="3" style="border:1px solid black; border-bottom:0;" class="border-b-0">{{ $mother->middlename ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center; border-bottom: 0;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center; border-bottom: 0;">{{ $childDobs[$childIndex] ?? '' }}</td>
         @php $childIndex++; @endphp
@@ -957,7 +957,7 @@
 
   <tr>
     <td colspan="8"
-        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-3xl px-2 border-3" style="background-color:#8a8a8a; color:#fff;">
+        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-3xl px-2" style="background-color:#8a8a8a; color:#fff; border:4px solid black;">
       III. EDUCATIONAL BACKGROUND
     </td>
   </tr>
@@ -1319,9 +1319,9 @@
 </div>
 <div style="page-break-before: always;">
 {{-- IV. CIVIL SERVICE ELIGIBILITY --}}
-<table class="section-table"
+<table class="section-table border-b-0"
        style="width:100%; border-collapse:collapse; table-layout:fixed;
-               font-family:'Arial Narrow','Arial',sans-serif;">
+               font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;">
 
     <colgroup>
         <col style="width:50%;">
@@ -1334,7 +1334,7 @@
     <tr>
         <th colspan="6"
             style="background:#8a8a8a; color:#fff; font-style:italic;
-                   text-align:left; padding:6px; border:2px solid black;
+                   text-align:left; padding:6px; border:4px solid black;
                    -webkit-print-color-adjust:exact; print-color-adjust:exact;"
                     class="text-3xl">
             IV. CIVIL SERVICE ELIGIBILITY
@@ -1362,14 +1362,17 @@
     @endphp
 
     @for ($i = 0; $i < $maxRows; $i++)
-        @php $row = $rows[$i] ?? null; @endphp
-        <tr class="text-lg align-middle">
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $row->eligibility ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $row->rating ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $row->exam_date ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $row->exam_place ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $row->license_no ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $row->validity ?? ' ' }}</td>
+        @php
+            $row = $rows[$i] ?? null;
+            $bottom = $i === $maxRows - 1 ? 'border-bottom:0;' : '';
+        @endphp
+        <tr class="text-lg align-middle" style="{{ $bottom }}">
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->eligibility ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->rating ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->exam_date ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->exam_place ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->license_no ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->validity ?? ' ' }}</td>
         </tr>
     @endfor
 </table>
@@ -1388,7 +1391,7 @@
 
     <tr>
         <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px;
-                               text-align:left; padding:6px; border:2px solid black;
+                               text-align:left; padding:6px; border:4px solid black;
                                -webkit-print-color-adjust:exact; print-color-adjust:exact; font-size:23px;">
             V. WORK EXPERIENCE <br>
             <span style="font-weight:100; font-size:20px;">
@@ -1471,7 +1474,7 @@
 </div>
 
 <div style="page-break-before: always;"></div>
-  <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid;">
+  <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid; border-bottom:0;">
 
   <colgroup>
     <col style="width:35%;">
@@ -1486,7 +1489,7 @@
         style="background:#8a8a8a; color:#fff;
                font-style:italic; font-size:18px;
                text-align:left; padding:6px;
-               border:2px solid black;
+               border:4px solid black;
                -webkit-print-color-adjust:exact;
                print-color-adjust:exact; font-size:23px;">
       VI. VOLUNTARY WORK OR INVOLVEMENT IN CIVIC / NON-GOVERNMENTAL / PEOPLE / VOLUNTARY ORGANIZATION
@@ -1528,13 +1531,16 @@
   @endphp
 
   @for ($i = 0; $i < $maxRows; $i++)
-    @php $row = $volRows[$i] ?? null; @endphp
-    <tr>
-      <td style="border:1px solid black; text-align:center;">{{ $row->organization ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $row->from ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $row->to ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $row->hours ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $row->position ?? ' ' }}</td>
+    @php
+        $row = $volRows[$i] ?? null;
+        $bottom = $i === $maxRows - 1 ? 'border-bottom:0;' : '';
+    @endphp
+    <tr style="{{ $bottom }}">
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->organization ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->from ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->to ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->hours ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->position ?? ' ' }}</td>
     </tr>
   @endfor
 
@@ -1542,7 +1548,7 @@
 
     
 
-   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid;">
+   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid; border-bottom:0;">
 
   <colgroup>
     <col style="width:40%;">
@@ -1558,7 +1564,7 @@
         style="background:#8a8a8a; color:#fff;
                font-style:italic; font-size:18px;
                text-align:left; padding:6px;
-               border:2px solid black;
+               border:4px solid black;
                -webkit-print-color-adjust:exact;
                print-color-adjust:exact;" font-size:23px;>
       VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
@@ -1605,14 +1611,17 @@
   @endphp
 
   @for ($i = 0; $i < $maxTraining; $i++)
-    @php $trow = $trainingRows[$i] ?? null; @endphp
-    <tr>
-      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $trow->from ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $trow->to ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $trow->hours ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
+    @php
+        $trow = $trainingRows[$i] ?? null;
+        $bottom = $i === $maxTraining - 1 ? 'border-bottom:0;' : '';
+    @endphp
+    <tr style="{{ $bottom }}">
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->from ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->to ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->hours ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->conducted_by ?? ' ' }}</td>
     </tr>
   @endfor
 
@@ -1631,7 +1640,7 @@
             style="background:#8a8a8a; color:#fff;
                    font-style:italic; font-size:18px;
                    text-align:left; padding:6px;
-                   border:2px solid black;
+                   border:4px solid black;
                    -webkit-print-color-adjust:exact;
                    print-color-adjust:exact; font-size:23px;">
             VIII. OTHER INFORMATION
@@ -1704,10 +1713,10 @@
     CS FORM 212 (Revised 2025), Page 3 of 5
 </div>
 <div style="page-break-before: always;"></div>
-  <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
-  <div class="pds-sheet">
+  <div class="w-full font-serif text-sm">
+  <div class="pds-sheet w-full" style="max-width:100%;">
 
-   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;">
+   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;">
     <!-- ======================= 34 ======================= -->
 <tr>
   <td style="border:1px solid black; width:66%; vertical-align:top; padding:10px;">
@@ -2126,7 +2135,7 @@
 
     <table class="section-table w-full h-full font-['Arial_Narrow','Arial',sans-serif]" style="border-collapse:collapse;">
       <tr>
-        <td class="border-2 border-black" colspan="3" style="border-right:0;">
+        <td colspan="3" style="border-right:0; border:2px solid black;">
           <span class="ml-2">41. REFERENCES </span><span class="font-semibold">(Person not related by consanguinity or affinity to applicant / appointee)</span>
         </td>
         <td rowspan="11"
@@ -2234,7 +2243,7 @@
       @endphp
       @for ($i = 0; $i < $maxRef; $i++)
       @php $ref = $refRows[$i] ?? null; @endphp
-      <tr class="border border-black align-top">
+      <tr class="align-top" style="border:2px solid black;">
         <td class="border border-black align-top p-0 w-60 text-center" style="height:25px;">
           {{ $ref->name ?? ($i === 0 ? 'N/A' : '') }}
         </td>
@@ -2361,8 +2370,8 @@
 </div>
   </div>
 <div style="page-break-before: always;"></div>
-<div class="page-wrap">
-<table>
+<div class="page-wrap" style="width:100%;">
+<table style="width:100%; border-collapse:collapse;">
   <th class="flex text-left font-['Arial_Narrow','Arial',sans-serif] italic font-semibold">
     Attachment to CS Form No. 212
   </th>
