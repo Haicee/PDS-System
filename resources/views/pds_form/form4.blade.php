@@ -480,6 +480,27 @@
       reader.readAsDataURL(file);
     }
 
+    // thumbmark
+    function previewThumb(event) {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+
+      const img = document.getElementById('thumbPreview');
+      const placeholder = document.getElementById('thumbPlaceholder');
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (img) {
+          img.src = e.target?.result || '';
+          img.classList.remove('hidden');
+        }
+        if (placeholder) {
+          placeholder.classList.add('hidden');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
     // Auto-grow textareas used in the references table and ID/date fields
     function autoSize(el) {
       el.style.height = 'auto';

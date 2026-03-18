@@ -32,7 +32,8 @@ class PdsResubmitted extends Notification implements ShouldBroadcast
             'email' => $this->user->email,
             'role' => $this->user->role,
             'type' => $this->user->type,
-            'link' => route('pds.preview', ['view_user' => $this->user?->id]),
+            // Use existing admin preview route
+            'link' => route('pds.preview.admin', ['user' => $this->user?->id]),
         ];
     }
 

@@ -108,7 +108,7 @@ class PdsSubmissionController extends Controller
 
         $alreadySubmitted = PdsSubmission::where('user_id', $userId)->exists();
 
-        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath, $existingPhotoPath, $existingSignaturePath, $existingThumbmarkPath) {
+        DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath, $existingPhotoPath, $existingSignaturePath, $existingThumbmarkPath, $draftData) {
             DB::table('pds_personal_infos')->updateOrInsert(
                 ['user_id' => $userId],
                 [

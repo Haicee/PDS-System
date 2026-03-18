@@ -646,6 +646,11 @@ Route::middleware('auth:admin,web')->group(function () {
     Route::post('/profile/request-edit', [ProfileController::class, 'requestEdit'])->name('profile.requestEdit');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Fallback: if someone lands on GET /pds/submit, send them to the PDS form instead of 405
+    Route::get('/pds/submit', function () {
+        return redirect()->route('pds.form1');
+    })->name('pds.submit.get');
+
     Route::post('/pds/submit', [PdsSubmissionController::class, 'store'])->name('pds.submit');
     Route::post('/pds/save-step/{step}', [PdsStepController::class, 'saveStep'])->name('pds.saveStep');
     Route::post('/pds/autosave', [PdsStepController::class, 'autoSave'])
