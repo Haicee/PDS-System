@@ -616,11 +616,6 @@ document.addEventListener('DOMContentLoaded', () => {
     <h1 class="font-extrabold text-4xl text-center mb-4 font-['Arial_Black','sans-serif'] flex-1">
       PERSONAL DATA SHEET
     </h1>
-    <div class="flex items-center">
-      <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-        Download PDF
-      </a>
-    </div>
   </header>
 
   <p class=" font-['Arial','sans-serif'] text-base italic font-bold mb-1">
