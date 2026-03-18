@@ -192,8 +192,8 @@ return compact(
 
         $shot = Browsershot::html($html)
         ->paperSize(8.5, 13, 'in') // FORCE inches
-        ->margins(5, 10, 5, 10)
-        ->scale(.56)
+        ->margins(10, 10, 10, 10)
+        ->scale(0.56)
         ->emulateMedia('print')
         ->showBackground()
         ->setOption('printBackground', true)

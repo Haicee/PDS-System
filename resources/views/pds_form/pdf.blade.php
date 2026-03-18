@@ -491,12 +491,13 @@
 </td>
 
 <td rowspan="3" colspan="2"
-      class="border p-0 align-top bg-[#e7e7e7]">
+      class="border align-top bg-[#e7e7e7]"
+      style="padding:0;">
 
-    <div class="flex" style="width:100%; height: 100%;">
+    <div class="flex" style="width:100%; height:100%;">
       
       <!-- LEFT TABLE -->
-      <table style="width:38%; padding:0px;">
+      <table style="width:35%; padding:0; margin:0; border-collapse:collapse; table-layout:fixed; border-right:0; height:100%;">
         <tr>
           <td class="border-black border-t-0" style="background-color:#e7e7e7; vertical-align:top;">
             17. RESIDENTIAL ADDRESS
@@ -509,7 +510,7 @@
         </tr>
       </table>
       <!-- RIGHT TABLE -->
-      <table class="bg-white h-full border-l" style="width:65%; border-collapse:collapse;">
+      <table class="bg-white h-full border-l" style="width:65%; border-collapse:collapse; table-layout:fixed; border-left:0; height:100%;">
         <tr>
           <td class="align-top">
             <div class="grid grid-cols-2 w-full text-center">
@@ -593,13 +594,14 @@
 
 
   <td rowspan="4" colspan="2"
-      class="border p-0 align-top bg-[#e7e7e7]">
+      class="border align-top bg-[#e7e7e7]"
+      style="padding:0;">
 
-    <div class="flex w-full h-full">
+    <div class="flex w-full h-full" style="background-color:#e7e7e7;">
       
       <!-- LEFT TABLE -->
-      <table class="bg-[#e7e7e7] border-b font-['Arial_Narrow','Arial',sans-serif] text-base" style="width:38%;">
-        <tr>
+      <table class="border-b font-['Arial_Narrow','Arial',sans-serif] text-base" style="width:35%; background-color:#e7e7e7; padding:0; margin:0; border-collapse:collapse; table-layout:fixed; border-right:0; height:100%; background-color:#e7e7e7;">
+        <tr style="height:100%;">
           <td class="px-2 py-1 align-top text-xl" style="background-color:#e7e7e7; vertical-align:top;">
             18. PERMANENT ADDRESS
           </td>
@@ -607,7 +609,7 @@
       </table>
 
       <!-- RIGHT TABLE -->
-      <table class="bg-white border-l" style="width:65%; border-collapse:collapse;">
+      <table class="bg-white border-l" style="width:65%; border-collapse:collapse; table-layout:fixed; border-left:0; height:100%;">
         <tr>
           <td class="align-top">
             <div class="grid grid-cols-2 w-full text-center">
@@ -1528,21 +1530,27 @@
   @php
     $volRows = ($voluntaryWorks ?? ($voluntary ?? collect()))->values(); // keep user-entered order
     $maxRows = max(15, $volRows->count());
+    // Scale down the table if we have more than 15 rows so it fits on a single page
+    $volScale = $maxRows > 15 ? round(15 / $maxRows, 4) : 1;
   @endphp
 
-  @for ($i = 0; $i < $maxRows; $i++)
-    @php
-        $row = $volRows[$i] ?? null;
-        $bottom = $i === $maxRows - 1 ? 'border-bottom:0;' : '';
-    @endphp
-    <tr style="{{ $bottom }}">
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->organization ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->from ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->to ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->hours ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->position ?? ' ' }}</td>
-    </tr>
-  @endfor
+<div style="page-break-inside: avoid;">
+  <div style="transform-origin: top left; transform: scale({{ $volScale }}); width: calc(100% / {{ $volScale }});">
+    @for ($i = 0; $i < $maxRows; $i++)
+      @php
+          $row = $volRows[$i] ?? null;
+          $bottom = $i === $maxRows - 1 ? 'border-bottom:0;' : '';
+      @endphp
+      <tr style="{{ $bottom }}">
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->organization ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->from ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->to ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->hours ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->position ?? ' ' }}</td>
+      </tr>
+    @endfor
+  </div>
+</div>
 
 </table>
 
@@ -2442,7 +2450,7 @@
     <div class="border-b-2 border-black" style="height:20px; width:100%;"></div>
     <div class="mt-2 text-sm">(Signature over Printed Name)</div>
   </div>
-</div>
+</div> 
 
 <div class="w-full flex justify-end" style="margin-top:50px; padding-right:8px; font-family:'Arial Narrow','Arial',sans-serif;">
   <div class="text-center relative" style="width:460px; margin-left:auto;">
