@@ -1,6 +1,6 @@
 <x-app-layout>
 
-    <div class="py-10"
+    <div class="py-5 md:py-8 lg:py-10"
         x-data="{
             addEmployeeOpen: false,
             confirmOpen: false,
@@ -162,22 +162,36 @@
         x-on:open-delete.window="requestDelete($event.detail)">
         
 
-        <div class="mx-auto sm:px-6 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-180px)]">
+        <div class="mx-auto px-2 sm:px-6 md:px-12 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)]">
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm uppercase tracking-wide text-indigo-500 font-semibold">Team Directory</p>
-                    <h1 class="text-2xl font-bold text-slate-900">Manage Employees</h1>
-                    <p class="text-slate-500 text-sm">Review account status, employee status, and contact details in one place.</p>
+            <div class="flex flex-row flex-nowrap items-center justify-between gap-2 sm:gap-3 lg:gap-4">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs sm:text-sm uppercase tracking-wide text-indigo-500 font-semibold">Team Directory</p>
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">Manage Employees</h1>
+                    <p class="text-slate-500 text-xs sm:text-sm lg:text-base">Review account status, employee status, and contact details in one place.</p>
                 </div>
-                <div class="flex gap-3">
+                <!-- Icon buttons for mobile/tablet -->
+                <div class="flex items-center gap-2 lg:hidden flex-shrink-0">
                     <button type="button"
                         @click="openEmployee()"
-                        class="inline-flex items-center rounded-xl border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-600 bg-white hover:bg-indigo-50 shadow-sm">
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-indigo-200 bg-white text-indigo-600 shadow-sm hover:bg-indigo-50"
+                        title="Add Employee">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 item-center"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-plus-icon lucide-user-round-plus"><path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/></svg>
+                    </button>
+                    <a href="{{ route('manage-user.export') }}" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm hover:bg-indigo-500" title="Export Excel">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    </a>
+                </div>
+
+                <!-- Full buttons for desktop -->
+                <div class="hidden lg:flex flex-row gap-3">
+                    <button type="button"
+                        @click="openEmployee()"
+                        class="inline-flex items-center justify-center rounded-xl border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-600 bg-white hover:bg-indigo-50 shadow-sm">
                         Add Employee
                     </button>
 
-                    <a href="{{ route('manage-user.export') }}" class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">
+                    <a href="{{ route('manage-user.export') }}" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">
                         Export Excel
                     </a>
                 </div>
@@ -191,6 +205,8 @@
                     filterType: '',
                     sortKey: 'created_at',
                     sortDir: 'desc',
+                    filtersOpen: false,
+                    searchOpen: false,
                     employees: @js($employees),
                     units: @js($units ?? []),
                     init() {
@@ -261,19 +277,40 @@
                     }
                 }"
                 x-init="init()">
-                <div class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
+                <div class="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col gap-2.5 sm:gap-3 lg:gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
+                    <!-- Mobile controls toggle row -->
+                    <div class="flex items-center justify-between lg:hidden">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                            @click="filtersOpen = !filtersOpen"
+                            :aria-expanded="filtersOpen">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14M3 12h18M3 18h10" />
+                            </svg>
+                            Filters 
+                        </button>
+                        <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                            @click="searchOpen = !searchOpen"
+                            :aria-expanded="searchOpen">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                            </svg>
+                            Search
+                        </button>
+                    </div>
+
+                    <!-- Desktop filters -->
+                    <div class="hidden lg:flex flex-wrap items-center gap-2">
+                        <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
                             <option value="">Status: All</option>
                             <option value="Active">Active</option>
                             <option value="Inactive">Inactive</option>
                         </select>
-                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
+                        <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
                             <option value="">Employee Status: All</option>
                             <option value="Permanent Employee">Permanent</option>
                             <option value="Contract of Service">Contract of Service</option>
                         </select>
-                        <select class="rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
+                        <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                             <option value="created_at">Sort: Date</option>
                             <option value="name">Sort: Name</option>
                             <option value="unit">Sort: Division/Section/Unit/Office</option>
@@ -297,8 +334,66 @@
                             Reset
                         </button>
                     </div>
-                    <div class="relative w-full lg:w-72">
+
+                    <!-- Desktop search -->
+                    <div class="hidden lg:block relative w-full lg:w-72">
                         <input type="text" placeholder="Search employee" class="w-full rounded-2xl border border-slate-200/90 bg-white py-2.5 ps-10 pe-3 text-sm font-medium text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                            x-model.debounce.200ms="search" x-on:keydown.escape="search = ''" />
+                        <span class="absolute left-3 top-2.5 text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <!-- Mobile filters panel -->
+                    <div x-show="filtersOpen" x-transition class="lg:hidden rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-3 space-y-2 shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="filterStatus">
+                                <option value="">Status: All</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                            <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
+                                <option value="">Employee Status: All</option>
+                                <option value="Permanent Employee">Permanent</option>
+                                <option value="Contract of Service">Contract of Service</option>
+                            </select>
+                            <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
+                                <option value="created_at">Sort: Date</option>
+                                <option value="name">Sort: Name</option>
+                                <option value="unit">Sort: Division/Section/Unit/Office</option>
+                                <option value="email">Sort: Email</option>
+                                <option value="phone">Sort: Phone</option>
+                            </select>
+                            <button type="button" class="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                                x-on:click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m8 9 4-4 4 4m0 6-4 4-4-4" />
+                                </svg>
+                                <span x-text="sortDir === 'asc' ? 'Ascending' : 'Descending'"></span>
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-between">
+                            <button type="button" class="inline-flex items-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-rose-600 hover:border-rose-200 hover:bg-rose-100"
+                                x-on:click="clearFilters()">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m4 4 16 16" />
+                                    <path d="M10 4h10v2a2 2 0 0 1-2 2h-2" />
+                                    <path d="m8 8-4 4v2a2 2 0 0 0 2 2h6" />
+                                </svg>
+                                Reset
+                            </button>
+                            <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                                @click="filtersOpen = false">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mobile search input -->
+                    <div x-show="searchOpen" x-transition class="lg:hidden relative w-full">
+                        <input type="text" placeholder="Search employee" class="w-full rounded-2xl border border-slate-200/90 bg-white py-2 sm:py-2.5 ps-9 sm:ps-10 pe-3 text-xs sm:text-sm font-medium text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                             x-model.debounce.200ms="search" x-on:keydown.escape="search = ''" />
                         <span class="absolute left-3 top-2.5 text-slate-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -309,21 +404,21 @@
                 </div>
 
                 <div class="flex-1 overflow-hidden">
-                    <div class="overflow-x-auto h-full">
+                    <div class="overflow-x-auto lg:overflow-visible h-full">
                         <div class="max-h-full min-h-full overflow-y-auto rounded-b-2xl bg-white">
                             <table class="w-full divide-y divide-slate-100">
-                                <thead class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
+                                <thead class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-[11px] sm:text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
-                                        <th class="px-6 py-3">Employee</th>
-                                        <th class="px-6 py-3">Division/Section/Unit/Office</th>
-                                        <th class="px-6 py-3">Email</th>
-                                        <th class="px-6 py-3">Phone</th>
-                                        <th class="px-6 py-3">Status</th>
-                                        <th class="px-6 py-3">Place Of Assignment</th>
-                                        <th class="px-6 py-3 text-center">Action</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Employee</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]">Division/Section/Unit/Office</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]">Email</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Phone</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Status</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]">Place Of Assignment</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 text-center">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                                <tbody class="divide-y divide-slate-100 bg-white text-[11px] sm:text-xs text-slate-700">
                                     <template x-for="employee in filteredSorted()" :key="employee.id">
                                         <tr class="hover:bg-slate-50"
                                             x-data="{
@@ -333,26 +428,26 @@
                                             }"
                                             x-init="window.addEventListener('employee-updated', e => { if (e.detail?.key === key) { employee = e.detail.employee; } })"
                                             x-cloak>
-                                            <td class="px-6 py-4">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
                                                 <div class="flex items-center gap-3">
-                                                    <img :src="employee.avatar" :alt="employee.name + ' avatar'" class="h-10 w-10 rounded-full object-cover shadow-sm">
+                                                    <img :src="employee.avatar" :alt="employee.name + ' avatar'" class="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover shadow-sm">
                                                     <div>
-                                                        <p class="font-semibold text-slate-900" x-text="employee.name"></p>
-                                                        <span class="text-slate-500" x-text="employee.type"></span>
+                                                        <p class="font-semibold text-slate-900 text-xs sm:text-sm whitespace-nowrap min-w-[9.5rem]" x-text="employee.name"></p>
+                                                        <span class="text-slate-500 text-[11px] sm:text-xs" x-text="employee.type"></span>
                                                     </div>
                                                 </div>
                                             </td>
 
-                                            <td class="px-6 py-4" x-text="employee.unit"></td>
-                                            <td class="px-6 py-4 text-slate-500" x-text="employee.email"></td>
-                                            <td class="px-6 py-4" x-text="employee.phone"></td>
-                                            <td class="px-6 py-4">
-                                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="statusClass()" x-text="employee.status"></span>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="employee.unit"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="employee.email"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4" x-text="employee.phone"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] sm:text-xs font-semibold" :class="statusClass()" x-text="employee.status"></span>
                                             </td>
-                                            <td class="px-6 py-4 text-slate-500" x-text="employee.location"></td>
-                                            <td class="px-6 py-4 text-center">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="employee.location"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
                                                 <div class="inline-flex items-center gap-2 justify-center">
-                                                    <button type="button" class="inline-flex items-center rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                                                    <button type="button" class="inline-flex items-center rounded-full border border-rose-200 px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-rose-600 hover:bg-rose-50"
                                                         x-on:click.prevent="$dispatch('open-delete', employee)" title="Delete">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                             <path d="M3 6h18" />
@@ -362,7 +457,7 @@
                                                             <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" />
                                                         </svg>
                                                     </button>
-                                                    <button type="button" class="inline-flex items-center rounded-full border border-indigo-200 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                                                    <button type="button" class="inline-flex items-center rounded-full border border-indigo-200 px-3.5 sm:px-4 py-1.5 text-[10px] sm:text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50"
                                                         x-on:click.prevent="window.dispatchEvent(new CustomEvent('open-modal', { detail: key }));">
                                                         View
                                                     </button>

@@ -1,18 +1,23 @@
 <x-app-layout>
 
-    <div class="py-10">
-        <div class="mx-auto sm:px-6 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-180px)]">
+    <div class="py-5 md:py-8 lg:py-10">
+        <div class="mx-auto px-2 sm:px-6 md:px-12 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)]">
 
             {{-- Header --}}
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm uppercase tracking-wide text-indigo-500 font-semibold">PDS Review</p>
-                    <h1 class="text-2xl font-bold text-slate-900">PDS Submissions</h1>
-                    <p class="text-slate-500 text-sm">
+            <div class="flex flex-row flex-nowrap items-center justify-between gap-2 sm:gap-3 lg:gap-4">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs sm:text-sm uppercase tracking-wide text-indigo-500 font-semibold">PDS Review</p>
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">PDS Submissions</h1>
+                    <p class="text-slate-500 text-xs sm:text-sm lg:text-base">
                         Monitor employees who submitted their Personal Data Sheets.
                     </p>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex items-center gap-2 lg:hidden flex-shrink-0">
+                    <a href="{{ route('pds.export') }}" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm hover:bg-indigo-500" title="Export Excel">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    </a>
+                </div>
+                <div class="hidden lg:flex flex-row gap-3 flex-shrink-0">
                     <a href="{{ route('pds.export') }}"
                         class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">
                         Export Excel
@@ -26,6 +31,8 @@
                 x-data="{
                     search: '',
                     activeTab: 'all',
+                    filtersOpen: false,
+                    searchOpen: false,
                     modalOpen: false,
                     selected: null,
                     confirmOpen: false,
@@ -170,9 +177,48 @@
 
                 {{-- Tabs + Search --}}
                 <div
-                    class="px-8 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
+                    class="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col gap-2.5 sm:gap-3 lg:gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100">
 
-                    <div class="flex flex-wrap gap-2">
+                    <!-- Mobile toggle row -->
+                    <div class="flex items-center justify-between lg:hidden">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                            @click="filtersOpen = !filtersOpen"
+                            :aria-expanded="filtersOpen">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h14M3 12h18M3 18h10" />
+                            </svg>
+                            Status
+                        </button>
+                        <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500"
+                            x-on:click="searchOpen = !searchOpen" :aria-expanded="searchOpen">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                            </svg>
+                            Search
+                        </button>
+                    </div>
+
+                    <!-- Mobile filters panel -->
+                    <div x-show="filtersOpen" x-transition class="lg:hidden rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-3 space-y-2 shadow-sm">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <button type="button" class="rounded-full border px-3 py-2 text-xs sm:text-sm font-semibold"
+                                :class="activeTab === 'all' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                                @click="activeTab = 'all'">All</button>
+                            <button type="button" class="rounded-full border px-3 py-2 text-xs sm:text-sm font-semibold"
+                                :class="activeTab === 'pending' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                                @click="activeTab = 'pending'">Pending</button>
+                            <button type="button" class="rounded-full border px-3 py-2 text-xs sm:text-sm font-semibold"
+                                :class="activeTab === 'approved' ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                                @click="activeTab = 'approved'">Approved</button>
+                            <button type="button" class="rounded-full border px-3 py-2 text-xs sm:text-sm font-semibold"
+                                :class="activeTab === 'rejected' ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+                                @click="activeTab = 'rejected'">Rejected</button>
+                        </div>
+                         
+                    </div>
+
+                    <!-- Tabs desktop -->
+                    <div class="hidden lg:flex flex-wrap gap-2">
                         <button
                             type="button"
                             class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
@@ -181,7 +227,7 @@
                                 : 'border-slate-200 text-slate-600 hover:border-slate-300'"
                             @click="activeTab = 'all'">
                             All
-                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('all') + ')'"></span>
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('all') + ')'" ></span>
                         </button>
 
                         <button
@@ -192,7 +238,7 @@
                                 : 'border-slate-200 text-slate-600 hover:border-slate-300'"
                             @click="activeTab = 'pending'">
                             Pending
-                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('pending') + ')'"></span>
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('pending') + ')'" ></span>
                         </button>
 
                         <button
@@ -203,7 +249,7 @@
                                 : 'border-slate-200 text-slate-600 hover:border-slate-300'"
                             @click="activeTab = 'approved'">
                             Approved
-                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('approved') + ')'"></span>
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('approved') + ')'" ></span>
                         </button>
 
                         <button
@@ -214,11 +260,28 @@
                                 : 'border-slate-200 text-slate-600 hover:border-slate-300'"
                             @click="activeTab = 'rejected'">
                             Rejected
-                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('rejected') + ')'"></span>
+                            <span class="ms-1 text-xs font-medium" x-text="'(' + tabCount('rejected') + ')'" ></span>
                         </button>
                     </div>
 
-                    <div class="relative w-full lg:w-64">
+                    {{-- Desktop search --}}
+                    <div class="hidden lg:block relative w-full lg:w-64">
+                        <input
+                            type="text"
+                            placeholder="Search submission"
+                            class="w-full rounded-2xl border border-slate-200 py-2 ps-9 pe-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            x-model.debounce.200ms="search"
+                            @keydown.escape="search = ''"
+                        />
+                        <span class="absolute left-3 top-2.5 text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0-6.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <!-- Mobile search panel -->
+                    <div x-show="searchOpen" x-transition class="lg:hidden relative w-full">
                         <input
                             type="text"
                             placeholder="Search submission"
@@ -236,22 +299,22 @@
 
                 {{-- Table --}}
                 <div class="flex-1 overflow-hidden">
-                    <div class="overflow-x-auto h-full">
+                    <div class="overflow-x-auto lg:overflow-visible h-full">
                         <div class="max-h-full min-h-full overflow-y-auto rounded-b-2xl bg-white">
                             <table class="w-full divide-y divide-slate-100">
                                 <thead
-                                    class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
+                                    class="sticky top-0 z-10 bg-slate-50 backdrop-blur text-left text-xs sm:text-sm font-semibold uppercase text-slate-500 shadow-[0_6px_12px_-12px_rgba(15,23,42,0.35)]">
                                     <tr>
-                                        <th class="px-6 py-3">Employee</th>
-                                        <th class="px-6 py-3">Division/Section/Unit/Office</th>
-                                        <th class="px-6 py-3">Email</th>
-                                        <th class="px-6 py-3">Submitted</th>
-                                        <th class="px-6 py-3">Status</th>
-                                        <th class="px-6 py-3 text-center">Action</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Employee</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Division/Section/Unit/Office</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Email</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Submitted</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Status</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 text-center">Action</th>
                                     </tr>
                                 </thead>
 
-                                <tbody class="divide-y divide-slate-100 bg-white text-sm text-slate-700">
+                                <tbody class="divide-y divide-slate-100 bg-white text-xs sm:text-sm text-slate-700">
 
                                     <template x-if="filtered().length === 0">
                                         <tr>
@@ -276,32 +339,32 @@
                                             }"
                                             x-cloak
                                         >
-                                            <td class="px-6 py-4">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
                                                 <div class="flex items-center gap-3">
-                                                    <img :src="submission.avatar" :alt="submission.name + ' avatar'" class="h-10 w-10 rounded-full object-cover shadow-sm" />
+                                                    <img :src="submission.avatar" :alt="submission.name + ' avatar'" class="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover shadow-sm" />
                                                     <div>
-                                                        <p class="font-semibold text-slate-900" x-text="submission.name"></p>
-                                                        <span class="text-slate-500" x-text="submission.type ?? '—'"></span>
+                                                        <p class="font-semibold text-slate-900 text-sm sm:text-base truncate max-w-[14ch] sm:max-w-none" x-text="submission.name"></p>
+                                                        <span class="text-slate-500 text-[11px] sm:text-xs" x-text="submission.type ?? '—'"></span>
                                                     </div>
                                                 </div>
                                             </td>
 
-                                            <td class="px-6 py-4" x-text="submission.unit"></td>
-                                            <td class="px-6 py-4 text-slate-500" x-text="submission.email"></td>
-                                            <td class="px-6 py-4" x-text="submission.submitted_at ?? '—'"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="submission.unit"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="submission.email"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4" x-text="submission.submitted_at ?? '—'"></td>
 
-                                            <td class="px-6 py-4">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
                                                 <span
-                                                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                                                    class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] sm:text-xs font-semibold"
                                                     :class="statusClass()"
                                                     x-text="submission.status">
                                                 </span>
                                             </td>
 
-                                            <td class="px-6 py-4 text-center">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
                                                 <button
                                                     type="button"
-                                                    class="inline-flex items-center rounded-full border border-indigo-200 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                                                    class="inline-flex items-center rounded-full border border-indigo-200 px-3.5 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
                                                     @click.prevent="open(submission)"
                                                 >
                                                     View

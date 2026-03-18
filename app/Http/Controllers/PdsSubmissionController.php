@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use App\Models\AdminUser;
 use App\Models\PdsRejection;
 use App\Notifications\PdsSubmitted;
+use App\Notifications\PdsResubmitted;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\PdsSubmission;
@@ -104,6 +105,8 @@ class PdsSubmissionController extends Controller
             $req->input('work_status.0'),
             $req->input('work_govt_service.0'),
         ], 'Work Experience');
+
+        $alreadySubmitted = PdsSubmission::where('user_id', $userId)->exists();
 
         DB::transaction(function () use ($req, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath, $existingPhotoPath, $existingSignaturePath, $existingThumbmarkPath) {
             DB::table('pds_personal_infos')->updateOrInsert(
@@ -631,13 +634,18 @@ class PdsSubmissionController extends Controller
 
         session()->forget('pds');
 
-        // Notify admins about the PDS submission
+        // Notify admins about the PDS submission/resubmission
         $adminUsers = AdminUser::all();
         $adminsFromUsersTable = User::where('role', 'admin')->get();
         $recipients = $adminUsers->concat($adminsFromUsersTable);
 
         if ($recipients->isNotEmpty()) {
-            Notification::send($recipients, new PdsSubmitted(User::find($userId)));
+            $user = User::find($userId);
+            $notification = $alreadySubmitted
+                ? new PdsResubmitted($user)
+                : new PdsSubmitted($user);
+
+            Notification::send($recipients, $notification);
             $this->trimNotificationHistory($recipients);
         }
 
