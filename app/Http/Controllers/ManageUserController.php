@@ -7,6 +7,7 @@ use App\Models\ProfileEditRequest;
 use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use App\Notifications\EmployeeInfoUpdated;
@@ -121,10 +122,32 @@ class ManageUserController extends Controller
     public function destroy(User $user)
     {
         DB::transaction(function () use ($user) {
+            // Collect file paths before deleting rows
+            $photoPaths = DB::table('pds_signature_files')
+                ->where('user_id', $user->id)
+                ->pluck('photo_file_path')
+                ->filter();
+
+            $signaturePaths = DB::table('pds_signature_files')
+                ->where('user_id', $user->id)
+                ->pluck('signature_file_path')
+                ->filter();
+
+            $thumbmarkPaths = DB::table('pds_signature_files')
+                ->where('user_id', $user->id)
+                ->pluck('thumbmark_file_path')
+                ->filter();
+
+            $profilePaths = DB::table('users_profile')
+                ->where('user_id', $user->id)
+                ->pluck('profile')
+                ->filter();
+
             $tables = [
                 'pds_addresses',
                 'pds_contact_infos',
                 'pds_declarations',
+                'pds_drafts',
                 'pds_education_records',
                 'pds_eligibilities',
                 'pds_family_members',
@@ -133,20 +156,50 @@ class ManageUserController extends Controller
                 'pds_other_info',
                 'pds_personal_infos',
                 'pds_references',
+                'pds_rejections',
                 'pds_signature_files',
                 'pds_submissions',
                 'pds_training_programs',
                 'pds_voluntary_work',
                 'pds_work_experiences',
+                'profile_edit_requests',
+                'users_profile',
+                'otps',
+                'notifications',
             ];
 
             foreach ($tables as $table) {
-                DB::table($table)->where('user_id', $user->id)->delete();
+                $query = DB::table($table);
+
+                if ($table === 'notifications') {
+                    $query->where('notifiable_id', $user->id);
+                } elseif ($table === 'otps') {
+                    $query->where('email', $user->email);
+                } else {
+                    $query->where('user_id', $user->id);
+                }
+
+                $query->delete();
             }
 
-            RegistrationUser::whereRaw('LOWER(full_name) = ?', [mb_strtolower($user->name)])
-                ->orWhere('email', $user->email)
+            // Also remove notifications that reference this user in payload (e.g., sent to admins)
+            DB::table('notifications')
+                ->whereRaw("JSON_EXTRACT(data, '$.user_id') = ?", [$user->id])
                 ->delete();
+
+            // Delete stored files tied to this user (passport photos, signatures, profiles)
+            foreach ($photoPaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+            foreach ($signaturePaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+            foreach ($thumbmarkPaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+            foreach ($profilePaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
 
             $user->delete();
         });
