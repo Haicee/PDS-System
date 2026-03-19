@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Route;
 
 class PdsResubmitted extends Notification implements ShouldBroadcast
 {
@@ -32,8 +33,10 @@ class PdsResubmitted extends Notification implements ShouldBroadcast
             'email' => $this->user->email,
             'role' => $this->user->role,
             'type' => $this->user->type,
-            // Use existing admin preview route
-            'link' => route('pds.preview.admin', ['user' => $this->user?->id]),
+            // Link to admin PDS review page (fallback to preview route if needed) with highlight
+            'link' => Route::has('pds.form')
+                ? route('pds.form', ['highlight' => $this->user?->id])
+                : route('pds.preview.admin', ['user' => $this->user?->id]),
         ];
     }
 

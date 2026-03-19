@@ -705,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
       class="w-full px-2 text-lg resize-none
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden"
-      placeholder="Enter Name Extension (optional)"
+      placeholder="(Optional)"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
@@ -1500,12 +1500,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>
             <textarea
       name="spouse_name_extension"
-      required
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2"
-      placeholder="Enter Name Extension"
+      placeholder="(Optional)"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
         </div>
@@ -1869,12 +1868,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>
             <textarea
       name="father_name_extension"
-      required
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2"
-      placeholder="Enter Name Extension"
+      placeholder="(Optional)"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
         </div>

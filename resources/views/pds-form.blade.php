@@ -65,6 +65,19 @@
                                 }
                             }
                         });
+
+                        // Auto-open preview when highlight query param is present (from notification)
+                        const params = new URLSearchParams(window.location.search);
+                        const highlight = params.get('highlight');
+                        if (highlight) {
+                            // match by user_id first, else by submission id
+                            const match = this.submissions.find(
+                                (s) => String(s.user_id) === String(highlight) || String(s.id) === String(highlight)
+                            );
+                            if (match) {
+                                this.open(match);
+                            }
+                        }
                     },
 
                     normalized(v) {
