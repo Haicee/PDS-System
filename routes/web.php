@@ -702,7 +702,115 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/verification-status', function () {
     return ['verified' => auth()->user()->hasVerifiedEmail()];
-})->middleware(['auth'])->name('verification.status');
+})->middleware(['auth'])->name('verification.status.simple');
+
+Route::get('/verification-stream', function () {
+
+    $response = new \Symfony\Component\HttpFoundation\StreamedResponse(function () {
+
+        // 🔥 Disable ALL buffering layers
+        while (ob_get_level() > 0) {
+            ob_end_flush();
+        }
+        ob_implicit_flush(true);
+
+        // 🔥 Force server + browser to start streaming immediately
+        echo str_repeat(' ', 2048) . "\n";
+        flush();
+
+        // Get authenticated user ID once
+        $userId = auth()->id();
+        if (!$userId) {
+            return;
+        }
+
+        // Initial fetch
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return;
+        }
+
+        $lastVerified = $user->hasVerifiedEmail();
+
+        // Send initial state immediately
+        echo "data: " . json_encode([
+            'verified' => $lastVerified,
+            'redirect' => $lastVerified
+                ? (strtolower($user->role ?? '') === 'employee'
+                    ? '/employee'
+                    : route('dashboard', absolute: false))
+                : null,
+        ]) . "\n\n";
+
+        flush();
+
+        // If already verified, stop immediately
+        if ($lastVerified) {
+            return;
+        }
+
+        $heartbeatCounter = 0;
+
+        while (true) {
+
+            // Stop if client disconnects
+            if (connection_aborted()) {
+                break;
+            }
+
+            // Re-fetch user (fresh data)
+            $user = \App\Models\User::find($userId);
+            if (!$user) {
+                echo "data: " . json_encode(['error' => 'user_not_found']) . "\n\n";
+                flush();
+                break;
+            }
+
+            $currentVerified = $user->hasVerifiedEmail();
+
+            // Only send update if status changed
+            if ($currentVerified !== $lastVerified) {
+
+                $target = strtolower($user->role ?? '') === 'employee'
+                    ? '/employee'
+                    : route('dashboard', absolute: false);
+
+                echo "data: " . json_encode([
+                    'verified' => $currentVerified,
+                    'redirect' => $currentVerified ? $target : null,
+                ]) . "\n\n";
+
+                flush();
+
+                $lastVerified = $currentVerified;
+
+                // If verified, end stream
+                if ($currentVerified) {
+                    break;
+                }
+            }
+
+            // Heartbeat every ~14 seconds
+            $heartbeatCounter++;
+            if ($heartbeatCounter >= 14) { // 14 * 1 second = 14 seconds
+                echo "data: " . json_encode(['heartbeat' => true]) . "\n\n";
+                flush();
+                $heartbeatCounter = 0;
+            }
+
+            sleep(1); // Check every 1 second for faster response
+        }
+    });
+
+    // 🔥 SSE Headers (optimized)
+    $response->headers->set('Content-Type', 'text/event-stream');
+    $response->headers->set('Cache-Control', 'no-cache, no-transform');
+    $response->headers->set('Connection', 'keep-alive');
+    $response->headers->set('X-Accel-Buffering', 'no'); // Nginx
+
+    return $response;
+
+})->middleware(['auth'])->name('verification.stream');
 
 Route::get('/otp/resend', [OtpController::class, 'resend'])
     ->name('otp.resend')

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use App\Events\EmailVerifiedBroadcast;
 use App\Models\User;
 use App\Models\AdminUser;
 
@@ -34,6 +35,7 @@ class VerifyEmailController extends Controller
         if ($user->markEmailAsVerified()) {
             $user->forceFill(['email_verification_token' => null])->save();
             event(new Verified($user));
+            event(new EmailVerifiedBroadcast($user, $target.'?verified=1'));
         }
 
         return redirect()->intended($target.'?verified=1');
@@ -74,6 +76,7 @@ class VerifyEmailController extends Controller
         if ($user->markEmailAsVerified()) {
             $user->forceFill(['email_verification_token' => null])->save();
             event(new Verified($user));
+            event(new EmailVerifiedBroadcast($user, $target));
         }
 
         // Do not log in this browser; let the original session poll and redirect

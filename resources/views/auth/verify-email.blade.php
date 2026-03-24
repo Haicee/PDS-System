@@ -91,9 +91,8 @@
         (() => {
             const statusUrl = '{{ route('verification.status', [], false) }}';
             const buildStatusUrl = () => `${statusUrl}?t=${Date.now()}`; // bust caches
-            const CHECK_INTERVAL_MS = 300;
             // Redirect immediately after verification to avoid perceived lag
-            const REDIRECT_DELAY_MS = 0;
+            const REDIRECT_DELAY_MS = 100; // Reduced to 100ms for smoother transition
             const RESEND_KEY = 'verify_resend_at';
             const COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
             const resendBtn = document.getElementById('resend-btn');
@@ -106,48 +105,7 @@
             const dismissErrorBtn = document.getElementById('dismiss-verify-error');
 
             let redirecting = false;
-            let pollTimer = null;
-
-            async function checkVerification() {
-                if (redirecting) return;
-                try {
-                    const res = await fetch(buildStatusUrl(), {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        credentials: 'same-origin',
-                        cache: 'no-store',
-                    });
-                    if (res.status === 401) {
-                        console.warn('Verification status check: unauthenticated. Please stay logged in on this page.');
-                        return;
-                    }
-                    if (!res.ok) return;
-                    const data = await res.json();
-                    if (data.verified) {
-                        redirecting = true;
-                        if (pollTimer) clearInterval(pollTimer);
-                        const target = data.redirect || '{{ route('dashboard', [], false) }}';
-                        const overlay = document.createElement('div');
-                        overlay.className = 'fixed inset-0 z-20 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm text-white text-center p-6 transition-opacity duration-500 ease-out opacity-0';
-                        overlay.innerHTML = `
-                            <div class="flex flex-col items-center gap-4">
-                                <div class="h-14 w-14 rounded-full border-3 border-white/30 border-t-white animate-spin"></div>
-                                <div class="space-y-1">
-                                    <h3 class="text-xl font-semibold">Redirecting...</h3>
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(overlay);
-
-                        requestAnimationFrame(() => overlay.classList.remove('opacity-0'));
-
-                        setTimeout(() => {
-                            window.location.href = target;
-                        }, REDIRECT_DELAY_MS);
-                    }
-                } catch (err) {
-                    console.error('Verification status check failed', err);
-                }
-            }
+            let eventSource = null;
 
             // Disable update email button unless value changed
             function syncUpdateEmailState() {
@@ -200,9 +158,53 @@
             setInterval(updateResendState, 1000);
             updateResendState();
 
-            // Poll for verification to auto-redirect main page
-            checkVerification();
-            pollTimer = setInterval(checkVerification, CHECK_INTERVAL_MS);
+            const currentUserId = {{ auth()->id() ?? 'null' }};
+
+            // Use Server-Sent Events (SSE) for automatic redirection without polling
+            if (currentUserId) {
+                eventSource = new EventSource('{{ route("verification.stream", [], false) }}');
+                
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    console.debug('SSE verification update received', data);
+                    
+                    if (data.verified && !redirecting) {
+                        redirecting = true;
+                        eventSource.close();
+                        
+                        const target = data.redirect || '{{ route('dashboard', [], false) }}';
+                        const overlay = document.createElement('div');
+                        overlay.className = 'fixed inset-0 z-20 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm text-white text-center p-6 transition-opacity duration-500 ease-out opacity-0';
+                        overlay.innerHTML = `
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="h-14 w-14 rounded-full border-3 border-white/30 border-t-white animate-spin"></div>
+                                <div class="space-y-1">
+                                    <h3 class="text-xl font-semibold">Redirecting...</h3>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(overlay);
+                        requestAnimationFrame(() => overlay.classList.remove('opacity-0'));
+                        setTimeout(() => {
+                            window.location.href = target;
+                        }, REDIRECT_DELAY_MS);
+                    }
+                };
+                
+                eventSource.onerror = function(event) {
+                    console.warn('SSE connection error, retrying...', event);
+                    // Auto-reconnect on error
+                    setTimeout(() => {
+                        if (!redirecting && eventSource.readyState === EventSource.CLOSED) {
+                            eventSource = new EventSource('{{ route("verification.stream", [], false) }}');
+                        }
+                    }, 3000);
+                };
+                
+                console.debug('SSE connection established for verification monitoring');
+            } else {
+                console.warn('User not authenticated for SSE verification monitoring');
+            }
         })();
     </script>
 </x-guest-layout>
