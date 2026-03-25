@@ -13,6 +13,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rules;
@@ -80,53 +82,60 @@ class RegisteredUserController extends Controller
         $role = 'employee';
         $status = 'Active';
 
-        $user = User::create([
-            'name' => $request->name,
-            'gender' => $request->gender,
-            'unit' => $request->unit,
-            'phone' => $request->phone,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'type' => $request->type,
-            'status' => $status,
-            'location_assigned' => $request->location_assigned,
-            'role' => $role,
-        ]);
-
-        // Store latest captured/uploaded photo
+        // Store file first but roll back DB + delete file if anything fails
         $path = $request->file('profile_photo')->store('profiles', 'public');
 
-        UserProfile::create([
-            'user_id' => $user->id,
-            'name' => $user->name,
-            'profile' => $path,
-        ]);
+        try {
+            return DB::transaction(function () use ($request, $role, $status, $path) {
+                $user = User::create([
+                    'name' => $request->name,
+                    'gender' => $request->gender,
+                    'unit' => $request->unit,
+                    'phone' => $request->phone,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                    'type' => $request->type,
+                    'status' => $status,
+                    'location_assigned' => $request->location_assigned,
+                    'role' => $role,
+                ]);
 
-        // Notify all admins about the new employee registration
-        $adminUsers = AdminUser::all();
-        $adminsFromUsersTable = User::where('role', 'admin')->get();
-        $recipients = $adminUsers->concat($adminsFromUsersTable);
+                UserProfile::create([
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'profile' => $path,
+                ]);
 
-        if ($recipients->isNotEmpty()) {
-            Notification::send($recipients, new EmployeeRegistered($user));
-            $this->trimNotificationHistory($recipients);
+                // Notify all admins about the new employee registration
+                $adminUsers = AdminUser::all();
+                $adminsFromUsersTable = User::where('role', 'admin')->get();
+                $recipients = $adminUsers->concat($adminsFromUsersTable);
+
+                if ($recipients->isNotEmpty()) {
+                    Notification::send($recipients, new EmployeeRegistered($user));
+                    $this->trimNotificationHistory($recipients);
+                }
+
+                event(new Registered($user));
+
+                Auth::login($user);
+
+                // ensure fresh pds session cache for new account
+                session()->forget(['pds', 'pds_owner']);
+                session(['pds_owner' => $user->id]);
+
+                // Require email verification before proceeding
+                if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail()) {
+                    return redirect()->route('verification.notice')->with('status', 'verification-link-sent');
+                }
+
+                return $user->role === 'employee'
+                    ? redirect('/employee')->with('clearRegisterCache', true)
+                    : redirect(route('dashboard', absolute: false))->with('clearRegisterCache', true);
+            });
+        } catch (\Throwable $e) {
+            Storage::disk('public')->delete($path);
+            throw $e;
         }
-
-        event(new Registered($user));
-
-        Auth::login($user);
-
-        // ensure fresh pds session cache for new account
-        session()->forget(['pds', 'pds_owner']);
-        session(['pds_owner' => $user->id]);
-
-        // Require email verification before proceeding
-        if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail()) {
-            return redirect()->route('verification.notice')->with('status', 'verification-link-sent');
-        }
-
-        return $user->role === 'employee'
-            ? redirect('/employee')->with('clearRegisterCache', true)
-            : redirect(route('dashboard', absolute: false))->with('clearRegisterCache', true);
     }
 }

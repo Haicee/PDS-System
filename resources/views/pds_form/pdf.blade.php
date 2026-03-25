@@ -165,6 +165,34 @@
         .text-4xl { font-size: 1.6rem; }
         .text-base { font-size: 1rem; }
         .text-lg { font-size: 1.05rem; }
+
+        /* Force uniform 3xl sizing for PDF/print while allowing opt-out via .keep-base */
+        @media print {
+            body,
+            table,
+            td,
+            th,
+            p,
+            span,
+            label,
+            div,
+            .text-xs,
+            .text-sm,
+            .text-base,
+            .text-lg,
+            .text-xl,
+            .text-2xl,
+            .text-3xl,
+            .text-4xl {
+                font-size: 1.6rem !important; /* 4xl */
+                line-height: 1.3;
+            }
+
+            .keep-base {
+                font-size: 1rem !important;
+                line-height: 1.2;
+            }
+        }
         /* Width helpers */
         .w-300 { width: 300px; }
         .w-200 { width: 200px; }
@@ -1313,7 +1341,7 @@
       </td>
 </table>
 
-<div class="w-full text-base" style="text-align:right; font-family:'Arial_Narrow','sans-serif'; margin-top:10px;">
+<div class="w-full text-base keep-base" style="text-align:right; font-family:'Arial_Narrow','sans-serif'; margin-top:10px;">
     CS FORM 212 (Revised 2025), Page 1 of 5
 </div>
     </table>
@@ -1381,7 +1409,7 @@
 
 {{-- V. WORK EXPERIENCE --}}
 <table class="section-table"
-       style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;">
+       style="width:100%; border-collapse:collapse; border-bottom:0; font-family:'Arial Narrow','Arial',sans-serif;">
     <colgroup>
         <col style="width:8%;">
         <col style="width:8%;">
@@ -1417,7 +1445,8 @@
 
     @php
         $workRows = ($workExperiences ?? ($work ?? collect()))->values(); // keep user-entered order
-        $maxWorkRows = max(27, $workRows->count());
+        $workRows = $workRows->take(23); // cap to 20 rows max in PDF
+        $maxWorkRows = max(23, $workRows->count());
     @endphp
 
     @for ($i = 0; $i < $maxWorkRows; $i++)
@@ -1439,15 +1468,15 @@
     <colgroup>
         <col style="width:17%;">
         <col style="width:20%;">
-        <col style="width:16.02%;">
+        <col style="width:16.1%;">
         <col style="width:15%;">
     </colgroup>
     <tr>
-        <td style="text-align:center; font-weight:bold; font-size:18px; border:1px solid black; vertical-align:middle; font-style:italic;">
+        <td style="text-align:center; font-weight:bold; font-size:18px; border:1px solid black; border-top:0; vertical-align:middle; font-style:italic;">
             SIGNATURE
         </td>
 
-        <td colspan="2" style="border:1px solid black;">
+        <td colspan="2" style="border:1px solid black; border-top:0;">
             <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
                 @if($signatureUrl)
                   <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
@@ -1457,19 +1486,19 @@
             </div>
         </td>
 
-        <td style="border:1px solid black; text-align:center; font-weight:bold; font-size:18px; vertical-align:middle; font-style:italic;">
+        <td style="border:1px solid black; border-top:0; text-align:center; font-weight:bold; font-size:18px; vertical-align:middle; font-style:italic;">
             DATE
         </td>
 
          <td colspan="2"
-          class="border h-10">
+          class="h-10">
           <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
             {{ $declaration->date_accomplished ?? '—' }}
           </div>
       </td>
     </tr>
 </table>  
-      <div class="text-base w-full" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+      <div class="text-base w-full keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 2 of 5
 </div>
 </div>
@@ -1615,7 +1644,8 @@
 
   @php
     $trainingRows = ($training ?? ($learning ?? collect()))->values(); // keep user-entered order
-    $maxTraining = max(21, $trainingRows->count());
+    $trainingRows = $trainingRows->take(23); // cap to 21 rows max in PDF
+    $maxTraining = max(23, $trainingRows->count());
   @endphp
 
   @for ($i = 0; $i < $maxTraining; $i++)
@@ -1635,12 +1665,12 @@
 
 </table>
 {{-- VIII. OTHER INFORMATION --}}
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif;" border="1">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;" border="1">
 
     <colgroup>
-        <col style="width:5.11%;">
+        <col style="width:5.13%;">
         <col style="width:6.5%;">
-        <col style="width:4.39%;">
+        <col style="width:4.30%;">
     </colgroup>
 
     <tr>
@@ -1683,19 +1713,18 @@
 <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-style:italic;" border="1">
 
     <colgroup>
-        <col style="width:31.95%;">
-        <col style="width:15.64%;">
-        <col style="width:15%;">
-        <col style="width:10%;">
-        <col style="width:auto;">
+        <col style="width:32.2%;">
+        <col style="width:15.7%;">
+        <col style="width:14.72%;">
+        <col style="width:10.4%;">
     </colgroup>
 
     <tr>
-        <td style="text-align:center; font-weight:bold; font-size:18px; border:1px solid black;">
+        <td style="text-align:center; font-weight:bold; font-size:18px; border:1px solid black; border-top:0;">
             SIGNATURE
         </td>
 
-        <td colspan="2" style="border:1px solid black;">
+        <td colspan="2" style="border:1px solid black; border-top:0;">
             <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
                 @if($signatureUrl)
                   <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
@@ -1705,19 +1734,19 @@
             </div>
         </td>
 
-        <td style="border:1px solid black; text-align:center; font-weight:bold; font-size:18px;">
+        <td style="border:1px solid black; text-align:center; border-top:0; font-weight:bold; font-size:18px;">
             DATE
         </td>
 
         <td 
-          class="border h-10">
-          <div class="h-full w-full flex items-center justify-center text-center" style="font-size: 30px;">
+          class="h-10">
+          <div class="h-full w-full flex items-center justify-center text-center" style="font-size: 30px; border-top:0;">
             {{ $declaration->date_accomplished ?? '—' }}
           </div>
       </td>
     </tr>
 </table>
-    <div class="text-base w-full" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+    <div class="text-base w-full keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 3 of 5
 </div>
 <div style="page-break-before: always;"></div>
@@ -2358,7 +2387,7 @@
   <td class="border-black text-center align-middle italic text-red-600 relative">
 
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:4cm;">
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:3.5cm;">
     @else
       <!-- Placeholder / Text -->
       <div id="signaturePlaceholder">
@@ -2373,7 +2402,7 @@
         </td>
       </tr>
     </table>
-     <div class="w-full text-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+     <div class="w-full text-base keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 4 of 5
 </div>
   </div>
@@ -2463,7 +2492,7 @@
 </div>
 
 
-<div class="w-full text-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+<div class="w-full text-base keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 5 of 5
 </div>
 </div>
