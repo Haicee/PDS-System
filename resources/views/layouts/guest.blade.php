@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>BFAR Region XII</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -23,7 +23,7 @@
             <div class="w-full max-w-8xl flex flex-col items-center text-white text-center drop-shadow-lg gap-1">
                 <div class="flex items-center justify-center gap-4 mb-2">
                     <img src="{{ asset('images/ph-logo.png') }}" alt="Philippines" class="h-16 w-auto object-contain drop-shadow-md sm:h-20 lg:h-24">
-                    <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="h-16 w-auto object-contain drop-shadow-md sm:h-20 lg:h-24">
+                    <img src="{{ asset('images/bfar-logo.png') }}" alt="BFAR" class="h-16 w-auto object-contain drop-shadow-md sm:h-20 lg:h-24">
                     <img src="{{ asset('images/gad-logo.jpg') }}" alt="GAD" class="h-16 w-auto object-contain drop-shadow-md sm:h-20 lg:h-24">
                 </div>
                 <p class="text-base sm:text-xl font-semibold tracking-[0.35em] text-emerald-100 [text-shadow:0_4px_12px_rgba(0,0,0,0.7)]">DEPARTMENT OF AGRICULTURE</p>

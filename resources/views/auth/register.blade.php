@@ -12,7 +12,7 @@
     <div class="flex items-center justify-center px-4">
         <section class="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur max-h-[75vh] overflow-y-auto hide-scrollbar">
             <div class="mb-8 space-y-2">
-                <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
+                <img src="{{ asset('images/bfar-logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
                 <h2 class="text-3xl font-semibold text-slate-900 text-center">Sign up for BFAR XII Portal</h2>
                 <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>

@@ -6,7 +6,7 @@
             <x-auth-session-status class="mb-6" :status="session('status')" />
 
             <div class="mb-4 space-y-2">
-                <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
+                <img src="{{ asset('images/bfar-logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
                 <h2 class="text-center text-3xl font-semibold text-slate-900">Sign in to BFAR XII Portal</h2>
                 <p class="text-center text-sm text-slate-500">Use your official BFAR email account to continue.</p>
             </div>

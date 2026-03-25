@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4">
                     <img src="{{ asset('images/ph-logo.png') }}" class="h-10 w-auto sm:h-14"/>
-                    <img src="{{ asset('images/Bfar logo.png') }}" class="h-10 w-auto sm:h-14"/>
+                    <img src="{{ asset('images/bfar-logo.png') }}" class="h-10 w-auto sm:h-14"/>
                     <img src="{{ asset('images/gad-logo.jpg') }}" class="h-10 w-auto sm:h-14"/>
                 </div>
 
