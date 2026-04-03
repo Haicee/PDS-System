@@ -76,9 +76,9 @@
                     </button>
                 </form>
 
-                <form method="POST" action="{{ route('logout', [], false) }}">
+                <form method="POST" action="{{ route('logout', [], false) }}" id="logout-form">
                     @csrf
-                    <button type="submit" class="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2">
+                    <button type="submit" id="logout-btn" class="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2">
                         Log out
                     </button>
                 </form>
@@ -100,6 +100,8 @@
             const resendForm = document.getElementById('resend-form');
             const updateEmailInput = document.getElementById('new_email');
             const updateEmailBtn = document.getElementById('update-email-btn');
+            const logoutForm = document.getElementById('logout-form');
+            const logoutBtn = document.getElementById('logout-btn');
             const initialEmail = updateEmailInput ? updateEmailInput.value.trim() : '';
             const errorModal = document.getElementById('verify-error-modal');
             const dismissErrorBtn = document.getElementById('dismiss-verify-error');
@@ -147,10 +149,27 @@
             // Handle form submit
             if (resendForm) {
                 resendForm.addEventListener('submit', (event) => {
-                    event.preventDefault(); // prevent reload
+                    // Prevent multiple submissions
+                    if (resendBtn.disabled) {
+                        event.preventDefault();
+                        return false;
+                    }
+                    
+                    // Set cooldown and disable button
                     localStorage.setItem(RESEND_KEY, Date.now().toString());
                     updateResendState();
-                    resendForm.submit(); // proceed with actual request
+                    
+                    // Allow form to submit normally
+                    // Don't prevent default - let the form submit naturally
+                });
+            }
+
+            // Prevent multiple logout submissions
+            if (logoutForm && logoutBtn) {
+                logoutForm.addEventListener('submit', (event) => {
+                    logoutBtn.disabled = true;
+                    logoutBtn.textContent = 'Logging out...';
+                    // Allow form to submit normally
                 });
             }
 

@@ -1,13 +1,28 @@
 <x-guest-layout>
-    <style>
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-    </style>
+    <div>
+        <!-- Custom Animation Styles -->
+        <style>
+            @keyframes pulseRingA { 0%,4%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-330;}12%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-335;}32%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-595;}40%,54%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-660;}62%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-665;}82%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-925;}90%,100%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-990;} }
+
+            @keyframes pulseRingB { 0%,12%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-110;}20%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-115;}40%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-195;}48%,62%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-220;}70%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-225;}90%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-305;}98%,100%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-330;} }
+
+            @keyframes pulseRingC { 0%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:0;}8%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-5;}28%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-175;}36%,58%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-220;}66%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-225;}86%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-395;}94%,100%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-440;} }
+
+            @keyframes pulseRingD { 0%,8%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:0;}16%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-5;}36%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-175;}44%,50%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-220;}58%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-225;}78%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-395;}86%,100%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-440;} }
+
+            .animate-pulse-ring-a { animation: pulseRingA 2s linear infinite; }
+            .animate-pulse-ring-b { animation: pulseRingB 2s linear infinite; }
+            .animate-pulse-ring-c { animation: pulseRingC 2s linear infinite; }
+            .animate-pulse-ring-d { animation: pulseRingD 2s linear infinite; }
+
+            .hide-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .hide-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+        </style>
     @vite(['resources/js/app.js'])
     <div class="flex items-center justify-center px-4">
         <section class="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/60 p-8 shadow-2xl backdrop-blur max-h-[75vh] overflow-y-auto hide-scrollbar">
@@ -22,8 +37,35 @@
                 class="space-y-6"
                 enctype="multipart/form-data"
                 x-data="formCache()"
-                @submit="submitting = true">
+                @submit="submitting = true; isLoading = true">
                 @csrf
+                
+                <!-- Loading Spinner Component -->
+                <div x-show="isLoading" x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 z-50 flex items-end justify-center  ">
+                    <div class="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4">
+                        <!-- Loading Spinner SVG -->
+                        <div class="relative">
+                            <svg class="w-24 h-24" viewBox="0 0 240 240">
+                                <circle class="animate-pulse-ring-a" cx="120" cy="120" r="105" fill="none" stroke="#2cab4f" stroke-width="20" stroke-dasharray="0 660" stroke-dashoffset="-330" stroke-linecap="round"></circle>
+                                <circle class="animate-pulse-ring-b" cx="120" cy="120" r="35" fill="none" stroke="#f49725" stroke-width="20" stroke-dasharray="0 220" stroke-dashoffset="-110" stroke-linecap="round"></circle>
+                                <circle class="animate-pulse-ring-c" cx="85" cy="120" r="70" fill="none" stroke="#255ff4" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                                <circle class="animate-pulse-ring-d" cx="155" cy="120" r="70" fill="none" stroke="#f42f25" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                            </svg>
+                        </div>
+                        
+                        <!-- Loading Message -->
+                        <div class="text-center">
+                            <p class="text-gray-700 font-medium">Creating your account...</p>
+                            <p class="text-gray-500 text-sm mt-1">Please wait...</p>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Name -->
                 <div>

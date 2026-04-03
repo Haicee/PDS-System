@@ -1,19 +1,61 @@
 <x-guest-layout>
-    <style>
-        @keyframes otp-shake {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-6px); }
-            40% { transform: translateX(6px); }
-            60% { transform: translateX(-4px); }
-            80% { transform: translateX(4px); }
-        }
+    <div x-data="{ isLoading: false }">
+        <!-- Custom Animation Styles -->
+        <style>
+            @keyframes pulseRingA { 0%,4%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-330;}12%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-335;}32%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-595;}40%,54%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-660;}62%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-665;}82%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-925;}90%,100%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-990;} }
 
-        .otp-shake {
-            animation: otp-shake 0.4s ease;
-        }
-    </style>
-    <div class="flex items-center justify-center px-4">
-        <section class="w-full max-w-md rounded-3xl border border-white/10 bg-white/70 p-8 shadow-2xl backdrop-blur">
+            @keyframes pulseRingB { 0%,12%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-110;}20%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-115;}40%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-195;}48%,62%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-220;}70%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-225;}90%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-305;}98%,100%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-330;} }
+
+            @keyframes pulseRingC { 0%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:0;}8%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-5;}28%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-175;}36%,58%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-220;}66%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-225;}86%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-395;}94%,100%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-440;} }
+
+            @keyframes pulseRingD { 0%,8%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:0;}16%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-5;}36%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-175;}44%,50%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-220;}58%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-225;}78%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-395;}86%,100%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-440;} }
+
+            .animate-pulse-ring-a { animation: pulseRingA 2s linear infinite; }
+            .animate-pulse-ring-b { animation: pulseRingB 2s linear infinite; }
+            .animate-pulse-ring-c { animation: pulseRingC 2s linear infinite; }
+            .animate-pulse-ring-d { animation: pulseRingD 2s linear infinite; }
+
+            @keyframes otp-shake {
+                0%, 100% { transform: translateX(0); }
+                20% { transform: translateX(-6px); }
+                40% { transform: translateX(6px); }
+                60% { transform: translateX(-4px); }
+                80% { transform: translateX(4px); }
+            }
+
+            .otp-shake {
+                animation: otp-shake 0.4s ease;
+            }
+        </style>
+        
+        <div class="flex items-center justify-center px-4">
+            <section class="w-full max-w-md rounded-3xl border border-white/10 bg-white/70 p-8 shadow-2xl backdrop-blur">
+                <!-- Loading Spinner Component -->
+                <div x-show="isLoading" x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 z-50 flex items-center justify-center ">
+                    <div class="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4">
+                        <!-- Loading Spinner SVG -->
+                        <div class="relative">
+                            <svg class="w-24 h-24" viewBox="0 0 240 240">
+                                <circle class="animate-pulse-ring-a" cx="120" cy="120" r="105" fill="none" stroke="#2cab4f" stroke-width="20" stroke-dasharray="0 660" stroke-dashoffset="-330" stroke-linecap="round"></circle>
+                                <circle class="animate-pulse-ring-b" cx="120" cy="120" r="35" fill="none" stroke="#f49725" stroke-width="20" stroke-dasharray="0 220" stroke-dashoffset="-110" stroke-linecap="round"></circle>
+                                <circle class="animate-pulse-ring-c" cx="85" cy="120" r="70" fill="none" stroke="#255ff4" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                                <circle class="animate-pulse-ring-d" cx="155" cy="120" r="70" fill="none" stroke="#f42f25" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                            </svg>
+                        </div>
+                        
+                        <!-- Loading Message -->
+                        <div class="text-center">
+                            <p class="text-gray-700 font-medium">Verifying OTP...</p>
+                            <p class="text-gray-500 text-sm mt-1">Please wait...</p>
+                        </div>
+                    </div>
+                </div>
             <div class="mb-6 space-y-2 text-center">
                 <img src="{{ asset('images/Bfar logo.png') }}" alt="BFAR" class="mx-auto h-14 w-auto object-contain drop-shadow-md">
                 <h2 class="text-2xl font-semibold text-slate-900">Enter your one-time passcode</h2>
@@ -28,7 +70,7 @@
                 <div id="statusAlert" class="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" style="display: none;"></div>
             @endif
 
-            <form method="POST" action="{{ route('otp.verify', [], false) }}" class="space-y-5" id="otpForm">
+            <form method="POST" action="{{ route('otp.verify', [], false) }}" class="space-y-5" id="otpForm" @submit="isLoading = true">
                 @csrf
                 <div>
                     <label class="text-sm font-medium text-slate-700 block mb-2">One-time passcode</label>
@@ -94,6 +136,11 @@ function updateOtpValue() {
 
     if (!autoSubmitted && otp.length === otpInputs.length && otp.match(/^\d{6}$/)) {
         autoSubmitted = true;
+        // Set loading state before auto-submit
+        const alpineEl = document.querySelector('[x-data]');
+        if (alpineEl && alpineEl.__x) {
+            alpineEl.__x.$data.isLoading = true;
+        }
         otpForm.requestSubmit();
     }
 }

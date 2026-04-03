@@ -161,7 +161,7 @@
                                 <th class="px-4 sm:px-6 py-2.5 sm:py-3 text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white text-xs sm:text-sm text-slate-700">
+                        <!--  <tbody class="divide-y divide-slate-100 bg-white text-xs sm:text-sm text-slate-700">
                             @foreach ($stats['recentSubmissions'] as $submission)
                                 <tr class="hover:bg-slate-50">
                                     <td class="px-4 sm:px-6 py-3 sm:py-4">
@@ -189,7 +189,7 @@
                                     </td>
                                 </tr>
                             @endforeach
-                        </tbody>
+                        </tbody>  -->
                     </table>
                 </div>
             </div>
