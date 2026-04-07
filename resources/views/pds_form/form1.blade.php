@@ -630,7 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </p>
 
   <!-- MAIN TABLE -->
-  <table class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base w-[100%]" >
+  <table data-section="personal_information" class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base w-[100%]" >
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -1377,7 +1377,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </table>
 
 
-   <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+   <table data-section="family_background" class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
   <style>
     /* Show education add buttons only on hover */
     tr[data-education-base] .edu-add-btn {
@@ -2156,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </table>
 
 
-<table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+<table data-section="educational_background" class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
 
   <!-- EXACT COLUMN GRID (8 columns) -->
   <colgroup>
@@ -3138,6 +3138,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const send = () => {
+      if (!navigator.onLine) {
+        console.warn('Auto-save skipped: offline');
+        showOverlay(true);
+        failureCount += 1;
+        const offlineDelay = Math.min(baseDelay * failureCount, maxDelay);
+        timer = setTimeout(send, offlineDelay);
+        return;
+      }
       const formData = new FormData(form);
       appendSingleSelectGroups(formData);
       appendEmptyEducationExtras(formData);
@@ -3422,5 +3430,19 @@ input[type="date"]::-moz-datetime-edit-year-field {
 }
 </style>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 
 </x-app-layout>

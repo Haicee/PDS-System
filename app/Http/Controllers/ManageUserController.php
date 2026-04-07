@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\ProfileEditRequest;
-use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use App\Notifications\EmployeeInfoUpdated;
+use App\Services\ActivityLogger;
 
 class ManageUserController extends Controller
 {
@@ -18,8 +18,10 @@ class ManageUserController extends Controller
     public function index(Request $request)
         {
             $units = config('units.list', []);
+            $status = $request->query('status');
 
             $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned', 'created_at')
+                ->where('is_archive', false) // Only show non-archived users
                 ->with('profile')
                 ->latest('created_at')
                 ->get()
@@ -50,8 +52,93 @@ class ManageUserController extends Controller
                 })
                 ->values();
 
-            return view('manage-user', compact('employees', 'units'));
+            return view('manage-user', compact('employees', 'units', 'status'));
         }
+
+    // archive page
+    public function archive(Request $request)
+    {
+        $units = config('units.list', []);
+        $status = $request->query('status');
+
+        // Get archived users (is_archive = 1)
+        $employees = User::select('id', 'name', 'gender', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned', 'updated_at')
+            ->where('is_archive', true)
+            ->latest('updated_at')
+            ->get()
+            ->map(function (User $user) {
+                $avatar = $this->avatarUrl($user->profile?->profile);
+                $latestEditRequest = ProfileEditRequest::where('user_id', $user->id)
+                    ->latest()
+                    ->first();
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'gender' => $user->gender,
+                    'unit' => $user->unit,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'type' => $user->type,
+                    'status' => $user->status,
+                    'location' => $user->location_assigned,
+                    'archived_at' => $user->updated_at?->toIso8601String(),
+                    'avatar' => $avatar,
+                    'edit_request' => $latestEditRequest ? [
+                        'id' => $latestEditRequest->id,
+                        'status' => $latestEditRequest->status,
+                        'remarks' => $latestEditRequest->remarks,
+                    ] : null,
+                ];
+            })
+            ->values();
+
+        return view('archive', compact('employees', 'units', 'status'));
+    }
+
+    // archive user
+    public function archiveUser(User $user)
+    {
+        $user->update([
+            'is_archive' => true,
+            'archived_at' => now(),
+            'archived_by' => auth()->user()->name,
+            'status' => 'Inactive', // Also update status to Inactive
+        ]);
+
+        ActivityLogger::log(
+            'archive',
+            "Archived the employee account.",
+            ['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'type' => $user->type, 'unit' => $user->unit]
+        );
+
+        return response()->json([
+            'message' => 'User archived successfully',
+            'user' => $user->only(['id','name','gender','unit','email','phone','type','status','location_assigned', 'is_archive']),
+        ]);
+    }
+
+    // unarchive user
+    public function unarchiveUser(User $user)
+    {
+        $user->update([
+            'is_archive' => false,
+            'archived_at' => null,
+            'archived_by' => null,
+            'status' => 'Active', // Also update status to Active
+        ]);
+
+        ActivityLogger::log(
+            'unarchive',
+            "Restored (unarchived) the employee account.",
+            ['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'type' => $user->type, 'unit' => $user->unit]
+        );
+
+        return response()->json([
+            'message' => 'User unarchived successfully',
+            'user' => $user->only(['id','name','gender','unit','email','phone','type','status','location_assigned', 'is_archive']),
+        ]);
+    }
 
     
         // update
@@ -64,7 +151,7 @@ class ManageUserController extends Controller
             'unit' => ['required', Rule::in($units)],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'phone' => ['required', 'digits:11'],
-            'type' => ['required', 'in:Permanent Employee,Contract of Service'],
+            'type' => ['required', 'in:Permanent Employee,Contract of Service,Job Order'],
             'status' => ['required', 'in:Active,Inactive'],
             'location_assigned' => ['required', 'string', 'max:255'],
         ]);
@@ -73,6 +160,27 @@ class ManageUserController extends Controller
 
         $user->fill($data);
         $user->save();
+
+        // Check if status changed to Inactive and automatically archive
+        $shouldArchive = false;
+        if (isset($data['status']) && $data['status'] === 'Inactive' && $original['status'] !== 'Inactive') {
+            $user->update([
+                'is_archive' => true,
+                'archived_at' => now(),
+                'archived_by' => auth()->user()->name,
+            ]);
+            $shouldArchive = true;
+        }
+        // Check if status changed from Inactive to Active and automatically unarchive
+        elseif (isset($data['status']) && $data['status'] === 'Active' && $original['status'] === 'Inactive' && $user->is_archive) {
+            $user->update([
+                'is_archive' => false,
+                'archived_at' => null,
+                'archived_by' => null,
+            ]);
+        }
+        // Skip automatic archiving if this was a manual archive/unarchive action
+        // because status was already handled in the respective methods
 
         $changed = [];
         foreach ($data as $key => $value) {
@@ -94,11 +202,31 @@ class ManageUserController extends Controller
         if (!empty($changed)) {
             Notification::send($user, new EmployeeInfoUpdated($user, $changed));
             $this->trimNotificationHistory($user);
+
+            $changedList = implode(', ', $changed);
+            ActivityLogger::log(
+                'update',
+                "Updated the information. Changed fields: {$changedList}.",
+                ['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'type' => $user->type, 'unit' => $user->unit],
+                ['changed_fields' => $changed]
+            );
+        }
+
+        // Prepare response message based on what happened
+        $message = 'User updated';
+        if ($shouldArchive) {
+            $message = 'User status changed to Inactive and automatically archived';
+        } elseif (isset($data['status']) && $data['status'] === 'Active' && $original['status'] === 'Inactive' && isset($original['is_archive']) && $original['is_archive']) {
+            $message = 'User status changed to Active and automatically unarchived';
+        } elseif (isset($data['status']) && $data['status'] === 'Inactive' && $original['status'] !== 'Inactive' && !isset($data['is_archive'])) {
+            $message = 'User status changed to Inactive and automatically archived';
+        } elseif (isset($data['status']) && $data['status'] === 'Active' && $original['status'] === 'Inactive' && !isset($data['is_archive'])) {
+            $message = 'User status changed to Active and automatically unarchived';
         }
 
         return response()->json([
-            'message' => 'User updated',
-            'user' => $user->only(['id','name','gender','unit','email','phone','type','status','location_assigned']),
+            'message' => $message,
+            'user' => $user->only(['id','name','gender','unit','email','phone','type','status','location_assigned', 'is_archive']),
         ]);
     }
 
@@ -121,6 +249,11 @@ class ManageUserController extends Controller
     // delete all account info
     public function destroy(User $user)
     {
+        $deletedName  = $user->name;
+        $deletedEmail = $user->email;
+        $deletedType  = $user->type;
+        $deletedUnit  = $user->unit;
+
         DB::transaction(function () use ($user) {
             // Collect file paths before deleting rows
             $photoPaths = DB::table('pds_signature_files')
@@ -203,6 +336,12 @@ class ManageUserController extends Controller
 
             $user->delete();
         });
+
+        ActivityLogger::log(
+            'delete',
+            "Permanently deleted the employee account.",
+            ['id' => null, 'name' => $deletedName, 'email' => $deletedEmail, 'type' => $deletedType, 'unit' => $deletedUnit]
+        );
 
         return response()->json([
             'message' => 'User deleted',

@@ -5,8 +5,8 @@
         <div class="mx-auto px-2 sm:px-6 lg:px-20 space-y-10">
 
             <section class="flex flex-col items-center gap-10 py-6">
-                <div class="flex flex-wrap justify-center gap-4 sm:gap-5 w-full max-w-9xl mx-auto">
-                    <div class="rounded-2xl bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-md shadow-sky-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/6">
+                <div class="grid w-full max-w-9xl mx-auto grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+                    <a href="{{ route('manage-user') }}?status=permanent" class="rounded-2xl bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-md shadow-sky-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/7 hover:shadow-lg hover:shadow-sky-200/60 transition-all duration-200 cursor-pointer">
                         <div class="p-4 sm:p-5 flex flex-col justify-between w-full">
                             <p class="text-base sm:text-lg font-semibold">Permanent Employees</p>
                             <div class="mt-3 sm:mt-4 flex items-center justify-between">
@@ -18,9 +18,9 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-md shadow-emerald-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/6">
+                    <a href="{{ route('manage-user') }}?status=contract" class="rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-md shadow-emerald-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/7 hover:shadow-lg hover:shadow-emerald-200/60 transition-all duration-200 cursor-pointer">
                         <div class="p-4 sm:p-5 flex flex-col justify-between w-full">
                             <p class="text-base sm:text-lg font-semibold">Contract of Service</p>
                             <div class="mt-3 sm:mt-4 flex items-center justify-between">
@@ -32,8 +32,22 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md shadow-amber-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/6">
+                    </a>
+
+                    <a href="{{ route('manage-user') }}?status=joborder" class="rounded-2xl bg-gradient-to-r from-purple-400 to-indigo-500 text-white shadow-md shadow-purple-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/7 hover:shadow-lg hover:shadow-purple-200/60 transition-all duration-200 cursor-pointer">
+                        <div class="p-4 sm:p-5 flex flex-col justify-between w-full">
+                            <p class="text-base sm:text-lg font-semibold">Job Order</p>
+                            <div class="mt-3 sm:mt-4 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-white/15">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase-icon lucide-briefcase"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect x="2" y="6" width="20" height="12" rx="2"/></svg>
+                                    </span>
+                                    <p class="text-3xl sm:text-4xl font-semibold leading-none">{{ number_format($stats['jobOrderEmployees'] ?? 0) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="{{ route('pds.form', ['status' => 'pending']) }}" class="rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md shadow-amber-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/7 hover:shadow-lg hover:shadow-amber-200/60 transition-all duration-200 cursor-pointer">
                         <div class="p-4 sm:p-5 flex flex-col justify-between w-full">
                             <p class="text-base sm:text-lg font-semibold">Pending PDS</p>
                             <div class="mt-3 sm:mt-4 flex items-center justify-between">
@@ -45,9 +59,9 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-400 text-white shadow-md shadow-sky-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/6">
+                    <a href="{{ route('pds.form', ['status' => 'approved']) }}" class="rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-400 text-white shadow-md shadow-sky-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/7 hover:shadow-lg hover:shadow-sky-200/60 transition-all duration-200 cursor-pointer">
                         <div class="p-4 sm:p-5 flex flex-col justify-between w-full">
                             <p class="text-base sm:text-lg font-semibold">Approved PDS</p>
                             <div class="mt-3 sm:mt-4 flex items-center justify-between">
@@ -59,9 +73,9 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="rounded-2xl bg-gradient-to-r from-rose-400 to-pink-500 text-white shadow-md shadow-rose-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/6">
+                    <a href="{{ route('pds.form', ['status' => 'rejected']) }}" class="rounded-2xl bg-gradient-to-r from-rose-400 to-pink-500 text-white shadow-md shadow-rose-200/40 border border-white/10 min-h-[8.5rem] w-full max-w-[320px] flex basis-1/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/7 hover:shadow-lg hover:shadow-rose-200/60 transition-all duration-200 cursor-pointer">
                         <div class="p-4 sm:p-5 flex flex-col justify-between w-full">
                             <p class="text-base sm:text-lg font-semibold">Rejected PDS</p>
                             <div class="mt-3 sm:mt-4 flex items-center justify-between">
@@ -73,13 +87,13 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
 
                 
             </section>
 
-            <div x-data="dashboardPreview(@js($stats['recentSubmissions']))" x-init="init()" class="space-y-6">
+            <div x-data="dashboardPreview(@js($stats['recentSubmissions']))" x-init="init()" class="space-y-12">
 
             <!-- Recent submissions table helps admins monitor latest activity -->
             <div class="bg-white shadow-sm sm:rounded-2xl border border-slate-100">
@@ -148,49 +162,95 @@
                     <span class="text-xs sm:text-sm text-slate-500 font-semibold">Updated {{ now()->format('M d, Y') }}</span>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full divide-y divide-slate-100">
-                        <thead class="bg-slate-50 text-left text-xs sm:text-sm font-semibold uppercase text-slate-500">
-                            <tr>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Employee</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Division/Section/Unit/Office</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Email</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Phone</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Place of Assignment</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Date Submitted</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <!--  <tbody class="divide-y divide-slate-100 bg-white text-xs sm:text-sm text-slate-700">
-                            @foreach ($stats['recentSubmissions'] as $submission)
-                                <tr class="hover:bg-slate-50">
-                                    <td class="px-4 sm:px-6 py-3 sm:py-4">
-                                        <div class="flex items-center gap-3">
-                                            <img src="{{ $submission['avatar'] }}" alt="{{ $submission['name'] }} avatar" class="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover shadow-sm">
-                                            <div>
-                                                <p class="font-semibold text-slate-900 text-sm sm:text-base">{{ $submission['name'] }}</p>
-                                                <span class="text-slate-500 text-xs sm:text-sm">{{ $submission['type'] }}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 sm:px-6 py-3 sm:py-4">{{ $submission['unit'] }}</td>
-                                    <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500">{{ $submission['email'] }}</td>
-                                    <td class="px-4 sm:px-6 py-3 sm:py-4">{{ $submission['phone'] }}</td>
-                                    <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500">{{ $submission['location'] }}</td>
-                                    <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500">{{ $submission['submitted_at'] }}</td>
-                                    <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                                        <button
-                                            type="button"
-                                            class="inline-flex items-center rounded-full border border-indigo-200 px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
-                                            @click.prevent="openById({{ $submission['id'] }}, @js($submission))"
-                                        >
-                                            View
-                                        </button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>  -->
-                    </table>
+                <div class="overflow-hidden">
+                    <div class="max-h-[580px] overflow-y-auto">
+                        <div class="min-w-full">
+                            <div class="overflow-x-auto">
+                                <table class="w-full divide-y divide-slate-100">
+                                    <thead class="bg-slate-50 text-left text-xs sm:text-sm font-semibold uppercase text-slate-500">
+                                        <tr>
+                                            <th class="px-4 sm:px-6 py-2.5 sm:py-3">Admin</th>
+                                            <th class="px-4 sm:px-6 py-2.5 sm:py-3">Role</th>
+                                            <th class="px-4 sm:px-6 py-2.5 sm:py-3">Activity</th>
+                                            <th class="px-4 sm:px-6 py-2.5 sm:py-3">Employee</th>
+                                            <th class="px-4 sm:px-6 py-2.5 sm:py-3">Date & Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 bg-white text-xs sm:text-sm text-slate-700">
+                                        @forelse ($stats['recentActivityLogs'] as $log)
+                                            <tr class="hover:bg-slate-50">
+                                                <td class="px-4 sm:px-6 py-3 sm:py-4">
+                                                    <p class="font-semibold text-slate-900">{{ $log['admin_name'] }}</p>
+                                                </td>
+                                                <td class="px-4 sm:px-6 py-3 sm:py-4">
+                                                    @php
+                                                        $roleKey = strtolower($log['admin_role']);
+                                                        $roleBadge = match(true) {
+                                                            str_contains($roleKey, 'main') => 'bg-indigo-100 text-indigo-700',
+                                                            default => 'bg-slate-100 text-slate-600',
+                                                        };
+                                                    @endphp
+                                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $roleBadge }}">
+                                                        {{ $log['admin_role'] }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 sm:px-6 py-3 sm:py-4 max-w-xs">
+                                                    @php
+                                                        $actionType = $log['action_type'];
+                                                        $actionBadge = match($actionType) {
+                                                            'archive'              => 'bg-amber-100 text-amber-700',
+                                                            'unarchive'            => 'bg-teal-100 text-teal-700',
+                                                            'delete', 'delete_admin' => 'bg-rose-100 text-rose-700',
+                                                            'update', 'update_admin' => 'bg-sky-100 text-sky-700',
+                                                            'create_admin'         => 'bg-emerald-100 text-emerald-700',
+                                                            'pds_status'           => 'bg-purple-100 text-purple-700',
+                                                            'profile_edit_approved'=> 'bg-green-100 text-green-700',
+                                                            'profile_edit_rejected'=> 'bg-red-100 text-red-700',
+                                                            default                => 'bg-slate-100 text-slate-600',
+                                                        };
+                                                        $actionLabel = match($actionType) {
+                                                            'archive'              => 'Archive',
+                                                            'unarchive'            => 'Unarchive',
+                                                            'delete'               => 'Delete',
+                                                            'delete_admin'         => 'Delete Admin',
+                                                            'update'               => 'Update',
+                                                            'update_admin'         => 'Update Admin',
+                                                            'create_admin'         => 'Create Admin',
+                                                            'pds_status'           => 'PDS Status',
+                                                            'profile_edit_approved'=> 'Edit Approved',
+                                                            'profile_edit_rejected'=> 'Edit Rejected',
+                                                            default                => ucfirst($actionType),
+                                                        };
+                                                    @endphp
+                                                    <div class="flex flex-col gap-1">
+                                                        <span class="inline-flex items-center self-start rounded-full px-2 py-0.5 text-[10px] font-bold uppercase {{ $actionBadge }}">
+                                                            {{ $actionLabel }}
+                                                        </span>
+                                                        <span class="text-slate-600 leading-snug">{{ $log['activity'] }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 sm:px-6 py-3 sm:py-4">
+                                                    @if($log['target_user_name'] !== '—')
+                                                        <p class="font-semibold text-slate-900">{{ $log['target_user_name'] }}</p>
+                                                        <span class="text-slate-400 text-xs">{{ $log['target_user_type'] }}</span>
+                                                    @else
+                                                        <span class="text-slate-400">—</span>
+                                                    @endif
+                                                </td>
+                                                <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500 whitespace-nowrap">{{ $log['date_time'] }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="5" class="px-4 sm:px-6 py-8 text-center text-slate-400 text-sm">
+                                                    No activity recorded yet.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

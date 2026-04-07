@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4">
                     <img src="{{ asset('images/ph-logo.png') }}" class="h-10 w-auto sm:h-14"/>
-                    <img src="{{ asset('images/bfar-xlogo.png') }}" class="h-10 w-auto sm:h-14"/>
+                    <img src="{{ asset('images/bfar-logo.png') }}" class="h-10 w-auto sm:h-14"/>
                     <img src="{{ asset('images/gad-logo.jpg') }}" class="h-10 w-auto sm:h-14"/>
                 </div>
 
@@ -22,7 +22,7 @@
                     <x-nav-link :href="route('pds.form')" :active="request()->routeIs('pds.form')" class="font-semibold text-xs md:text-base">
                         {{ __('PDS Review') }}
                     </x-nav-link>
-                </div>x
+                </div>
 
                 <!-- Manage User screen -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-6 sm:flex">
@@ -130,6 +130,10 @@
 
                             <x-dropdown-link :href="route('admin.users')">
                                 {{ __('Admins') }}
+                            </x-dropdown-link>
+
+                            <x-dropdown-link :href="route('archive')">
+                                {{ __('Archive') }}
                             </x-dropdown-link>
 
                             <!-- Authentication -->

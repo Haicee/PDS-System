@@ -38,6 +38,9 @@ class AuthenticatedSessionController extends Controller
         $guard = Auth::guard('admin')->check() ? 'admin' : 'web';
         $user = Auth::guard($guard)->user();
 
+        // Track last login time
+        $user->update(['last_login_at' => now()]);
+
         // Require verified email for users that implement it
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
             $user->sendEmailVerificationNotification();

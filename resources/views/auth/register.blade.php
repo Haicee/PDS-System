@@ -32,14 +32,43 @@
                 <p class="text-sm text-slate-500 text-center">Fill in your details to get started.</p>
             </div>
 
-            <form method="POST" 
+            <form id="register-form" method="POST" 
                 action="{{ route('register', [], false) }}" 
                 class="space-y-6"
                 enctype="multipart/form-data"
                 x-data="formCache()"
-                @submit="submitting = true; isLoading = true">
+                @submit.prevent="handleRegisterSubmit">
                 @csrf
-                
+
+                <!-- Network Error Modal -->
+                <div x-show="showNetworkError" x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div class="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 flex flex-col items-center space-y-4">
+                        <!-- Error Icon -->
+                        <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div class="text-center">
+                            <h3 class="text-xl font-semibold text-gray-900">No Internet Connection</h3>
+                            <p class="text-gray-600 mt-2">Please check your internet connection and try again.</p>
+                        </div>
+
+                        <!-- Retry Button -->
+                        <button @click="showNetworkError = false" class="w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-sky-500 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Loading Spinner Component -->
                 <div x-show="isLoading" x-transition:enter="transition ease-out duration-300"
                      x-transition:enter-start="opacity-0"
@@ -105,12 +134,13 @@
                 <div class="grid gap-6 md:grid-cols-2">
                     <!-- Type --> 
                     <div>
-                        <label for="type" class="text-md font-medium text-slate-700">Employee Status</label>
+                        <label for="type" class="text-md font-medium text-slate-700">Employment Status</label>
                         <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-search-icon lucide-user-round-search"><circle cx="10" cy="8" r="5"/><path d="M2 21a8 8 0 0 1 10.434-7.62"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.9-1.9"/></svg>  
                             <select id="type" name="type" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>
                                 <option value="Permanent Employee" {{ old('type', 'Permanent Employee') === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
                                 <option value="Contract of Service" {{ old('type') === 'Contract of Service' ? 'selected' : '' }}>Contract of Service</option>
+                                <option value="Job Order" {{ old('type') === 'Job Order' ? 'selected' : '' }}>Job Order</option>
                             </select>
                         </div>
                         <x-input-error :messages="$errors->get('type')" class="mt-2" />
@@ -320,6 +350,21 @@ document.addEventListener("DOMContentLoaded", () => {
 localStorage.removeItem("register_cache");
 </script>
 @endif
+
+<script>
+// Network error handling for registration form
+function handleRegisterSubmit() {
+    if (!navigator.onLine) {
+        this.showNetworkError = true;
+        return;
+    }
+    this.submitting = true;
+    this.isLoading = true;
+    this.$nextTick(() => {
+        document.getElementById('register-form').submit();
+    });
+}
+</script>
 </x-guest-layout>
 
 

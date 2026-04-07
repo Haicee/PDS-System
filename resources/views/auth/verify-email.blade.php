@@ -1,4 +1,34 @@
 <x-guest-layout>
+    <div x-data="{ isLoading: false, showNetworkError: false }">
+        <!-- Network Error Modal -->
+        <div x-show="showNetworkError" x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl p-8 shadow-2xl max-w-md mx-4 flex flex-col items-center space-y-4">
+                <!-- Error Icon -->
+                <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+
+                <!-- Error Message -->
+                <div class="text-center">
+                    <h3 class="text-xl font-semibold text-gray-900">No Internet Connection</h3>
+                    <p class="text-gray-600 mt-2">Please check your internet connection and try again.</p>
+                </div>
+
+                <!-- Retry Button -->
+                <button @click="showNetworkError = false" class="w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-sky-500 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
+                    Try Again
+                </button>
+            </div>
+        </div>
+
     @if ($errors->has('email'))
         <div id="verify-error-modal" class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4">
             <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl ring-1 ring-rose-200 text-center p-8 space-y-4">
@@ -40,6 +70,11 @@
                     <div class="rounded-xl bg-emerald-50 px-4 py-3 text-emerald-700">A fresh verification link was sent.</div>
                 @elseif (session('status') == 'verification-email-updated')
                     <div class="rounded-xl bg-emerald-50 px-4 py-3 text-emerald-700">Email updated. A new verification link was sent.</div>
+                @elseif (session('status') == 'registration-successful-email-failed')
+                    <div class="rounded-xl bg-amber-50 px-4 py-3 text-amber-700">
+                        <p class="font-semibold">Registration successful, but email could not be sent.</p>
+                        <p class="text-sm mt-1">Please check your internet connection and try resending the verification email below.</p>
+                    </div>
                 @endif
 
                 <div id="status-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-rose-700"></div>
@@ -48,7 +83,7 @@
                 <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <p class="text-sm font-semibold text-slate-800">Entered the wrong email?</p>
                     <p class="text-xs text-slate-600">Update your email and we will send a new activation link.</p>
-                    <form method="POST" action="{{ route('verification.update', [], false) }}" class="mt-3 space-y-2" id="update-email-form">
+                    <form method="POST" action="{{ route('verification.update', [], false) }}" class="mt-3 space-y-2" id="update-email-form" @submit.prevent="handleUpdateEmail">
                         @csrf
                         <label for="new_email" class="text-xs font-medium text-slate-700">New email</label>
                         <input id="new_email" name="email" type="email" value="{{ old('email', auth()->user()->email) }}" required
@@ -65,7 +100,7 @@
 
             <!-- Footer Actions -->
             <div class="flex flex-wrap items-center gap-3 border-t border-slate-100 px-6 py-4">
-                <form method="POST" action="{{ route('verification.send', [], false) }}" class="flex-1 min-w-[10rem]" id="resend-form">
+                <form method="POST" action="{{ route('verification.send', [], false) }}" class="flex-1 min-w-[10rem]" id="resend-form" @submit.prevent="handleResend">
                     @csrf
                     <button id="resend-btn" type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -149,9 +184,19 @@
             // Handle form submit
             if (resendForm) {
                 resendForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    
                     // Prevent multiple submissions
                     if (resendBtn.disabled) {
-                        event.preventDefault();
+                        return false;
+                    }
+                    
+                    // Check network connectivity
+                    if (!navigator.onLine) {
+                        const alpineEl = document.querySelector('[x-data]');
+                        if (alpineEl && alpineEl.__x) {
+                            alpineEl.__x.$data.showNetworkError = true;
+                        }
                         return false;
                     }
                     
@@ -160,7 +205,27 @@
                     updateResendState();
                     
                     // Allow form to submit normally
-                    // Don't prevent default - let the form submit naturally
+                    resendForm.submit();
+                });
+            }
+
+            // Handle update email form
+            const updateEmailForm = document.getElementById('update-email-form');
+            if (updateEmailForm) {
+                updateEmailForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    
+                    // Check network connectivity
+                    if (!navigator.onLine) {
+                        const alpineEl = document.querySelector('[x-data]');
+                        if (alpineEl && alpineEl.__x) {
+                            alpineEl.__x.$data.showNetworkError = true;
+                        }
+                        return false;
+                    }
+                    
+                    // Allow form to submit normally
+                    updateEmailForm.submit();
                 });
             }
 
@@ -224,6 +289,33 @@
             } else {
                 console.warn('User not authenticated for SSE verification monitoring');
             }
+
+            // Alpine.js functions for form handling
+            function handleResend() {
+                if (!navigator.onLine) {
+                    this.showNetworkError = true;
+                    return;
+                }
+                if (resendBtn.disabled) {
+                    return;
+                }
+                localStorage.setItem(RESEND_KEY, Date.now().toString());
+                updateResendState();
+                this.$nextTick(() => {
+                    resendForm.submit();
+                });
+            }
+
+            function handleUpdateEmail() {
+                if (!navigator.onLine) {
+                    this.showNetworkError = true;
+                    return;
+                }
+                this.$nextTick(() => {
+                    updateEmailForm.submit();
+                });
+            }
         })();
     </script>
+    </div>
 </x-guest-layout>

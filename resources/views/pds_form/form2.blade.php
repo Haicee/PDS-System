@@ -650,7 +650,7 @@
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
-    <table class="border border-black w-full font-['Arial_Narrow','sans-serif']">
+    <table data-section="civil_service" class="border border-black w-full font-['Arial_Narrow','sans-serif']">
 
       <colgroup>
         <col style="width: 35%;">
@@ -706,7 +706,7 @@
     </table>
     
 
-    <table class="border border-black font-['Arial_Narrow','sans-serif'] w-full">
+    <table data-section="work_experience" class="border border-black font-['Arial_Narrow','sans-serif'] w-full">
 
       <colgroup>
         <col style="width: 8%;">
@@ -900,4 +900,19 @@ input[type="date"]::-moz-datetime-edit-year-field {
   text-align: center !important;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 </x-app-layout>

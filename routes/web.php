@@ -451,6 +451,57 @@ Route::delete('/manage-user/{user}', [ManageUserController::class, 'destroy'])
     ->middleware(['auth:admin'])
     ->name('manage-user.destroy');
 
+Route::post('/manage-user/{user}/archive', [ManageUserController::class, 'archiveUser'])
+    ->middleware(['auth:admin'])
+    ->name('manage-user.archive');
+
+// Archive routes
+Route::get('/archive', [ManageUserController::class, 'archive'])
+    ->middleware(['auth:admin'])
+    ->name('archive');
+
+Route::post('/archive/{user}/unarchive', [ManageUserController::class, 'unarchiveUser'])
+    ->middleware(['auth:admin'])
+    ->name('archive.unarchive');
+
+Route::delete('/archive/{user}', [ManageUserController::class, 'destroy'])
+    ->middleware(['auth:admin'])
+    ->name('archive.delete');
+
+Route::get('/archive/export', function () {
+    if (! class_exists(ZipArchive::class)) {
+        abort(500, 'ZipArchive PHP extension is required to export XLSX. Please enable php_zip.');
+    }
+
+    $employees = \App\Models\User::select('name', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned', 'archived_at', 'archived_by')
+        ->where('is_archive', true)
+        ->latest('archived_at')
+        ->get()
+        ->map(function ($employee) {
+            return [
+                'name' => $employee->name,
+                'department' => $employee->unit,
+                'email' => $employee->email,
+                'phone' => $employee->phone,
+                'type' => $employee->type,
+                'status' => $employee->status,
+                'location' => $employee->location_assigned,
+                'archived_at' => $employee->archived_at?->format('Y-m-d H:i:s'),
+                'archived_by' => $employee->archived_by,
+            ];
+        })
+        ->toArray();
+
+    $columns = ['Name', 'Department', 'Email', 'Phone', 'Employee Status', 'Status', 'Place of Assignment', 'Archived At', 'Archived By'];
+    $colWidths = [25, 18, 32, 18, 18, 14, 30, 20, 20];
+
+    $xlsx = buildEmployeesXlsx($columns, $employees, $colWidths);
+
+    return response($xlsx, 200, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition' => 'attachment; filename="BFAR_Archived_Employees_' . date('Y-m-d') . '.xlsx"',
+    ]);
+})->middleware(['auth:admin'])->name('archive.export');
 
 
 if (! function_exists('buildEmployeesXlsx')) {
@@ -621,6 +672,11 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::patch('/admin/profile', [AdminProfileController::class, 'updateProfile'])->name('admin.profile.update');
     Route::put('/admin/profile/password', [AdminProfileController::class, 'updatePassword'])->name('admin.profile.password');
 });
+
+// Admin Activity History
+Route::get('/admin/activity', [AdminActivityController::class, 'index'])
+    ->middleware(['auth:admin'])
+    ->name('admin.activity.index');
 
 
 // Employee creation (Add Employee modal)

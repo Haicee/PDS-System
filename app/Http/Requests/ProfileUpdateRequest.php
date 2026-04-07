@@ -30,7 +30,7 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
-            'type' => ['required', 'in:Permanent Employee,Contract of Service'],
+            'type' => ['required', 'in:Permanent Employee,Contract of Service,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
             'profile_photo' => ['nullable', 'image', 'max:5120'],
         ];
