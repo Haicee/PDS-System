@@ -183,9 +183,20 @@ class ManageUserController extends Controller
             }
 
             // Also remove notifications that reference this user in payload (e.g., sent to admins)
-            DB::table('notifications')
-                ->whereRaw("JSON_EXTRACT(data, '$.user_id') = ?", [$user->id])
-                ->delete();
+            $connection = DB::connection();
+            $driver = $connection->getDriverName();
+            
+            if ($driver === 'pgsql') {
+                // PostgreSQL syntax
+                DB::table('notifications')
+                    ->whereRaw("(data::jsonb)->>'user_id' = ?", [$user->id])
+                    ->delete();
+            } else {
+                // MySQL syntax
+                DB::table('notifications')
+                    ->whereRaw("JSON_EXTRACT(data, '$.user_id') = ?", [$user->id])
+                    ->delete();
+            }
 
             // Delete stored files tied to this user (passport photos, signatures, profiles)
             foreach ($photoPaths as $path) {

@@ -8,14 +8,13 @@
 <x-app-layout>
 @endif
 <form method="POST" action="{{ route('pds.saveStep', 4) }}" enctype="multipart/form-data">
-@csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
+    <div class="max-w-6xl mx-auto p-4 flex justify-end gap-3">
+      <a href="{{ route('pdsreview1.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">Preview PDF</a>
+      <a href="{{ route('pds.pdf.download') }}" class="px-4 py-2 bg-slate-700 text-white rounded shadow border border-slate-800 hover:bg-slate-800">Download PDF</a>
     </div>
+@csrf
   <style>
-    body { margin: 24px; font-family: 'Arial Narrow','Arial',sans-serif; }
+    body { margin: 0px; font-family: 'Arial Narrow','Arial',sans-serif; }
     table { border-collapse: collapse; width: 100%; table-layout: fixed; }
     .border-3 { border: 3px solid #000; }
     .border-2 { border: 2px solid #000; }
@@ -88,8 +87,7 @@
         el.style.height = `${el.scrollHeight}px`;
     }
   </script>
-  <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
-  <div class="pds-sheet">
+  <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
   <table class="border-black w-full text-sm border-2 border-b-0">
     <tr>
@@ -427,12 +425,15 @@
 </table>
         </td>
         <td class="p-0 align-top border-b-0 border-l-0 border-r-0 border-black" colspan="2">
-          @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+          @php
+            $signatureCleanPath = !empty($signaturePath) ? preg_replace('/^public\//', '', $signaturePath) : null;
+            $signatureUrl = !empty($signatureCleanPath) ? asset('storage/'.$signatureCleanPath) : null;
+          @endphp
           <table class="border-collapse text-xs border-3 mt-2 border-2 mb-2 w-[11.6cm]" style="margin-left: 122px;">
             <tr>
               <td class="h-[2.74cm] border-black text-center align-middle italic text-red-600 relative p-1">
                 @if($signatureUrl)
-                  <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
+                  <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);" onerror="this.alt='';this.style.display='none';">
                 @else
                   (wet signature / e-signature / digital certificate)
                 @endif
@@ -470,7 +471,7 @@
   <td class="border-black h-24 text-center align-middle italic text-red-600 relative overflow-hidden">
 
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6.5cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full object-contain" style="max-height:6.5cm; mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);" onerror="this.alt='';this.style.display='none';">
     @else
       <!-- Placeholder / Text -->
       <div id="signaturePlaceholder">
@@ -494,7 +495,6 @@
         <a href="{{ route('pdsreview.pdsreview5') }}" id="next-btn" class="px-4 py-2 bg-blue-600 text-white rounded shadow border border-blue-700 hover:bg-blue-700">Next Page</a>
       </div>
       @endif
-  </div>
 </form>
 @if(empty($pdfMode))
 </x-app-layout>

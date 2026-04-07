@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
 use App\Models\PdsSubmission;
 use App\Models\User;
 use App\Models\PdsDraft;
+use App\Models\PdsForm5Remark;
 
 class PdsSubmissionController extends Controller
 {
@@ -594,15 +595,64 @@ class PdsSubmissionController extends Controller
                 DB::table('pds_references')->insert($refs->all());
             }
 
-            DB::table('pds_form5_remarks')->where('user_id', $userId)->delete();
-            $remarks = collect($req->input('remarks', []))->filter(fn ($v) => strlen(trim((string) $v)) > 0);
-            if ($remarks->isNotEmpty()) {
-                DB::table('pds_form5_remarks')->insert($remarks->map(fn ($v) => ['user_id' => $userId, 'remarks' => $v])->all());
-            }
+            // Handle form5 work experience data
+            PdsForm5Remark::where('user_id', $userId)->delete();
 
+            // Get form5 data from request
+            $durations = $req->input('duration', []);
+            $positionTitles = $req->input('position_title', []);
+            $officeUnits = $req->input('office_unit', []);
+            $immediateSupervisors = $req->input('immediate_supervisor', []);
+            $agencyLocations = $req->input('agency_location', []);
+            $accomplishments = $req->input('accomplishments', []);
+            $duties = $req->input('duties', []);
+
+            // Resolve signature/photo paths once so they are available for each row
             $photoPathToPersist = $photoPath ?? $existingPhotoPath;
             $signaturePathToPersist = $signaturePath ?? ($existingSignaturePath ?? 'NA');
             $thumbmarkPathToPersist = $existingThumbmarkPath ?? 'NA';
+
+            // Create work experience entries for each row
+            $workExperienceData = [];
+            $maxRows = max(count($durations), count($positionTitles), count($officeUnits), 
+                          count($immediateSupervisors), count($agencyLocations), count($duties));
+            
+            for ($i = 0; $i < $maxRows; $i++) {
+                $hasData = !empty($durations[$i]) || !empty($positionTitles[$i]) || 
+                          !empty($officeUnits[$i]) || !empty($immediateSupervisors[$i]) || 
+                          !empty($agencyLocations[$i]) || !empty($duties[$i]);
+                
+                if ($hasData) {
+                    // Filter accomplishments for this row (accomplishments are stored as a flat array)
+                    $rowAccomplishments = [];
+                    if (!empty($accomplishments)) {
+                        // Assuming accomplishments are stored per row, adjust logic if needed
+                        $rowAccomplishments = array_filter($accomplishments, fn($v) => !empty(trim($v)));
+                    }
+
+                    $workExperienceData[] = [
+                        'user_id' => $userId,
+                        'duration' => $durations[$i] ?? null,
+                        'position_title' => $positionTitles[$i] ?? null,
+                        'office_unit' => $officeUnits[$i] ?? null,
+                        'immediate_supervisor' => $immediateSupervisors[$i] ?? null,
+                        'agency_location' => $agencyLocations[$i] ?? null,
+                        'accomplishments' => $rowAccomplishments,
+                        'duties' => $duties[$i] ?? null,
+                        'signature_path' => $signaturePathToPersist,
+                        'signature_data' => $req->input('signature_data'),
+                        'date5' => $req->input('date5'),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
+            
+            if (!empty($workExperienceData)) {
+                foreach ($workExperienceData as $row) {
+                    PdsForm5Remark::create($row);
+                }
+            }
 
             DB::table('pds_signature_files')->updateOrInsert(
                 ['user_id' => $userId],

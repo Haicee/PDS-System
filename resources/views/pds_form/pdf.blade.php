@@ -9,7 +9,7 @@
 @endif
 <style>
         /* Print-friendly, spreadsheet-like grid tuned to fit on one A4 page */
-        body { font-family: 'Arial', sans-serif; font-size: 8px; margin: 0 auto; max-width: 100%; width: 100%; }
+        body { font-family: 'Arial', sans-serif; font-size: calc(18px * {{ $contentScale ?? 1.0 }}); margin: 0 auto; max-width: 100%; width: 100%; }
         html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         table { width: 100%; table-layout: fixed; border-collapse: collapse; background: #fff !important; }
         /* Apply 4px border to top-level tables without overlapping; remove stacked seams via border-top reset */
@@ -37,7 +37,7 @@
           td, th { padding: 3px; }
         }
          table td {
-          font-size: 20px;
+          font-size: calc(18px * {{ $contentScale ?? 1.0 }});
                       }
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
@@ -166,7 +166,7 @@
         .text-base { font-size: 1rem; }
         .text-lg { font-size: 1.05rem; }
 
-        /* Force uniform 3xl sizing for PDF/print while allowing opt-out via .keep-base */
+        /* Force uniform 3xl sizing for PDF/print with dynamic content scaling */
         @media print {
             body,
             table,
@@ -184,12 +184,12 @@
             .text-2xl,
             .text-3xl,
             .text-4xl {
-                font-size: 1.6rem !important; /* 4xl */
+                font-size: calc(1.875rem * {{ $contentScale ?? 1.0 }}) !important; /* 3xl scaled */
                 line-height: 1.3;
             }
 
             .keep-base {
-                font-size: 1rem !important;
+                font-size: calc(1rem * {{ $contentScale ?? 1.0 }}) !important;
                 line-height: 1.2;
             }
         }
@@ -241,26 +241,43 @@
           /* Keep tables flexible in PDF mode */
           body.pdf-mode .pds-sheet { min-width: 100%; max-width: 100%; }
 
-          /* Uniform typography for PDF tables (larger, XL-like) */
+          /* Uniform typography for PDF tables with per-table scaling support */
           body.pdf-mode table {
               font-family: 'Arial Narrow','Arial',sans-serif;
-              font-size: 14px;
+              font-size: calc(18px * var(--table-scale, {{ $contentScale ?? 1.0 }}));
               line-height: 1.15;
           }
+          
+          /* Override using data attributes as fallback */
+          body.pdf-mode table[data-table-scale] {
+              font-size: calc(18px * attr(data-table-scale));
+          }
+          
           body.pdf-mode table td,
           body.pdf-mode table  {
               padding: 5px;
-              font-size: 14px !important;
+              font-size: calc(18px * var(--table-scale, {{ $contentScale ?? 1.0 }})) !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
               font-weight: 400 !important;
               line-height: 1.15 !important;
           }
+          
+          body.pdf-mode table[data-table-scale] td,
+          body.pdf-mode table[data-table-scale] * {
+              font-size: calc(18px * attr(data-table-scale)) !important;
+          }
+          
           body.pdf-mode table td *,
           body.pdf-mode table * {
-              font-size: 14px !important;
+              font-size: calc(18px * var(--table-scale, {{ $contentScale ?? 1.0 }})) !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
               font-weight: 400 !important;
               line-height: 1.15 !important;
+          }
+          
+          body.pdf-mode table[data-table-scale] td *,
+          body.pdf-mode table[data-table-scale] * {
+              font-size: calc(18px * attr(data-table-scale)) !important;
           }
 
           /* Extra specificity to beat table-wide overrides in PDF mode */
@@ -295,6 +312,8 @@
   // If controller already provided data/base64 URLs, keep them; otherwise fall back to storage assets
   $signatureUrl = $signatureUrl ?? (!empty($signaturePath) ? asset('storage/'.$signaturePath) : null);
   $photoUrl = $photoUrl ?? (!empty($photoPath) ? asset('storage/'.$photoPath) : null);
+  // For employee preview, skip heavy sections to avoid Chrome timeouts
+  $isPreview = ($includeRemarks === false);
 @endphp
 
 <table style="width:100%; border-collapse:collapse; border-bottom:0;" class="no-scale">
@@ -332,13 +351,13 @@
 
 
   <!-- MAIN TABLE -->
-  <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow', Arial, sans-serif; font-size:14px; border:4px solid black; border-bottom:0;">
+  <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow', Arial, sans-serif; font-size:14px; border:4px solid black; border-bottom:0; --table-scale: {{ $firstTableScale ?? $contentScale ?? 1.0 }};" data-table-scale="{{ $firstTableScale ?? $contentScale ?? 1.0 }}">
     <!-- FIXED GRID -->
     <colgroup>
       <col style="width:8%">
       <col style="width:9%">
-      <col style="width:10%">
-      <col style="width:12%">
+      <col style="width:8.08%">
+      <col style="width:15%">
     </colgroup>
 
     <!-- SECTION HEADER -->
@@ -399,7 +418,7 @@
       </td>
       <td class="border">
         <div>
-          {{ $personal->date_of_birth ?? '—' }}
+          {{ !empty($personal->date_of_birth) ? \Carbon\Carbon::parse($personal->date_of_birth)->format('d/m/Y') : '—' }}
       </div>
       </td>
         <td rowspan="3" 
@@ -754,12 +773,12 @@
 
 
   {{-- II. FAMILY BACKGROUND --}}
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:14px; border:4px solid black; border-bottom:0;" class="border-black border-b-0">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:14px; border:4px solid black; border-bottom:0; --table-scale: {{ $secondTableScale ?? $contentScale ?? 1.0 }};" data-table-scale="{{ $secondTableScale ?? $contentScale ?? 1.0 }}" class="border-black border-b-0">
     <colgroup>
-      <col style="width:25%">
-      <col style="width:10%">
-      <col style="width:12%">
-      <col style="width:16%">
+      <col style="width:20.7%">
+      <col style="width:15%">
+      <col style="width:5%">
+      <col style="width:18%">
       <col style="width:20%">
       <col style="width:22%">
     </colgroup>
@@ -1335,7 +1354,7 @@
 
     <td colspan="3"
           class="border h-10">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;"> 
+          <div class="h-full w-full flex items-center justify-center text-3xl text-center"> 
             {{ $declaration->date_accomplished ?? '—' }}
           </div>
       </td>
@@ -1492,7 +1511,7 @@
 
          <td colspan="2"
           class="h-10">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
+          <div class="h-full w-full flex items-center justify-center text-3xl text-center">
             {{ $declaration->date_accomplished ?? '—' }}
           </div>
       </td>
@@ -1504,6 +1523,7 @@
 </div>
 </div>
 
+@if(!$isPreview)
 <div style="page-break-before: always;"></div>
   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid; border-bottom:0;">
 
@@ -1582,9 +1602,11 @@
 </div>
 
 </table>
+@endif
 
     
 
+@if(!$isPreview)
    <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid; border-bottom:0;">
 
   <colgroup>
@@ -1664,6 +1686,8 @@
   @endfor
 
 </table>
+@endif
+@if(!$isPreview)
 {{-- VIII. OTHER INFORMATION --}}
 <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;" border="1">
 
@@ -1708,6 +1732,7 @@
     @endfor
 
 </table>
+@endif
 
 {{-- SIGNATURE & DATE --}}
 <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-style:italic;" border="1">
@@ -1740,7 +1765,7 @@
 
         <td 
           class="h-10">
-          <div class="h-full w-full flex items-center justify-center text-center" style="font-size: 30px; border-top:0;">
+          <div class="h-full w-full flex items-center justify-center text-3xl text-center; border-top:0;">
             {{ $declaration->date_accomplished ?? '—' }}
           </div>
       </td>
@@ -1749,6 +1774,7 @@
     <div class="text-base w-full keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
     CS FORM 212 (Revised 2025), Page 3 of 5
 </div>
+@if(!$isPreview)
 <div style="page-break-before: always;"></div>
   <div class="w-full font-serif text-sm">
   <div class="pds-sheet w-full" style="max-width:100%;">
@@ -2362,7 +2388,7 @@
   <td>
     <div class="relative flex justify-center py-2  text-base">
       <div class="flex items-center space-x-1 relative">
-        <span class="text-base text-center" style="font-size: 30px;">{{ $declaration->date_accomplished ?? '—' }}</span>
+        <span class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</span>
       </div>
     </div>
   </td>
@@ -2406,7 +2432,14 @@
     CS FORM 212 (Revised 2025), Page 4 of 5
 </div>
   </div>
+@endif
 <div style="page-break-before: always;"></div>
+@php
+  // Default to including remarks/page 5 unless the controller explicitly disables it
+  $includeRemarks = $includeRemarks ?? true;
+@endphp
+
+@if($includeRemarks)
 <div class="page-wrap" style="width:100%;">
 <table style="width:100%; border-collapse:collapse;">
   <th class="flex text-left font-['Arial_Narrow','Arial',sans-serif] italic font-semibold">
@@ -2448,14 +2481,66 @@
 @endphp
 
 @for ($i = 0; $i < $maxRemark; $i++)
-@php $remark = $remarkRows[$i]->remarks ?? ''; @endphp
+@php 
+  $remark = $remarkRows[$i] ?? null; 
+  $accomplishmentsList = [];
+  if ($remark) {
+      if (is_array($remark->accomplishments)) {
+          $accomplishmentsList = $remark->accomplishments;
+      } elseif (is_string($remark->accomplishments) && $remark->accomplishments !== '') {
+          $decoded = json_decode($remark->accomplishments, true);
+          $accomplishmentsList = is_array($decoded) ? $decoded : [];
+      }
+  }
+@endphp
 <tr>
 <td class="border-2 border-black relative align-top">
-  <div
-    id="remarks-prototype"
-    class="remarks-content border-none w-full p-5 text-sm"
-    style="min-height:350px; white-space:pre-wrap; box-sizing:border-box; page-break-inside:auto; overflow:visible;"
-  >{{ $remark ?: "Sample: If applying to Supervising Administrative Officer\n\n•\tDuration:  February 11, 2011 – present\n•\tPosition:  Human Resource Management Officer III\n•\tName of Office/Unit: Finance and Administrative Service\n•\tImmediate Supervisor: Maria Estrada\n•\t Name of Agency/Organization and Location: Department of Human Resources, Metro Manila\n\n•\tList of Accomplishments and Contributions (if any)\n - Developed recruitment plan\n - Designed training program for retirees under EO 366\n \n•\tSummary of Actual Duties\n  - Responsible for the management of the recruitment and selection process and the coordination of training activities of the Department; provides assistance in the management of the Division’s programs and activities and performs other related functions." }}</div>
+  <div class="p-5 text-sm">
+    @if($remark)
+      <ul class="list-none space-y-2" style="margin:0; padding:0; list-style:none;">
+        <li>
+          <span style="font-weight:600;">Duration:</span>
+          <span style="margin-left:6px;">{{ $remark->duration ?? '' }}</span>
+        </li>
+        <li>
+          <span style="font-weight:600;">Position:</span>
+          <span style="margin-left:6px;">{{ $remark->position_title ?? '' }}</span>
+        </li>
+        <li>
+          <span style="font-weight:600;">Name of Office/Unit:</span>
+          <span style="margin-left:6px;">{{ $remark->office_unit ?? '' }}</span>
+        </li>
+        <li>
+          <span style="font-weight:600;">Immediate Supervisor:</span>
+          <span style="margin-left:6px;">{{ $remark->immediate_supervisor ?? '' }}</span>
+        </li>
+        <li>
+          <span style="font-weight:600;">Name of Agency/Organization and Location:</span>
+          <span style="margin-left:6px;">{{ $remark->agency_location ?? '' }}</span>
+        </li>
+        <li style="margin-top:12px;">
+          <p style="font-weight:600; margin:0 0 4px 0;">List of Accomplishments and Contributions (if any)</p>
+          <div style="margin-left:18px;">
+            @if(!empty($accomplishmentsList))
+              @foreach($accomplishmentsList as $accomplishment)
+                @if(!empty(trim($accomplishment)))
+                  <div>• {{ $accomplishment }}</div>
+                @endif
+              @endforeach
+            @else
+              <div>—</div>
+            @endif
+          </div>
+        </li>
+        <li style="margin-top:12px;">
+          <p style="font-weight:600; margin:0 0 4px 0;">Summary of Actual Duties</p>
+          <div style="margin-left:18px; white-space:pre-wrap;">{{ $remark->duties ?? '' }}</div>
+        </li>
+      </ul>
+    @else
+      <div style="min-height:120px; white-space:pre-wrap;">—</div>
+    @endif
+  </div>
 </td>
 </tr>
 @endfor
@@ -2483,7 +2568,7 @@
 
 <div class="w-full flex justify-end" style="margin-top:50px; padding-right:8px; font-family:'Arial Narrow','Arial',sans-serif;">
   <div class="text-center relative" style="width:460px; margin-left:auto;">
-    <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
+    <div class="h-full w-full flex items-center justify-center text-3xl text-center">
             {{ $declaration->date_accomplished ?? '—' }}
           </div>
     <div class="border-b-2 border-black w-full absolute mt-10" style="bottom:26px; left:0; width:100%;"></div>
@@ -2496,6 +2581,7 @@
     CS FORM 212 (Revised 2025), Page 5 of 5
 </div>
 </div>
+@endif
 @if(!empty($pdfMode))
 </body>
 </html>

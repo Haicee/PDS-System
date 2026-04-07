@@ -2,11 +2,7 @@
 <div id="autosaveOverlay2" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form2" method="POST" action="{{ route('pds.saveStep', [2], false) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
+
     <style>
         table { border-collapse: collapse; width: 100%; }
         td, th { padding: 4px; vertical-align: top; }
@@ -76,8 +72,8 @@
 
             // First-row logic for eligibility and work tables
             const rowGroup = (names) => names.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
-            const eligibilityFirstRow = rowGroup(['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]']);
-            const workFirstRow = rowGroup(['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]']);
+            const eligibilityFirstRow = rowGroup(['eligibility[]']);
+            const workFirstRow = rowGroup(['work_position_title[]']);
 
             const disableFollowingRows = (names, disable) => {
                 names.forEach(n => {
@@ -697,7 +693,19 @@
       <tr>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Eligibility' : '' }}" name="eligibility[]" ></textarea></td>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Rating' : '' }}" name="rating[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Date' : '' }}" name="date[]"></textarea></td>
+        <td class="border align-top">
+          <div class="h-full w-full">
+            <input
+              type="date"
+              name="date[]"
+              class="w-full h-full text-lg resize-none
+                     focus:outline-none focus:ring-0
+                     bg-transparent text-center"
+              style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+              max="{{ now()->format('Y-m-d') }}" 
+              placeholder="{{ $i === 0 ? 'Date' : '' }}"/>
+          </div>
+        </td>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Place' : '' }}" name="place[]"></textarea></td>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'License No.' : '' }}" name="license_no[]"></textarea></td>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Validity' : '' }}" name="validity[]"></textarea></td>
@@ -750,8 +758,30 @@
 
     @for ($i = 0; $i < 27; $i++)
      <tr>
-      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="work_from[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="work_to[]"></textarea></td>
+      <td class="border align-top">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="work_from[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'From' : '' }}"/>
+        </div>
+      </td>
+      <td class="border align-top">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="work_to[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'To' : '' }}"/>
+        </div>
+      </td>
       <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position Title' : '' }}" name="work_position_title[]"></textarea></td>
       <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Department/Agency/Office/Company' : '' }}" name="work_department[]"></textarea></td>
       <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Status' : '' }}" name="work_status[]"></textarea></td>
@@ -841,40 +871,84 @@ input[type="date"] {
   margin-left: 50px;
 }
 
-/* Hide calendar icon since date is synced from form1 */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  display: none;
+/* Hide eligibility date inputs by default */
+input[name="date[]"] {
+  display: none !important;
 }
 
-input[type="date"]::-moz-calendar-picker-indicator {
-  display: none;
+/* Hide work date inputs by default */
+input[name="work_from[]"], input[name="work_to[]"] {
+  display: none !important;
+}
+
+/* Show date inputs when they should be visible */
+input[type="date"].visible {
+  display: block !important;
+}
+
+/* Make calendar icon visible and clickable with blue stroke */
+input[type="date"].visible::-webkit-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(4500%) hue-rotate(190deg) brightness(95%) contrast(150%) !important;
+  transform: scale(1.5);
+  margin-left: 5px;
+}
+
+input[type="date"].visible::-moz-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+}
+
+/* Hide calendar icon for the signature date field */
+input[name="date2"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+input[name="date2"]::-moz-calendar-picker-indicator {
+  display: none !important;
+}
+
+input[type="date"].visible::-moz-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  transform: scale(1.5);
+  margin-left: 5px;
 }
 
 /* Ensure text is vertically centered and black */
 input[type="date"]::-webkit-datetime-edit-text {
   vertical-align: middle;
   color: #000000;
-  font-size: 16px;
+  font-size: 20px;
   text-align: center !important;
 }
 
 input[type="date"]::-webkit-datetime-edit-month-field {
   vertical-align: middle;
-  font-size: 16px;
+  font-size: 20px;
   color: #000000;
   text-align: center !important;
 }
 
 input[type="date"]::-webkit-datetime-edit-day-field {
   vertical-align: middle;
-  font-size: 16px;
+  font-size: 20px;
   color: #000000;
   text-align: center !important;
 }
 
 input[type="date"]::-webkit-datetime-edit-year-field {
   vertical-align: middle;
-  font-size: 16px;
+  font-size: 20px;
   color: #000000;
   text-align: center !important;
 }
@@ -900,4 +974,158 @@ input[type="date"]::-moz-datetime-edit-year-field {
   text-align: center !important;
 }
 </style>
+
+<script>
+function checkEligibilityFields() {
+    // Get all eligibility name and date fields (exclude signature date)
+    const eligibilityFields = document.querySelectorAll('textarea[name="eligibility[]"]');
+    const dateFields = document.querySelectorAll('input[name="date[]"]');
+    
+    // Process each row
+    eligibilityFields.forEach((eligibilityField, index) => {
+        const dateField = dateFields[index];
+        const hasEligibility = eligibilityField.value.trim() !== '';
+        const isNAValue = eligibilityField.value.trim().toUpperCase() === 'NA';
+        
+        if (dateField) {
+            if (hasEligibility && !isNAValue) {
+                // Show date input if eligibility is filled and not NA
+                dateField.disabled = false;
+                dateField.classList.add('visible');
+                dateField.style.backgroundColor = 'transparent';
+            } else {
+                // Hide date input if eligibility is empty or NA
+                dateField.classList.remove('visible');
+                if (!isNAValue) {
+                    dateField.value = '';
+                }
+            }
+        }
+    });
+}
+
+function checkWorkFields() {
+    // Get all work position and date fields
+    const positionFields = document.querySelectorAll('textarea[name="work_position_title[]"]');
+    const workFromFields = document.querySelectorAll('input[name="work_from[]"]');
+    const workToFields = document.querySelectorAll('input[name="work_to[]"]');
+    
+    // Process each row
+    positionFields.forEach((positionField, index) => {
+        const workFromField = workFromFields[index];
+        const workToField = workToFields[index];
+        const hasPosition = positionField.value.trim() !== '';
+        const isNAValue = positionField.value.trim().toUpperCase() === 'NA';
+        
+        // Check if previous row is complete (for sequential logic)
+        let previousRowComplete = true; // Default to true for first row
+        if (index > 0) {
+            const prevPositionField = positionFields[index - 1];
+            const prevWorkFromField = workFromFields[index - 1];
+            const prevWorkToField = workToFields[index - 1];
+            const prevPositionValue = prevPositionField ? prevPositionField.value.trim() : '';
+            const prevWorkFromValue = prevWorkFromField ? prevWorkFromField.value.trim() : '';
+            const prevWorkToValue = prevWorkToField ? prevWorkToField.value.trim() : '';
+            const prevIsNA = prevPositionValue.toUpperCase() === 'NA';
+            
+            // Previous row is complete if position is empty, or if position is filled with NA or both dates
+            previousRowComplete = prevPositionValue === '' || 
+                                  prevIsNA || 
+                                  (prevWorkFromValue !== '' && prevWorkToValue !== '');
+        }
+        
+        // Handle Work From field
+        if (workFromField) {
+            // For first row, always show calendar
+            if (index === 0) {
+                // Always show date input with calendar for first row
+                workFromField.type = 'date';
+                workFromField.disabled = false;
+                workFromField.classList.add('visible');
+                workFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                workFromField.style.backgroundColor = 'transparent';
+                workFromField.removeAttribute('required');
+                if (workFromField.value === 'NA') {
+                    workFromField.value = '';
+                }
+            } else if (index > 0 && hasPosition && previousRowComplete) {
+                // For other rows, show only if previous row is complete
+                // Show date input with calendar if position is filled and not NA
+                workFromField.type = 'date';
+                workFromField.disabled = false;
+                workFromField.classList.add('visible');
+                workFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                workFromField.style.backgroundColor = 'transparent';
+                workFromField.removeAttribute('required');
+                if (workFromField.value === 'NA') {
+                    workFromField.value = '';
+                }
+            } else {
+                // Hide date input if position is empty or conditions not met
+                workFromField.type = 'date';
+                workFromField.classList.remove('visible');
+                workFromField.value = '';
+                workFromField.removeAttribute('required');
+            }
+        }
+        
+        // Handle Work To field
+        if (workToField) {
+            // For first row, always show calendar
+            if (index === 0) {
+                // Always show date input with calendar for first row
+                workToField.type = 'date';
+                workToField.disabled = false;
+                workToField.classList.add('visible');
+                workToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                workToField.style.backgroundColor = 'transparent';
+                workToField.removeAttribute('required');
+                if (workToField.value === 'NA') {
+                    workToField.value = '';
+                }
+            } else if (index > 0 && hasPosition && previousRowComplete) {
+                // For other rows, show only if previous row is complete
+                // Show date input with calendar if position is filled and not NA
+                workToField.type = 'date';
+                workToField.disabled = false;
+                workToField.classList.add('visible');
+                workToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                workToField.style.backgroundColor = 'transparent';
+                workToField.removeAttribute('required');
+                if (workToField.value === 'NA') {
+                    workToField.value = '';
+                }
+            } else {
+                // Hide date input if position is empty or conditions not met
+                workToField.type = 'date';
+                workToField.classList.remove('visible');
+                workToField.value = '';
+                workToField.removeAttribute('required');
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Check eligibility fields on page load
+    checkEligibilityFields();
+    
+    // Add event listeners to all eligibility fields
+    const eligibilityFields = document.querySelectorAll('textarea[name="eligibility[]"]');
+    eligibilityFields.forEach(field => {
+        field.addEventListener('input', checkEligibilityFields);
+        field.addEventListener('change', checkEligibilityFields);
+    });
+    
+    // Check work fields on page load
+    checkWorkFields();
+    
+    // Add event listeners to all work position fields
+    const workPositionFields = document.querySelectorAll('textarea[name="work_position_title[]"]');
+    workPositionFields.forEach(field => {
+        field.addEventListener('input', checkWorkFields);
+        field.addEventListener('change', checkWorkFields);
+    });
+});
+</script>
 </x-app-layout>

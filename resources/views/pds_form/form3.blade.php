@@ -2,11 +2,6 @@
 <div id="autosaveOverlay3" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form3" method="POST" action="{{ route('pds.saveStep', [3], false) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
     <style>
   table {
     border-collapse: collapse;
@@ -41,6 +36,208 @@
         .autosave-overlay.hidden { display: none; }
     </style>
     <script>
+        function checkVoluntaryFields() {
+            // Get all voluntary organization and date fields
+            const organizationFields = document.querySelectorAll('textarea[name="voluntary_organization[]"]');
+            const voluntaryFromFields = document.querySelectorAll('input[name="voluntary_from[]"]');
+            const voluntaryToFields = document.querySelectorAll('input[name="voluntary_to[]"]');
+            
+            // Process each row
+            organizationFields.forEach((organizationField, index) => {
+                const voluntaryFromField = voluntaryFromFields[index];
+                const voluntaryToField = voluntaryToFields[index];
+                const hasOrganization = organizationField.value.trim() !== '';
+                
+                // Check if previous row is complete (for sequential logic)
+                let previousRowComplete = true; // Default to true for first row
+                if (index > 0) {
+                    const prevOrganizationField = organizationFields[index - 1];
+                    const prevVoluntaryFromField = voluntaryFromFields[index - 1];
+                    const prevVoluntaryToField = voluntaryToFields[index - 1];
+                    const prevOrganizationValue = prevOrganizationField ? prevOrganizationField.value.trim() : '';
+                    const prevVoluntaryFromValue = prevVoluntaryFromField ? prevVoluntaryFromField.value.trim() : '';
+                    const prevVoluntaryToValue = prevVoluntaryToField ? prevVoluntaryToField.value.trim() : '';
+                    const prevIsNA = prevOrganizationValue.toUpperCase() === 'NA';
+                    
+                    // Previous row is complete if organization is empty, or if organization is filled with NA or both dates
+                    previousRowComplete = prevOrganizationValue === '' || 
+                                          prevIsNA || 
+                                          (prevVoluntaryFromValue !== '' && prevVoluntaryToValue !== '');
+                }
+                
+                // Handle Voluntary From field
+                if (voluntaryFromField) {
+                    // For first row, always show calendar
+                    if (index === 0) {
+                        // Always show date input with calendar for first row
+                        voluntaryFromField.type = 'date';
+                        voluntaryFromField.disabled = false;
+                        voluntaryFromField.classList.add('visible');
+                        voluntaryFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        voluntaryFromField.style.backgroundColor = 'transparent';
+                        voluntaryFromField.removeAttribute('required');
+                        if (voluntaryFromField.value === 'NA') {
+                            voluntaryFromField.value = '';
+                        }
+                    } else if (index > 0 && hasOrganization && previousRowComplete) {
+                        // For other rows, show only if previous row is complete
+                        // Show date input with calendar if organization is filled
+                        voluntaryFromField.type = 'date';
+                        voluntaryFromField.disabled = false;
+                        voluntaryFromField.classList.add('visible');
+                        voluntaryFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        voluntaryFromField.style.backgroundColor = 'transparent';
+                        voluntaryFromField.removeAttribute('required');
+                        if (voluntaryFromField.value === 'NA') {
+                            voluntaryFromField.value = '';
+                        }
+                    } else {
+                        // Hide date input if organization is empty or previous row is not complete
+                        voluntaryFromField.type = 'date';
+                        voluntaryFromField.classList.remove('visible');
+                        voluntaryFromField.value = '';
+                        voluntaryFromField.removeAttribute('required');
+                    }
+                }
+                
+                // Handle Voluntary To field
+                if (voluntaryToField) {
+                    // For first row, always show calendar
+                    if (index === 0) {
+                        // Always show date input with calendar for first row
+                        voluntaryToField.type = 'date';
+                        voluntaryToField.disabled = false;
+                        voluntaryToField.classList.add('visible');
+                        voluntaryToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        voluntaryToField.style.backgroundColor = 'transparent';
+                        voluntaryToField.removeAttribute('required');
+                        if (voluntaryToField.value === 'NA') {
+                            voluntaryToField.value = '';
+                        }
+                    } else if (index > 0 && hasOrganization && previousRowComplete) {
+                        // For other rows, show only if previous row is complete
+                        // Show date input with calendar if organization is filled
+                        voluntaryToField.type = 'date';
+                        voluntaryToField.disabled = false;
+                        voluntaryToField.classList.add('visible');
+                        voluntaryToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        voluntaryToField.style.backgroundColor = 'transparent';
+                        voluntaryToField.removeAttribute('required');
+                        if (voluntaryToField.value === 'NA') {
+                            voluntaryToField.value = '';
+                        }
+                    } else {
+                        // Hide date input if organization is empty or previous row is not complete
+                        voluntaryToField.type = 'date';
+                        voluntaryToField.classList.remove('visible');
+                        voluntaryToField.value = '';
+                        voluntaryToField.removeAttribute('required');
+                    }
+                }
+            });
+        }
+
+        function checkLearningFields() {
+            // Get all learning title and date fields
+            const titleFields = document.querySelectorAll('textarea[name="learning_title_of_ld[]"]');
+            const learningFromFields = document.querySelectorAll('input[name="learning_from[]"]');
+            const learningToFields = document.querySelectorAll('input[name="learning_to[]"]');
+            
+            // Process each row
+            titleFields.forEach((titleField, index) => {
+                const learningFromField = learningFromFields[index];
+                const learningToField = learningToFields[index];
+                const hasTitle = titleField.value.trim() !== '';
+                
+                // Check if previous row is complete (for sequential logic)
+                let previousRowComplete = true; // Default to true for first row
+                if (index > 0) {
+                    const prevTitleField = titleFields[index - 1];
+                    const prevLearningFromField = learningFromFields[index - 1];
+                    const prevLearningToField = learningToFields[index - 1];
+                    const prevTitleValue = prevTitleField ? prevTitleField.value.trim() : '';
+                    const prevLearningFromValue = prevLearningFromField ? prevLearningFromField.value.trim() : '';
+                    const prevLearningToValue = prevLearningToField ? prevLearningToField.value.trim() : '';
+                    const prevIsNA = prevTitleValue.toUpperCase() === 'NA';
+                    
+                    // Previous row is complete if title is empty, or if title is filled with NA or both dates
+                    previousRowComplete = prevTitleValue === '' || 
+                                          prevIsNA || 
+                                          (prevLearningFromValue !== '' && prevLearningToValue !== '');
+                }
+                
+                // Handle Learning From field
+                if (learningFromField) {
+                    // For first row, always show calendar
+                    if (index === 0) {
+                        // Always show date input with calendar for first row
+                        learningFromField.type = 'date';
+                        learningFromField.disabled = false;
+                        learningFromField.classList.add('visible');
+                        learningFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        learningFromField.style.backgroundColor = 'transparent';
+                        learningFromField.removeAttribute('required');
+                        if (learningFromField.value === 'NA') {
+                            learningFromField.value = '';
+                        }
+                    } else if (index > 0 && hasTitle && previousRowComplete) {
+                        // For other rows, show only if previous row is complete
+                        // Show date input with calendar if title is filled
+                        learningFromField.type = 'date';
+                        learningFromField.disabled = false;
+                        learningFromField.classList.add('visible');
+                        learningFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        learningFromField.style.backgroundColor = 'transparent';
+                        learningFromField.removeAttribute('required');
+                        if (learningFromField.value === 'NA') {
+                            learningFromField.value = '';
+                        }
+                    } else {
+                        // Hide date input if title is empty or previous row is not complete
+                        learningFromField.type = 'date';
+                        learningFromField.classList.remove('visible');
+                        learningFromField.value = '';
+                        learningFromField.removeAttribute('required');
+                    }
+                }
+                
+                // Handle Learning To field
+                if (learningToField) {
+                    // For first row, always show calendar
+                    if (index === 0) {
+                        // Always show date input with calendar for first row
+                        learningToField.type = 'date';
+                        learningToField.disabled = false;
+                        learningToField.classList.add('visible');
+                        learningToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        learningToField.style.backgroundColor = 'transparent';
+                        learningToField.removeAttribute('required');
+                        if (learningToField.value === 'NA') {
+                            learningToField.value = '';
+                        }
+                    } else if (index > 0 && hasTitle && previousRowComplete) {
+                        // For other rows, show only if previous row is complete
+                        // Show date input with calendar if title is filled
+                        learningToField.type = 'date';
+                        learningToField.disabled = false;
+                        learningToField.classList.add('visible');
+                        learningToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                        learningToField.style.backgroundColor = 'transparent';
+                        learningToField.removeAttribute('required');
+                        if (learningToField.value === 'NA') {
+                            learningToField.value = '';
+                        }
+                    } else {
+                        // Hide date input if title is empty or previous row is not complete
+                        learningToField.type = 'date';
+                        learningToField.classList.remove('visible');
+                        learningToField.value = '';
+                        learningToField.removeAttribute('required');
+                    }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.querySelector('#pds-form3');
             if (!form) return;
@@ -216,6 +413,26 @@
                 f.addEventListener('input', refreshRows);
             });
             refreshRows();
+
+            // Check voluntary fields on page load
+            checkVoluntaryFields();
+            
+            // Add event listeners to all voluntary organization fields
+            const voluntaryOrganizationFields = document.querySelectorAll('textarea[name="voluntary_organization[]"]');
+            voluntaryOrganizationFields.forEach(field => {
+                field.addEventListener('input', checkVoluntaryFields);
+                field.addEventListener('change', checkVoluntaryFields);
+            });
+
+            // Check learning fields on page load
+            checkLearningFields();
+            
+            // Add event listeners to all learning title fields
+            const learningTitleFields = document.querySelectorAll('textarea[name="learning_title_of_ld[]"]');
+            learningTitleFields.forEach(field => {
+                field.addEventListener('input', checkLearningFields);
+                field.addEventListener('change', checkLearningFields);
+            });
 
             // Next button gating
             const nextBtn = document.getElementById('pds3-next');
@@ -692,9 +909,31 @@
    @for ($i = 0; $i < 7; $i++)
       <tr>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Organization' : '' }}" name="voluntary_organization[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="voluntary_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="voluntary_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="voluntary_hours[]"></textarea></td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="voluntary_from[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'From' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="voluntary_to[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'To' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10"><input type="number" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="voluntary_hours[]" class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0;" min="0"/></td>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position/Nature of Work' : '' }}" name="voluntary_position_nature_of_work[]"></textarea></td>
       </tr>
    @endfor
@@ -747,9 +986,31 @@
     @for ($i = 0; $i < 27; $i++)
      <tr>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Title of L&D / Training' : '' }}" name="learning_title_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="learning_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="learning_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="learning_hours[]"></textarea></td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="learning_from[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'From' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="learning_to[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'To' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10"><input type="number" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="learning_hours[]" class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0;" min="0"/></td>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Type of L&D' : '' }}" name="learning_type_of_ld[]"></textarea></td>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Conducted/Sponsored By' : '' }}" name="learning_conducted_sponsored_by[]"></textarea></td>
      </tr>
@@ -930,6 +1191,42 @@ input[type="date"]::-moz-datetime-edit-day-field {
 input[type="date"]::-moz-datetime-edit-year-field {
   color: #000000;
   text-align: center !important;
+}
+
+/* Hide voluntary and learning date inputs by default */
+input[name="voluntary_from[]"], input[name="voluntary_to[]"], 
+input[name="learning_from[]"], input[name="learning_to[]"] {
+  display: none !important;
+}
+
+/* Show date inputs when they should be visible */
+input[type="date"].visible {
+  display: block !important;
+}
+
+/* Make calendar icon visible and clickable with blue stroke */
+input[type="date"].visible::-webkit-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(4500%) hue-rotate(190deg) brightness(95%) contrast(150%) !important;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  border-radius: 2px;
+}
+
+input[type="date"].visible::-moz-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  border-radius: 2px;
 }
 </style>
 </x-app-layout>

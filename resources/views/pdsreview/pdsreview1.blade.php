@@ -121,7 +121,7 @@
         <p class="text-xs font-normal ml-4">(dd/mm/yyyy)</p>
       </td>
       <td class="border h-10">
-        <div class="py-2 text-lg">{{ $personal->date_of_birth ?? '—' }}</div>
+        <div class="py-2 text-lg">{{ !empty($personal->date_of_birth) ? \Carbon\Carbon::parse($personal->date_of_birth)->format('d/m/Y') : '—' }}</div>
       </td>
 
       <td rowspan="3" class="bg-[#e7e7e7] px-2 align-top border-l-5">
@@ -1339,25 +1339,29 @@
  
 
   <tr>
-    <td class="border h-2 text-center text-xl font-bold italic align-middle">
-      SIGNATURE
-    </td>
+    <td class="border text-center font-bold text-xl border align-middle italic">
+            SIGNATURE
+        </td>
 
-    <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
-        @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
-        @if($signatureUrl)
-          <img src="{{ $signatureUrl }}"
+        <td class="border" colspan="2">
+          <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
+            @php
+              $signatureCleanPath = !empty($signaturePath) ? preg_replace('/^public\//', '', $signaturePath) : null;
+              $signatureUrl = !empty($signatureCleanPath) ? asset('storage/'.$signatureCleanPath) : null;
+            @endphp
+            @if($signatureUrl)
+              <img src="{{ $signatureUrl }}"
      alt="Signature"
      class="object-contain"
      style="max-height: 150px;
             mix-blend-mode: multiply;
-            filter: contrast(1.2) brightness(1.1);">
-        @else
-          <div class="text-xs text-gray-600">No signature on file</div>
-        @endif
-      </div>
-    </td>
+            filter: contrast(1.2) brightness(1.1);"
+     onerror="this.alt='';this.style.display='none';">
+            @else
+              <div class="text-xs text-gray-600">No signature on file</div>
+            @endif
+          </div>
+        </td>
 
     <td class="border text-center text-xl font-bold italic align-middle" colspan="2">
       DATE

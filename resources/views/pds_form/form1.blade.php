@@ -4,12 +4,26 @@
 <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', [1], false) }}" enctype="multipart/form-data">
     @csrf
     <style>
+      textarea.no-uppercase {
+        text-transform: none !important;
+      }
+      textarea[name="email_address"] {
+        text-transform: none !important;
+      }
+      .no-uppercase, .no-uppercase * {
+        text-transform: none !important;
+      }
         /* Print-friendly, spreadsheet-like grid */
         table { border-collapse: collapse; width: 100%; }
         td, th { padding: 4px; vertical-align: top; }
         /* Only apply borders where classes already exist */
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
+        
+        /* Prevent uppercase conversion for email field */
+        .no-uppercase {
+            text-transform: none !important;
+        }
         .signature-box {
             position: relative;
             background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
@@ -112,8 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
         countryInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // Force textarea input to uppercase
-    document.querySelectorAll('textarea').forEach(el => {
+    // Force textarea input to uppercase (except email field)
+    document.querySelectorAll('textarea:not([name="email_address"])').forEach(el => {
         el.addEventListener('input', () => {
             const start = el.selectionStart;
             const end = el.selectionEnd;
@@ -130,6 +144,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const v = (val || '').trim().toUpperCase();
         return v === 'NA' || v === 'N/A' || v === 'NONE';
     };
+
+    // Convert email to lowercase when loaded from database
+    const emailField = document.querySelector('textarea[name="email_address"]');
+    if (emailField && emailField.value) {
+        emailField.value = emailField.value.toLowerCase();
+    }
 
     // Collect []-suffixed fields
     const names = new Set();
@@ -163,6 +183,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const enforceUppercase = (ta) => {
+        // Skip email address field - allow mixed case
+        if (ta.name === 'email_address') {
+            // Immediately override any uppercase styling
+            ta.style.textTransform = 'none';
+            ta.style.setProperty('text-transform', 'none', 'important');
+            
+            // Remove any existing uppercase event listeners
+            const newInputHandler = (e) => {
+                e.stopImmediatePropagation();
+                // Don't convert to uppercase
+            };
+            
+            // Remove all existing input listeners and add our protective one
+            ta.removeEventListener('input', ta._uppercaseHandler);
+            ta.addEventListener('input', newInputHandler, true);
+            ta._uppercaseHandler = newInputHandler;
+            
+            return;
+        }
         ta.style.textTransform = 'uppercase';
         ta.addEventListener('input', () => {
             const start = ta.selectionStart;
@@ -742,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <tr>
       <td class="bg-[#e7e7e7] px-2 align-middle border">
     3. DATE OF BIRTH
-    <p class="text-xs font-normal ml-7">(dd/mm/yyyy)</p>
+    <p class="text-base font-normal ml-6">(dd/mm/yyyy)</p>
   </td>
 
   <td class="border h-10">
@@ -1071,6 +1110,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr>
           <td class="px-2 py-1 align-top border-r border-black">
             18. PERMANENT ADDRESS
+            <button type="button" 
+                    onclick="copyResidentialToPermanent()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-2 rounded transition-colors duration-200 mt-10 text-center"
+                    style="font-size: 15px; white-space: nowrap; display: block; width: fit-content; margin-left: auto; margin-right: auto;">
+              Same as Above
+            </button>
           </td>
         </tr>
       </table>
@@ -1166,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </td>    
 
-    <tr>
+  <tr>
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border">10. UMID ID NO.</td>
       <td class="border px-2 h-10">
 
@@ -1360,9 +1405,10 @@ document.addEventListener('DOMContentLoaded', () => {
       rows="1"
       class="w-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden align-top px-2"
+             whitespace-pre-wrap overflow-hidden align-top px-2 no-uppercase"
       placeholder="Enter Email Address"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
+      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'; this.value = this.value;"
+      style="text-transform: none !important;"
     ></textarea>
             </div>
             </td>
@@ -1529,14 +1575,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1580,14 +1627,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1629,14 +1677,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1679,14 +1728,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1729,14 +1779,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1778,14 +1829,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1831,14 +1883,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1896,14 +1949,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1948,14 +2002,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1986,14 +2041,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2038,14 +2094,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2090,14 +2147,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2142,14 +2200,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2858,7 +2917,134 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     </form>
 <script>
+        function copyResidentialToPermanent() {
+            // Copy residential address to permanent address
+            const fields = [
+                'house_block_lot', 'permanent_house_block_lot',
+                'street', 'permanent_street', 
+                'subdivision_village', 'permanent_subdivision_village',
+                'baranggay', 'permanent_baranggay',
+                'city_municipality', 'permanent_city_municipality',
+                'province', 'permanent_province'
+            ];
+            
+            let hasChanges = false;
+            
+            for (let i = 0; i < fields.length; i += 2) {
+                const sourceField = document.querySelector(`[name="${fields[i]}"]`);
+                const targetField = document.querySelector(`[name="${fields[i+1]}"]`);
+                
+                if (sourceField && targetField) {
+                    const oldValue = targetField.value;
+                    targetField.value = sourceField.value;
+                    // Trigger the auto-resize for textareas
+                    targetField.style.height = 'auto';
+                    targetField.style.height = targetField.scrollHeight + 'px';
+                    
+                    // Check if value actually changed
+                    if (oldValue !== targetField.value) {
+                        hasChanges = true;
+                        // Trigger input event to notify autosave
+                        targetField.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            }
+            
+            // Trigger autosave if any changes were made
+            if (hasChanges && typeof persist === 'function') {
+                hasUserInput = true;
+                persist();
+            }
+        }
+
+        function checkChildrenFields() {
+            // Get all children name and date of birth fields
+            const childrenNameFields = document.querySelectorAll('textarea[name="children_familybg[]"]');
+            const childrenDobFields = document.querySelectorAll('input[name="children_dateofbirth_familybg[]"]');
+            
+            // Check if first child name is "NA"
+            const firstChildName = childrenNameFields[0]?.value.trim().toUpperCase() || '';
+            const isNA = firstChildName === 'NA' || firstChildName === 'N/A' || firstChildName === 'N.A.';
+            
+            // Process each row
+            childrenNameFields.forEach((nameField, index) => {
+                const dobField = childrenDobFields[index];
+                const hasName = nameField.value.trim() !== '';
+                
+                if (index === 0) {
+                    // First row - check NA logic and sequential logic
+                    if (isNA) {
+                        // If first child is NA, disable first row too
+                        nameField.disabled = false; // Allow editing to remove NA
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            dobField.disabled = true;
+                            dobField.style.backgroundColor = '#f5f5f5';
+                            dobField.style.display = 'none';
+                            dobField.value = '';
+                        }
+                    } else {
+                        // Normal sequential logic for first row
+                        nameField.disabled = false;
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            if (hasName) {
+                                dobField.disabled = false;
+                                dobField.style.display = 'block';
+                                dobField.style.backgroundColor = 'transparent';
+                            } else {
+                                dobField.style.display = 'none';
+                                dobField.value = '';
+                            }
+                        }
+                    }
+                } else {
+                    // Remaining rows - check NA logic and sequential logic
+                    if (isNA) {
+                        // If first child is NA, disable all remaining rows
+                        nameField.disabled = true;
+                        nameField.style.backgroundColor = '#f5f5f5';
+                        nameField.value = '';
+                        
+                        if (dobField) {
+                            dobField.disabled = true;
+                            dobField.style.backgroundColor = '#f5f5f5';
+                            dobField.style.display = 'none';
+                            dobField.value = '';
+                        }
+                    } else {
+                        // Normal sequential logic for remaining rows
+                        nameField.disabled = false;
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            if (hasName) {
+                                dobField.disabled = false;
+                                dobField.style.display = 'block';
+                                dobField.style.backgroundColor = 'transparent';
+                            } else {
+                                dobField.style.display = 'none';
+                                dobField.value = '';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+
+  // Check children fields on page load
+  checkChildrenFields();
+  
+  // Add event listeners to all children name fields
+  const childrenNameFields = document.querySelectorAll('textarea[name="children_familybg[]"]');
+  childrenNameFields.forEach(field => {
+    field.addEventListener('input', checkChildrenFields);
+    field.addEventListener('change', checkChildrenFields);
+  });
 
   const form = document.querySelector('#pds-form1');
   const autosaveOverlay = document.getElementById('autosaveOverlay');
@@ -3269,11 +3455,6 @@ document.addEventListener('DOMContentLoaded', () => {
     hasUserInput = true;
     persist();
   });
-  form.addEventListener('change', (e) => {
-    console.log('Form change event triggered on:', e.target.name, e.target.type);
-    hasUserInput = true;
-    persist();
-  });
 
   // Sync all date fields across forms using localStorage - form1 is the master
   // Exclude personal DOB (date_of_birth) so it stays independent
@@ -3341,31 +3522,31 @@ input[type="date"] {
   margin-left: 100px;
 }
 
-/* Make calendar icon bigger and black in WebKit browsers (Chrome, Safari, Edge) */
+/* Make calendar icon bigger and blue in WebKit browsers (Chrome, Safari, Edge) */
 input[type="date"]::-webkit-calendar-picker-indicator {
   width: 30px;
   height: 30px;
   cursor: pointer;
   background-size: 30px 30px;
   background-color: transparent;
-  filter: invert(0) brightness(0) !important;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   opacity: 1 !important;
-  -webkit-filter: invert(0) brightness(0) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(4500%) hue-rotate(190deg) brightness(95%) contrast(150%) !important;
   vertical-align: middle;
   position: absolute;
   right: 5px;
 }
 
-/* Make calendar icon bigger and black in Firefox */
+/* Make calendar icon bigger and blue in Firefox */
 input[type="date"]::-moz-calendar-picker-indicator {
   width: 30px;
   height: 30px;
   cursor: pointer;
   background-size: 30px 30px;
   background-color: transparent;
-  filter: invert(0) brightness(0) !important;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   opacity: 1 !important;
-  -webkit-filter: invert(0) brightness(0) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   vertical-align: middle;
   position: absolute;
   right: 5px;
@@ -3421,6 +3602,28 @@ input[type="date"]::-moz-datetime-edit-year-field {
   text-align: center !important;
 }
 </style>
+
+<script>
+// Immediate protection for email field - runs before any other scripts
+document.addEventListener('DOMContentLoaded', () => {
+    const emailField = document.querySelector('textarea[name="email_address"]');
+    if (emailField) {
+        // Force text-transform to none with highest priority
+        emailField.style.textTransform = 'none';
+        emailField.style.setProperty('text-transform', 'none', 'important');
+        emailField.classList.add('no-uppercase');
+        
+        // Remove ALL event listeners (clean slate)
+        const clone = emailField.cloneNode(true);
+        clone.value = emailField.value;
+        emailField.parentNode.replaceChild(clone, emailField);
+        
+        // Ensure style is maintained
+        clone.style.textTransform = 'none';
+        clone.style.setProperty('text-transform', 'none', 'important');
+    }
+});
+</script>
 
 
 </x-app-layout>

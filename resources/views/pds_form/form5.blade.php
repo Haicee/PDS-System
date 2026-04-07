@@ -2,13 +2,6 @@
 <div id="autosaveOverlay5" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form5" method="POST" action="{{ route('pds.submit', [], false) }}" class="w-full" enctype="multipart/form-data">
 @csrf
-
-<div class="max-w-6xl mx-auto p-4 flex justify-end">
-  <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-    Download PDF
-  </a>
-</div>
-
 <style>
 textarea:focus { outline: none; box-shadow: none; }
 [contenteditable]:focus { outline: none; margin: 0; padding: 0; }
@@ -181,21 +174,82 @@ document.addEventListener('DOMContentLoaded', () => {
     el.style.height = `${el.scrollHeight}px`;
   };
 
+  // Helper: create accomplishment input element (used in multiple places)
+  const createAccomplishmentInput = () => {
+    const div = document.createElement('div');
+    div.className = 'flex items-center space-x-2';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'accomplishments[]';
+    input.className = 'border border-gray-300 bg-transparent text-sm p-1 focus:outline-none flex-grow';
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'remove-accomplishment text-red-500 hover:text-red-700 font-semibold';
+    removeButton.textContent = '×';
+    div.appendChild(input);
+    div.appendChild(removeButton);
+    return { div, input };
+  };
+
   const loadCache = (overrideData = null) => {
     let data = {};
+    let localData = {};
+
+    // Always try to load localStorage first (for real-time sync during session)
     try {
-      data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      localData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      console.log('[loadCache] localStorage loaded:', localData);
     } catch (e) {
-      data = {};
+      localData = {};
     }
 
-    if (overrideData) {
+    // Normalize server data (draft/session) to use []-suffixed keys
+    let serverData = {};
+    if (overrideData && Object.keys(overrideData).length > 0) {
+      // Map remarks -> remarks[] if needed
       if (overrideData.remarks && !overrideData['remarks[]']) {
         overrideData['remarks[]'] = overrideData.remarks;
       }
-      // Prefer locally cached values; use server/session as fallback
-      data = { ...overrideData, ...data };
+
+      const arrayFieldAliases = [
+        'duration',
+        'position_title',
+        'office_unit',
+        'immediate_supervisor',
+        'agency_location',
+        'accomplishments',
+        'duties'
+      ];
+
+      arrayFieldAliases.forEach((field) => {
+        const aliasKey = `${field}[]`;
+        if (Array.isArray(overrideData[field]) && !overrideData[aliasKey]) {
+          overrideData[aliasKey] = overrideData[field];
+        }
+      });
+
+      serverData = overrideData;
+      console.log('[loadCache] serverData normalized:', serverData);
     }
+
+    // IMPORTANT: localStorage takes priority even for empty values
+    if (localData && Object.keys(localData).length > 0) {
+      data = { ...(serverData || {}), ...localData };
+      console.log('[loadCache] merged data (localStorage wins):', data);
+    } else if (serverData && Object.keys(serverData).length > 0) {
+      data = serverData;
+      console.log('[loadCache] using serverData only:', data);
+    } else {
+      data = {};
+      console.log('[loadCache] no data, starting fresh');
+    }
+
+    // Debug: Log the key fields we're trying to load
+    console.log('[loadCache] after merge - duration[]:', data['duration[]']);
+    console.log('[loadCache] after merge - position_title[]:', data['position_title[]']);
+    console.log('[loadCache] after merge - office_unit[]:', data['office_unit[]']);
+    console.log('[loadCache] after merge - immediate_supervisor[]:', data['immediate_supervisor[]']);
+    console.log('[loadCache] after merge - agency_location[]:', data['agency_location[]']);
 
     if (overrideData?.signature_path && signaturePathInput5) {
       signaturePathInput5.value = overrideData.signature_path;
@@ -204,7 +258,85 @@ document.addEventListener('DOMContentLoaded', () => {
       signatureDataInput5.value = overrideData.signature_data;
     }
 
-    Object.entries(data).forEach(([name, stored]) => {
+    // Ensure enough work-experience rows exist before populating values
+    try {
+      const rowKeys = ['duration[]','position_title[]','office_unit[]','immediate_supervisor[]','agency_location[]','duties[]'];
+      const lengths = rowKeys.map(k => Array.isArray(data[k]) ? data[k].length : 0);
+      const accLen = Array.isArray(data.accomplishments_indexed) ? data.accomplishments_indexed.length : 0;
+      const savedRowCount = typeof data._row_count === 'number' ? data._row_count : 0;
+      const rowsNeeded = Math.max(1, savedRowCount, ...lengths, accLen);
+      const tbody = document.getElementById('remarks-rows');
+      if (tbody) {
+        const rowsNow = tbody.querySelectorAll('tr');
+        const existingCount = Math.max(0, rowsNow.length - 1); // minus instructions row
+        const baseRow = rowsNow.length > 1 ? rowsNow[1] : null;
+        if (baseRow) {
+          for (let i = existingCount; i < rowsNeeded; i++) {
+            const clone = baseRow.cloneNode(true);
+            // clear values
+            Array.from(clone.querySelectorAll('input[type="text"], textarea')).forEach(el => { el.value = ''; });
+            // normalize accomplishment container/buttons
+            const accContainer = clone.querySelector('#accomplishments-container');
+            if (accContainer) {
+              accContainer.removeAttribute('id');
+              accContainer.classList.add('accomplishments-container');
+              while (accContainer.children.length) accContainer.removeChild(accContainer.lastChild);
+              // ensure two inputs
+              const { div: div1, input: input1 } = createAccomplishmentInput();
+              const { div: div2, input: input2 } = createAccomplishmentInput();
+              accContainer.appendChild(div1);
+              accContainer.appendChild(div2);
+              // Attach reactive and event listeners to accomplishment inputs
+              if (window.attachReactive) {
+                window.attachReactive(input1);
+                window.attachReactive(input2);
+              }
+              [input1, input2].forEach(input => {
+                input.addEventListener('input', () => {
+                  if (window.updateRemarksCounter) window.updateRemarksCounter();
+                });
+                input.addEventListener('change', () => {
+                  if (window.updateRemarksCounter) window.updateRemarksCounter();
+                });
+              });
+            } else {
+              const byClass = clone.querySelector('.accomplishments-container');
+              if (byClass && byClass.children.length < 2) {
+                while (byClass.children.length < 2) {
+                  const { div, input } = createAccomplishmentInput();
+                  byClass.appendChild(div);
+                  // Attach reactive and event listeners
+                  if (window.attachReactive) window.attachReactive(input);
+                  input.addEventListener('input', () => {
+                    if (window.updateRemarksCounter) window.updateRemarksCounter();
+                  });
+                  input.addEventListener('change', () => {
+                    if (window.updateRemarksCounter) window.updateRemarksCounter();
+                  });
+                }
+              }
+            }
+            const addBtn = clone.querySelector('#add-accomplishment');
+            if (addBtn) { addBtn.removeAttribute('id'); addBtn.classList.add('add-accomplishment'); }
+            tbody.appendChild(clone);
+            
+            // Attach reactive and event listeners to ALL inputs in the restored row
+            const restoredInputs = clone.querySelectorAll('input[type="text"], textarea');
+            restoredInputs.forEach(el => {
+              if (window.attachReactive) window.attachReactive(el);
+              el.addEventListener('input', () => {
+                if (window.updateRemarksCounter) window.updateRemarksCounter();
+              });
+              el.addEventListener('change', () => {
+                if (window.updateRemarksCounter) window.updateRemarksCounter();
+              });
+            });
+          }
+        }
+      }
+    } catch (_) {}
+
+  Object.entries(data).forEach(([name, stored]) => {
       if (name === 'remarks[]' && Array.isArray(stored)) {
         const rows = getRemarks();
         if (rows.length) {
@@ -218,19 +350,62 @@ document.addEventListener('DOMContentLoaded', () => {
       const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
 
       if (name.endsWith('[]') && Array.isArray(stored)) {
-        elements.forEach((el, idx) => {
-          const val = stored[idx] ?? '';
-          if (el.type === 'checkbox') {
-            el.checked = Array.isArray(val) ? val.includes(el.value) : String(val) === el.value;
-          } else if (el.type === 'radio') {
-            el.checked = val === el.value;
-          } else {
-            if (!el.value) el.value = val;
+        if (name === 'accomplishments[]') {
+          const indexed = Array.isArray(data.accomplishments_indexed) ? data.accomplishments_indexed : null;
+          const tbody = document.getElementById('remarks-rows');
+          if (indexed && tbody) {
+            const rows = Array.from(tbody.querySelectorAll('tr')).slice(1); // skip instructions
+            indexed.forEach((bucket, rowIdx) => {
+              const tr = rows[rowIdx];
+              if (!tr || !Array.isArray(bucket)) return;
+              const container = tr.querySelector('#accomplishments-container') || tr.querySelector('.accomplishments-container');
+              if (!container) return;
+              // Ensure inputs match bucket length exactly
+              // First, trim extras from the end
+              let inputs = Array.from(container.querySelectorAll('input[name="accomplishments[]"]'));
+              while (inputs.length > bucket.length) {
+                const last = inputs.pop();
+                const wrap = last && last.parentElement;
+                if (wrap && wrap.parentElement === container) wrap.remove();
+              }
+              // Then, add more until we match length
+              while (inputs.length < bucket.length) {
+                const { div, input } = createAccomplishmentInput();
+                container.appendChild(div);
+                if (window.attachReactive) window.attachReactive(input);
+                // Add event listeners for counter updates
+                input.addEventListener('input', () => {
+                  if (window.updateRemarksCounter) window.updateRemarksCounter();
+                });
+                input.addEventListener('change', () => {
+                  if (window.updateRemarksCounter) window.updateRemarksCounter();
+                });
+                inputs = Array.from(container.querySelectorAll('input[name="accomplishments[]"]'));
+              }
+              // Populate values for this row only
+              bucket.forEach((val, i) => {
+                if (inputs[i]) {
+                  inputs[i].value = val;
+                  if (window.attachReactive) window.attachReactive(inputs[i]);
+                }
+              });
+            });
           }
-          if (el.tagName === 'TEXTAREA' || el.type === 'text') {
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        });
+        } else {
+          elements.forEach((el, idx) => {
+            const val = stored[idx] ?? '';
+            if (el.type === 'checkbox') {
+              el.checked = Array.isArray(val) ? val.includes(el.value) : String(val) === el.value;
+            } else if (el.type === 'radio') {
+              el.checked = val === el.value;
+            } else {
+              el.value = val; // Always apply localStorage value (including empty)
+            }
+            if (el.tagName === 'TEXTAREA' || el.type === 'text') {
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          });
+        }
         return;
       }
 
@@ -246,9 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
           el.checked = stored === el.value;
         }
         else {
-          if (!el.value) {
-            el.value = stored;
-          }
+          el.value = stored; // Always apply localStorage value (including empty)
         }
 
         if (el.tagName === 'TEXTAREA' || el.type === 'text') {
@@ -262,6 +435,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const saveCache = () => {
     const data = {};
+    // Always capture row count first (critical for reconstruction)
+    try {
+      const tbody = document.getElementById('remarks-rows');
+      if (tbody) {
+        const rows = Array.from(tbody.querySelectorAll('tr')).slice(1); // skip instructions
+        data._row_count = rows.length;
+      }
+    } catch (_) {}
 
     Array.from(form.elements).forEach(el => {
       if (!el.name || el.disabled) return;
@@ -302,24 +483,74 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Capture accomplishments per work-entry to preserve exact positions
+    try {
+      const tbody = document.getElementById('remarks-rows');
+      if (tbody) {
+        const rows = Array.from(tbody.querySelectorAll('tr')).slice(1); // skip instructions
+        const accPerRow = rows.map(tr => {
+          const container = tr.querySelector('#accomplishments-container') || tr.querySelector('.accomplishments-container');
+          if (!container) return [];
+          const inputs = Array.from(container.querySelectorAll('input[name="accomplishments[]"]'));
+          return inputs.map(i => i.value || '');
+        });
+        data.accomplishments_indexed = accPerRow;
+      }
+    } catch (_) {}
+
+    // Debug: Log the key fields we're trying to save
+    console.log('[saveCache] duration[]:', data['duration[]']);
+    console.log('[saveCache] position_title[]:', data['position_title[]']);
+    console.log('[saveCache] office_unit[]:', data['office_unit[]']);
+    console.log('[saveCache] immediate_supervisor[]:', data['immediate_supervisor[]']);
+    console.log('[saveCache] agency_location[]:', data['agency_location[]']);
+    
+    // Ensure empty values are preserved (don't filter out empty strings)
+    const criticalFields = ['duration[]', 'position_title[]', 'office_unit[]', 'immediate_supervisor[]', 'agency_location[]'];
+    criticalFields.forEach(field => {
+      if (!(field in data)) {
+        data[field] = [];
+      }
+    });
+
     try {
       localStorage.setItem(storageKey, JSON.stringify(data));
+      console.log('[saveCache] saved to localStorage');
     } catch (err) {
       console.warn('localStorage quota exceeded, skipping cache save', err);
     }
   };
 
   const autoSaveToServer = (() => {
+    // Throttled autosave similar to Form 1 to avoid spamming the server
     let timer;
     let failureCount = 0;
-    const retryDelay = 1200;
+    const baseDelay = 1200;
+    const maxDelay = 8000;
     const maxRetries = 3;
     const showOverlay = (flag) => {
       if (!autosaveOverlay) return;
       autosaveOverlay.classList.toggle('hidden', !flag);
     };
+
     const send = () => {
       const formData = new FormData(form);
+      // Include per-row accomplishments in autosave payload
+      try {
+        const tbody = document.getElementById('remarks-rows');
+        if (tbody) {
+          const rows = Array.from(tbody.querySelectorAll('tr')).slice(1);
+          rows.forEach((tr, rowIdx) => {
+            const container = tr.querySelector('#accomplishments-container') || tr.querySelector('.accomplishments-container');
+            if (!container) return;
+            const inputs = Array.from(container.querySelectorAll('input[name="accomplishments[]"]'));
+            inputs.forEach(input => {
+              formData.append(`accomplishments_indexed[${rowIdx}][]`, input.value || '');
+            });
+          });
+        }
+      } catch (_) {}
+
       fetch('{{ route('pds.autosave', [], false) }}', {
         method: 'POST',
         headers: {
@@ -330,6 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .then(response => {
         if (response.status === 401 || response.status === 419) {
+          // Session/CSRF issues – show overlay and stop exponential retrying
           showOverlay(true);
           throw new Error('Auto-save unauthorized');
         }
@@ -354,13 +586,15 @@ document.addEventListener('DOMContentLoaded', () => {
         showOverlay(true);
         if (failureCount < maxRetries) {
           failureCount += 1;
-          setTimeout(send, retryDelay);
+          const delay = Math.min(baseDelay * Math.pow(2, failureCount - 1), maxDelay);
+          setTimeout(send, delay);
         }
       });
     };
 
     return () => {
       clearTimeout(timer);
+      // Small debounce window so multiple keystrokes are batched into one autosave
       timer = setTimeout(send, 800);
     };
   })();
@@ -369,11 +603,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MAX_REMARKS_CHARS = 60 * 1024; // ~60 KB cap (below DB text limit)
 
-  const updateRemarksCounter = (el) => {
+  const updateRemarksCounter = () => {
     const counterEl = document.getElementById('remarksCounter');
-    if (!counterEl || !el) return;
-    const len = el.value.length;
-    counterEl.textContent = `${len.toLocaleString()} / ${MAX_REMARKS_CHARS.toLocaleString()}`;
+    if (!counterEl) return;
+
+    let total = 0;
+    // Count ALL text inputs and textareas within the work experience table
+    const workExperienceTable = document.querySelector('#remarks-rows');
+    if (workExperienceTable) {
+      const fields = workExperienceTable.querySelectorAll(
+        'input[type="text"], textarea'
+      );
+      fields.forEach((f) => {
+        if (f.disabled) return;
+        const v = f.value || '';
+        total += v.length;
+      });
+    }
+    
+    // Also count the main remarks field if it exists
+    const remarksFields = form.querySelectorAll('textarea[name="remarks[]"]');
+    remarksFields.forEach((f) => {
+      if (f.disabled) return;
+      const v = f.value || '';
+      total += v.length;
+    });
+
+    counterEl.textContent = `${total.toLocaleString()} / ${MAX_REMARKS_CHARS.toLocaleString()}`;
   };
 
   const getRemarks = () => Array.from(form.querySelectorAll('textarea[name="remarks[]"]'));
@@ -402,27 +658,88 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const attachReactive = (el) => {
-    const isRemarksField = el.name === 'remarks[]';
+    // Treat all fields inside the work-experience table (and any remarks[] fields)
+    // as part of a single global character budget.
+    const isRemarksField = el.name === 'remarks[]' || !!el.closest('#remarks-rows');
     autoSize(el);
     const enforceLimit = () => {
       if (!isRemarksField) return;
-      if (el.value.length > MAX_REMARKS_CHARS) {
-        const { selectionStart, selectionEnd } = el;
-        el.value = el.value.slice(0, MAX_REMARKS_CHARS);
-        // restore cursor where possible
-        if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
-          el.selectionStart = Math.min(selectionStart, MAX_REMARKS_CHARS);
-          el.selectionEnd = Math.min(selectionEnd, MAX_REMARKS_CHARS);
-        }
+
+      // Compute total characters across all relevant fields (same set as the counter)
+      let total = 0;
+
+      const workExperienceTable = document.querySelector('#remarks-rows');
+      if (workExperienceTable) {
+        const fields = workExperienceTable.querySelectorAll('input[type="text"], textarea');
+        fields.forEach((f) => {
+          if (f.disabled) return;
+          const v = f.value || '';
+          total += v.length;
+        });
       }
-      updateRemarksCounter(el);
+
+      const remarksFields = form.querySelectorAll('textarea[name="remarks[]"]');
+      remarksFields.forEach((f) => {
+        if (f.disabled) return;
+        const v = f.value || '';
+        total += v.length;
+      });
+
+      if (total <= MAX_REMARKS_CHARS) return;
+
+      // We're over budget – trim the current field's value so that
+      // the overall sum never exceeds MAX_REMARKS_CHARS.
+      const currentValue = el.value || '';
+      const overBy = total - MAX_REMARKS_CHARS;
+      if (overBy <= 0) return;
+
+      const newLength = Math.max(0, currentValue.length - overBy);
+      if (newLength >= currentValue.length) return;
+
+      const { selectionStart, selectionEnd } = el;
+      el.value = currentValue.slice(0, newLength);
+
+      // Restore cursor position as close to the end as possible
+      if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+        const pos = Math.min(newLength, newLength);
+        el.selectionStart = pos;
+        el.selectionEnd = pos;
+      }
     };
 
-    el.addEventListener('input', () => { enforceLimit(); autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
-    el.addEventListener('change', () => { enforceLimit(); autoSize(el); validateRequired(); saveCache(); autoSaveToServer(); });
+    // Input/change handlers (persist() is called globally on form input event)
+    el.addEventListener('input', () => {
+      enforceLimit();
+      autoSize(el);
+      validateRequired();
+      updateRemarksCounter();
+    });
+    el.addEventListener('change', () => {
+      enforceLimit();
+      autoSize(el);
+      validateRequired();
+      updateRemarksCounter();
+    });
 
     if (isRemarksField) enforceLimit();
   };
+
+  // Persist function: save to localStorage immediately, then autosave to server
+  let hasUserInput = false;
+  const persist = () => {
+    saveCache(); // Synchronous localStorage save (instant)
+    if (hasUserInput) {
+      autoSaveToServer(); // Async server save (non-blocking)
+    }
+  };
+
+  // Expose functions to global scope for accomplishment script
+  window.attachReactive = attachReactive;
+  window.saveCache = saveCache;
+  window.autoSaveToServer = autoSaveToServer;
+  window.persist = persist;
+  window.createAccomplishmentInput = createAccomplishmentInput;
+  window.updateRemarksCounter = updateRemarksCounter;
 
   // Initial hooks
   getRemarks().forEach(attachReactive);
@@ -431,6 +748,24 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCache({ ...(draftData || {}), ...(sessionData || {}) });
   updateSignaturePreview5();
   validateRequired();
+  updateRemarksCounter();
+
+  // Persist merged cache once on load so fast refresh keeps latest values
+  saveCache();
+  
+  // If we have hydrated data, push to server once
+  const initialPayload = { ...(draftData || {}), ...(sessionData || {}) };
+  const hasHydratedData = initialPayload && Object.keys(initialPayload).length > 0;
+  if (hasHydratedData) {
+    hasUserInput = true;
+    autoSaveToServer();
+  }
+
+  // Trigger persist on every form input (like Form 1)
+  form.addEventListener('input', (e) => {
+    hasUserInput = true;
+    persist();
+  });
 
   if (submitBtn) {
     submitBtn.addEventListener('click', (e) => {
@@ -510,29 +845,217 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <tr>
 <td class="border-2 border-black relative align-top">
-<textarea
-id="remarks-prototype"
-name="remarks[]"
-class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
-style="min-height:350px; white-space:pre-wrap; overflow:hidden;"
-placeholder="Sample: If applying to Supervising Administrative Officer
-
-Duration:  February 11, 2011 – present
-
-Position Title:  Administrative Officer IV
-
-Department/Agency/Office/Company:  Civil Service Commission – Regional Office No. IV
-
-Immediate Supervisor:  Division Chief   and highlight your key duties/responsibilities
-
-For more spaces, type as many roles as needed in the box." aria-label="Work Experience Remarks"></textarea>
+<div class="p-3 text-sm">
+    <ul class="list-none space-y-2">
+        <li>
+            <p class="font-semibold inline">Duration:</p>
+            <input type="text" name="duration[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 100px);">
+        </li>
+        <li>
+            <p class="font-semibold inline">Position:</p>
+            <input type="text" name="position_title[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 100px);">
+        </li>
+        <li>
+            <p class="font-semibold inline">Name of Office/Unit:</p>
+            <input type="text" name="office_unit[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 180px);">
+        </li>
+        <li>
+            <p class="font-semibold inline">Immediate Supervisor:</p>
+            <input type="text" name="immediate_supervisor[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 180px);">
+        </li>
+        <li>
+            <p class="font-semibold inline">Name of Agency/Organization and Location:</p>
+            <input type="text" name="agency_location[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2 mt-1" style="width: calc(100% - 280px);">
+        </li>
+        <li class="mt-3">
+            <p class="font-semibold">List of Accomplishments and Contributions (if any)</p>
+            <div class="ml-6 mt-2 space-y-1" id="accomplishments-container">
+                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full">
+                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full">
+            </div>
+            <div class="ml-6 mt-2 flex justify-end">
+                <button type="button" id="add-accomplishment" class="text-blue-500 hover:text-blue-700 font-semibold">+ Add Accomplishment</button>
+            </div>
+        </li>
+        <li class="mt-3">
+            <p class="font-semibold">Summary of Actual Duties</p>
+            <div class="ml-6 mt-2">
+                <textarea name="duties[]" class="border border-gray-300 w-full p-3 resize-none text-sm focus:outline-none bg-transparent" style="min-height:100px; white-space:pre-wrap; overflow:hidden;" aria-label="Summary of Actual Duties"></textarea>
+            </div>
+        </li>
+        <li class="mt-4 pt-2 border-t border-gray-300">
+            <div class="ml-6 mt-2 flex justify-end">
+                <button type="button" class="remove-work-experience text-red-500 hover:text-red-700 font-semibold">× Remove Work Experience</button>
+            </div>
+        </li>
+    </ul>
+</div>
 </td>
 </tr>
 
 </tbody>
 </table>
 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Ensure first block also has classes so delegated handlers work across multiple rows
+  const firstContainer = document.getElementById('accomplishments-container');
+  if (firstContainer) firstContainer.classList.add('accomplishments-container');
+  const firstAddBtn = document.getElementById('add-accomplishment');
+  if (firstAddBtn) firstAddBtn.classList.add('add-accomplishment');
+
+  // Delegated: add accomplishment in the nearest work block
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('add-accomplishment')) {
+      const li = e.target.closest('li');
+      const container = li ? (li.querySelector('#accomplishments-container') || li.querySelector('.accomplishments-container')) : null;
+      if (!container) return;
+
+      const { div, input } = window.createAccomplishmentInput();
+      container.appendChild(div);
+      if (window.attachReactive) window.attachReactive(input);
+      // Add direct event listeners for immediate counter updates
+      input.addEventListener('input', () => {
+        if (window.updateRemarksCounter) window.updateRemarksCounter();
+      });
+      input.addEventListener('change', () => {
+        if (window.updateRemarksCounter) window.updateRemarksCounter();
+      });
+      // Immediate save after adding accomplishment
+      if (window.persist) window.persist();
+      // Update counter to include new empty field
+      if (window.updateRemarksCounter) window.updateRemarksCounter();
+    }
+  });
+
+  // Delegated: remove accomplishment with per-block minimum of 2 inputs
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-accomplishment')) {
+      const fieldDiv = e.target.parentElement;
+      const block = e.target.closest('li');
+      const container = block ? (block.querySelector('#accomplishments-container') || block.querySelector('.accomplishments-container')) : null;
+      if (!container) return;
+      if (container.children.length > 2) {
+        fieldDiv.remove();
+        // Immediate save after removing accomplishment
+        if (window.persist) window.persist();
+        // Update counter to remove the deleted field
+        if (window.updateRemarksCounter) window.updateRemarksCounter();
+      } else {
+        alert('You must have at least 2 accomplishment fields.');
+      }
+    }
+  });
+
+  // Add Work Experience: clone the original work row (2nd tr in tbody)
+  const addWorkBtn = document.getElementById('add-work-experience');
+  if (addWorkBtn) {
+    addWorkBtn.addEventListener('click', function() {
+      const tbody = document.getElementById('remarks-rows');
+      if (!tbody) return;
+      const rows = tbody.querySelectorAll('tr');
+      if (rows.length < 2) return; // need base row to clone
+      const baseRow = rows[1];
+      const clone = baseRow.cloneNode(true);
+
+      // Clear values in clone
+      Array.from(clone.querySelectorAll('input[type="text"], textarea')).forEach(el => {
+        el.value = '';
+      });
+
+      // Make accomplishment controls class-based in clone to avoid duplicate IDs
+      const accContainer = clone.querySelector('#accomplishments-container');
+      if (accContainer) {
+        accContainer.removeAttribute('id');
+        accContainer.classList.add('accomplishments-container');
+      } else {
+        // if already class-based, ensure it's set
+        const accByClass = clone.querySelector('.accomplishments-container');
+        if (!accByClass) {
+          const fallback = clone.querySelector('div.ml-6.mt-2.space-y-1');
+          if (fallback) fallback.classList.add('accomplishments-container');
+        }
+      }
+      const addBtn = clone.querySelector('#add-accomplishment');
+      if (addBtn) {
+        addBtn.removeAttribute('id');
+        addBtn.classList.add('add-accomplishment');
+      }
+
+      // Ensure at least two accomplishment inputs exist in each new block
+      const container = clone.querySelector('.accomplishments-container') || clone.querySelector('#accomplishments-container');
+      if (container) {
+        while (container.children.length) container.removeChild(container.lastChild);
+        const { div: div1, input: input1 } = window.createAccomplishmentInput();
+        const { div: div2, input: input2 } = window.createAccomplishmentInput();
+        container.appendChild(div1);
+        container.appendChild(div2);
+        if (window.attachReactive) {
+          window.attachReactive(input1);
+          window.attachReactive(input2);
+        }
+        // Add direct event listeners for immediate counter updates
+        [input1, input2].forEach(input => {
+          input.addEventListener('input', () => {
+            if (window.updateRemarksCounter) window.updateRemarksCounter();
+          });
+          input.addEventListener('change', () => {
+            if (window.updateRemarksCounter) window.updateRemarksCounter();
+          });
+        });
+      }
+
+      tbody.appendChild(clone);
+      // Attach reactive to new inputs
+      const newInputs = clone.querySelectorAll('input[type="text"], textarea');
+      Array.from(newInputs).forEach(el => {
+        if (window.attachReactive) window.attachReactive(el);
+        // Also add direct event listeners for immediate counter updates
+        el.addEventListener('input', () => {
+          if (window.updateRemarksCounter) window.updateRemarksCounter();
+        });
+        el.addEventListener('change', () => {
+          if (window.updateRemarksCounter) window.updateRemarksCounter();
+        });
+      });
+      // Immediate save after adding work experience row
+      if (window.persist) window.persist();
+      // Update counter to include new row's fields
+      if (window.updateRemarksCounter) window.updateRemarksCounter();
+    });
+  }
+
+  // Delegated: remove entire work experience row, keep at least one
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-work-experience')) {
+      const tbody = document.getElementById('remarks-rows');
+      if (!tbody) return;
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const workRows = rows.slice(1); // exclude instructions row
+      if (workRows.length <= 1) {
+        alert('You must have at least one work experience entry.');
+        return;
+      }
+      const tr = e.target.closest('tr');
+      if (tr && tbody.contains(tr)) {
+        tr.remove();
+        // Immediate save after removing work experience row
+        if (window.persist) window.persist();
+        // Update counter to remove the deleted row's fields
+        if (window.updateRemarksCounter) window.updateRemarksCounter();
+      }
+    }
+  });
+});
+</script>
+
 <div class="max-w-6xl mx-auto flex justify-end text-xs text-gray-600 pr-3 pb-2" id="remarksCounter">0 / 61,440</div>
+
+
+<div class="mt-4 flex justify-end">
+  <button type="button" id="add-work-experience" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-['Arial_Narrow','Arial',sans-serif] text-sm font-semibold">+ Add Work Experience</button>
+</div>
 
 <!-- SIGNATURE -->
 <div class="w-full flex justify-end mt-[3cm] pr-6">
@@ -594,7 +1117,7 @@ Previous Page</a>
   Submit PDS
 </button>
 </div>
-
+  
 </div>
 </form>
 <x-submitpds />
