@@ -164,184 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (name) names.add(name);
     });
 
-    // Education dynamic extra rows
-    const extraPrototype = document.getElementById('education-extra-prototype');
-    const addButtons = Array.from(document.querySelectorAll('[data-education-add]'));
-    const addRows = Array.from(document.querySelectorAll('tr[data-education-base]')).filter(row => row.querySelector('td.add-btn-cell.has-add-btn'));
-
-    // Hover highlight spans entire row for add-enabled rows (anywhere in the row)
-    addRows.forEach(row => {
-        row.addEventListener('mouseenter', () => row.classList.add('row-add-hover'));
-        row.addEventListener('mouseleave', () => row.classList.remove('row-add-hover'));
-    });
-
-    const autoHeight = (ta) => {
-        ta.addEventListener('input', () => {
-            ta.style.height = 'auto';
-            ta.style.height = ta.scrollHeight + 'px';
-        });
-    };
-
-    const enforceUppercase = (ta) => {
-        // Skip email address field - allow mixed case
-        if (ta.name === 'email_address') {
-            // Immediately override any uppercase styling
-            ta.style.textTransform = 'none';
-            ta.style.setProperty('text-transform', 'none', 'important');
-            
-            // Remove any existing uppercase event listeners
-            const newInputHandler = (e) => {
-                e.stopImmediatePropagation();
-                // Don't convert to uppercase
-            };
-            
-            // Remove all existing input listeners and add our protective one
-            ta.removeEventListener('input', ta._uppercaseHandler);
-            ta.addEventListener('input', newInputHandler, true);
-            ta._uppercaseHandler = newInputHandler;
-            
-            return;
-        }
-        ta.style.textTransform = 'uppercase';
-        ta.addEventListener('input', () => {
-            const start = ta.selectionStart;
-            const end = ta.selectionEnd;
-            ta.value = (ta.value || '').toUpperCase();
-            ta.selectionStart = start;
-            ta.selectionEnd = end;
-        });
-    };
-
-    const addEducationRow = (level = '', values = {}, baseRowHint = null) => {
-        if (!extraPrototype) return;
-        const levelKey = (level || '').trim();
-        const fragment = extraPrototype.content.cloneNode(true);
-        const row = fragment.querySelector('tr');
-        row.dataset.educationExtra = '1';
-        row.dataset.educationLevel = levelKey;
-
-        const textareas = Array.from(fragment.querySelectorAll('textarea'));
-        textareas.forEach((ta, idx) => {
-            const name = ta.getAttribute('name');
-            if (idx === 0) {
-                if (levelKey) {
-                    ta.value = levelKey;
-                }
-                ta.readOnly = true;
-                ta.classList.add('pointer-events-none', 'bg-transparent', 'text-transparent', 'caret-transparent', 'select-none');
-            }
-            if (name && values[name] !== undefined) {
-                ta.value = values[name] ?? '';
-            }
-            ta.required = true;
-            autoHeight(ta);
-            enforceUppercase(ta);
-        });
-
-        // Register required validation on newly added fields
-        textareas.forEach(ta => {
-            if (!requiredFields.includes(ta)) {
-                requiredFields.push(ta);
-                ta.addEventListener('input', validateRequired);
-                ta.addEventListener('change', validateRequired);
-            }
-        });
-
-        validateRequired();
-
-        const removeBtn = fragment.querySelector('[data-education-remove]');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                row.remove();
-                triggerPersist();
-            });
-        }
-
-        const baseRow = baseRowHint || document.querySelector(`tr[data-education-base="${CSS.escape(levelKey)}"]`);
-        if (baseRow) {
-            let insertAfter = baseRow;
-            while (
-                insertAfter.nextElementSibling &&
-                insertAfter.nextElementSibling.dataset.educationExtra === '1' &&
-                insertAfter.nextElementSibling.dataset.educationLevel === levelKey
-            ) {
-                insertAfter = insertAfter.nextElementSibling;
-            }
-            insertAfter.insertAdjacentElement('afterend', row);
-        } else {
-            extraPrototype.parentElement.insertBefore(row, extraPrototype);
-        }
-
-        triggerPersist();
-    };
-
-    addButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const level = (btn.getAttribute('data-education-add') || '').trim();
-            const baseRow = btn.closest('tr');
-            addEducationRow(level, {}, baseRow);
-        });
-    });
-
-    // Restore dynamic education rows from cache/draft so refresh keeps added rows (cache-first like form2)
-    const hydrateExistingExtras = () => {
-        // Prefer local cache (captures unsent changes)
-        let source = {};
-        try {
-            source = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
-        } catch (e) {
-            source = {};
-        }
-
-        const serverSource = (draftData && Object.keys(draftData).length) ? draftData : sessionData;
-        const hasLocalCache = Object.keys(source).length > 0;
-
-        // Backfill only missing keys from server draft/session; never override cached values
-        if (serverSource) {
-            Object.entries(serverSource).forEach(([k, v]) => {
-                if (!hasLocalCache && source[k] === undefined) {
-                    source[k] = v;
-                }
-            });
-        }
-
-        if (!Object.keys(source).length) return;
-
-        const keys = [
-            'education_extra_level',
-            'education_extra_school_name',
-            'education_extra_basic_education',
-            'education_extra_from',
-            'education_extra_to',
-            'education_extra_highest_level',
-            'education_extra_year_graduated',
-            'education_extra_scholarship_acadhonors'
-        ];
-
-        const getArray = (obj, key) => {
-            if (Array.isArray(obj[key])) return obj[key];
-            const bracketKey = `${key}[]`;
-            if (Array.isArray(obj[bracketKey])) return obj[bracketKey];
-            return [];
-        };
-
-        const arrays = Object.fromEntries(keys.map(k => [k, getArray(source, k)]));
-        const maxLen = Math.max(0, ...Object.values(arrays).map(arr => arr.length));
-
-        for (let i = 0; i < maxLen; i++) {
-            const level = arrays.education_extra_level[i] || '';
-            const values = {};
-            let hasData = (level || '').trim().length > 0;
-            keys.forEach(k => {
-                values[`${k}[]`] = arrays[k][i] ?? '';
-                if (!hasData && (arrays[k][i] ?? '').toString().trim().length > 0) {
-                    hasData = true;
-                }
-            });
-            if (!hasData) continue; // skip empty cached rows
-            addEducationRow(level, values);
-        }
-    };
 
     // Special handling: children rows
     const childrenNameFields = Array.from(document.querySelectorAll('textarea[name="children_familybg[]"]'));
@@ -603,9 +425,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     validateRequired();
-
-    // Hydrate any cached/auto-saved dynamic education rows on load (requires validateRequired/requiredFields)
-    hydrateExistingExtras();
 
     if (form && nextBtn) {
         form.addEventListener('submit', (e) => {
@@ -1424,45 +1243,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
    <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
-  <style>
-    /* Show education add buttons only on hover */
-    tr[data-education-base] .edu-add-btn {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s ease;
-    }
-    tr.row-add-hover .edu-add-btn {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Emphasize add area with a bottom highlight on hover */
-    tr[data-education-base] td.add-btn-cell.has-add-btn {
-      position: relative;
-      overflow: visible;
-    }
-    tr[data-education-base] td.add-btn-cell.has-add-btn::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -1px;
-      height: 3px;
-      background: #059669;
-      opacity: 0;
-      transition: opacity 0.15s ease;
-      pointer-events: none;
-    }
-    tr.row-add-hover td.add-btn-cell.has-add-btn::after {
-      opacity: 1;
-    }
-
-    /* Extend hover highlight across the full row bottom border */
-    tr.row-add-hover td {
-      box-shadow: inset 0 -2px 0 #059669;
-      border-bottom-color: #059669;
-    }
-  </style>
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -2451,7 +2231,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative add-btn-cell has-add-btn">
+          class="border h-10">
           <div class="h-full w-full">
          <textarea
       name="education[secondary][scholarship_acadhonors]"
@@ -2463,11 +2243,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="SECONDARY" aria-label="Add secondary row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="VOCATIONAL / TRADE COURSE">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2568,11 +2347,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="VOCATIONAL / TRADE COURSE" aria-label="Add vocational row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="COLLEGE">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">COLLEGE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2673,11 +2451,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="COLLEGE" aria-label="Add college row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="GRADUATE STUDIES">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2766,7 +2543,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative add-btn-cell has-add-btn">
+          class="border h-10">
           <div class="h-full w-full">
          <textarea
       name="education[graduate_studies][scholarship_acadhonors]"
@@ -2778,82 +2555,8 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="GRADUATE STUDIES" aria-label="Add graduate row">+</button>
       </td>
   </tr>
-
-  <!-- Dynamic extra education rows (hydrated client-side) -->
-  <tbody id="education-extra-rows"></tbody>
-
-  <!-- Prototype for dynamic education row -->
-  <template id="education-extra-prototype">
-    <tr data-education-extra-row>
-      <td class="border text-center align-middle h-20">
-        <textarea name="education_extra_level[]" rows="1"
-          class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-          oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_school_name[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_basic_education[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_from[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_to[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus-ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_highest_level[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_year_graduated[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10 relative">
-        <div class="h-full w-full">
-          <textarea name="education_extra_scholarship_acadhonors[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-        <button type="button" data-education-remove class="absolute -right-7 top-2 text-red-600 font-bold text-lg px-1">✕</button>
-      </td>
-    </tr>
-  </template>
-
- 
 
   <tr>
     <td class="border h-2 text-center text-xl font-bold italic align-middle">

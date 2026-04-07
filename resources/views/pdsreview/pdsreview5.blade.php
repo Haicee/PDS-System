@@ -146,9 +146,9 @@ window.addEventListener('load', () => {
 <div class="w-[350px] text-center relative">
 
 <div class="border-b-2 border-black w-full absolute bottom-6 left-0"></div>
-
+@include('pdsreview.partials.date-format-helper')
 <div class="flex justify-center space-x-1 relative">
-<div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
+<div class="text-3xl text-center">{{ format_pds_date($declaration->date_accomplished) ?? '—' }}</div>
 </div>
 
 <div class="text-sm">DATE</div>

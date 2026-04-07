@@ -30,6 +30,7 @@
         td { height: 38px; min-height: 38px; vertical-align: middle; }
     </style>  
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
+  @include('pdsreview.partials.date-format-helper')
 
     <table class="border border-black w-full font-['Arial_Narrow','sans-serif']">
 
@@ -84,7 +85,7 @@
   <tr>
     <td class="border align-middle text-center">{{ $row->eligibility ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->rating ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->exam_date ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{format_pds_date($row->exam_date) ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->exam_place ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->license_no ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->validity ?? ' ' }}</td>
@@ -143,8 +144,8 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $workRow = $workRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-middle text-center">{{ $workRow->from ?? " " }}</td>
-    <td class="border align-middle text-center">{{ $workRow->to ?? " " }}</td>
+    <td class="border align-middle text-center"> {{ format_pds_date($workRow?->from) ?? " " }}</td>
+    <td class="border align-middle text-center">{{ format_pds_date($workRow?->to) ?? " " }}</td>
     <td class="border align-middle text-center">{{ $workRow->position_title ?? " " }}</td>
     <td class="border align-middle text-center">{{ $workRow->department ?? " " }}</td>
     <td class="border align-middle text-center">{{ $workRow->status ?? " " }}</td>
@@ -189,11 +190,14 @@
           DATE
         </td>
 
-        <td class="border h-10">
-          <div class="h-full w-full flex items-center justify-center">
-            <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
-          </div>
-        </td>
+
+       <td class="border h-10">
+  <div class="h-full w-full flex items-center justify-center">
+    <div class="text-3xl text-center">
+      {{ format_pds_date($declaration->date_accomplished ?? null) ?? '—' }}
+    </div>
+  </div>
+</td>
       </tr>
     </table>
 

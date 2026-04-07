@@ -37,203 +37,199 @@
     </style>
     <script>
         function checkVoluntaryFields() {
-            // Get all voluntary organization and date fields
+            // Get all voluntary fields for sequential row logic
             const organizationFields = document.querySelectorAll('textarea[name="voluntary_organization[]"]');
             const voluntaryFromFields = document.querySelectorAll('input[name="voluntary_from[]"]');
             const voluntaryToFields = document.querySelectorAll('input[name="voluntary_to[]"]');
+            const hoursFields = document.querySelectorAll('input[name="voluntary_hours[]"]');
+            const positionFields = document.querySelectorAll('textarea[name="voluntary_position_nature_of_work[]"]');
             
-            // Process each row
+            const isNA = (val) => {
+                const v = (val || '').trim().toUpperCase();
+                return v === 'NA' || v === 'N/A' || v === 'NONE';
+            };
+            
+            const isRowComplete = (index) => {
+                const orgVal = organizationFields[index]?.value?.trim() || '';
+                if (orgVal === '') return false; // Empty first column = incomplete
+                if (isNA(orgVal)) return true; // NA in first column = complete (skip row)
+                
+                // Check if all required fields in the row are filled
+                const fromVal = voluntaryFromFields[index]?.value?.trim() || '';
+                const toVal = voluntaryToFields[index]?.value?.trim() || '';
+                const hoursVal = hoursFields[index]?.value?.trim() || '';
+                const posVal = positionFields[index]?.value?.trim() || '';
+                
+                // All fields are required if organization is filled (not NA)
+                return (fromVal !== '' || isNA(fromVal)) && 
+                       (toVal !== '' || isNA(toVal)) && 
+                       (hoursVal !== '' || isNA(hoursVal)) &&
+                       (posVal !== '' || isNA(posVal));
+            };
+            
+            const setRowEnabled = (index, enabled) => {
+                const fields = [
+                    organizationFields[index],
+                    voluntaryFromFields[index],
+                    voluntaryToFields[index],
+                    hoursFields[index],
+                    positionFields[index]
+                ];
+                
+                fields.forEach(field => {
+                    if (!field) return;
+                    field.disabled = !enabled;
+                    field.classList.toggle('bg-gray-200', !enabled);
+                    field.classList.toggle('text-gray-500', !enabled);
+                    field.classList.toggle('cursor-not-allowed', !enabled);
+                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
+                        field.value = '';
+                        if (field.type === 'date') {
+                            field.classList.remove('visible');
+                        }
+                    }
+                });
+            };
+            
+            // Process each row sequentially
+            let allowNextRow = true;
             organizationFields.forEach((organizationField, index) => {
                 const voluntaryFromField = voluntaryFromFields[index];
                 const voluntaryToField = voluntaryToFields[index];
                 const hasOrganization = organizationField.value.trim() !== '';
+                const isNAValue = isNA(organizationField.value);
                 
-                // Check if previous row is complete (for sequential logic)
-                let previousRowComplete = true; // Default to true for first row
-                if (index > 0) {
-                    const prevOrganizationField = organizationFields[index - 1];
-                    const prevVoluntaryFromField = voluntaryFromFields[index - 1];
-                    const prevVoluntaryToField = voluntaryToFields[index - 1];
-                    const prevOrganizationValue = prevOrganizationField ? prevOrganizationField.value.trim() : '';
-                    const prevVoluntaryFromValue = prevVoluntaryFromField ? prevVoluntaryFromField.value.trim() : '';
-                    const prevVoluntaryToValue = prevVoluntaryToField ? prevVoluntaryToField.value.trim() : '';
-                    const prevIsNA = prevOrganizationValue.toUpperCase() === 'NA';
-                    
-                    // Previous row is complete if organization is empty, or if organization is filled with NA or both dates
-                    previousRowComplete = prevOrganizationValue === '' || 
-                                          prevIsNA || 
-                                          (prevVoluntaryFromValue !== '' && prevVoluntaryToValue !== '');
+                // First row is always enabled
+                if (index === 0) {
+                    setRowEnabled(index, true);
+                } else {
+                    // Enable row only if previous rows are complete
+                    setRowEnabled(index, allowNextRow);
                 }
                 
-                // Handle Voluntary From field
-                if (voluntaryFromField) {
-                    // For first row, always show calendar
-                    if (index === 0) {
-                        // Always show date input with calendar for first row
-                        voluntaryFromField.type = 'date';
-                        voluntaryFromField.disabled = false;
+                // Show/hide date fields based on organization value and row enabled state
+                if (voluntaryFromField && !voluntaryFromField.disabled) {
+                    if (hasOrganization && !isNAValue) {
                         voluntaryFromField.classList.add('visible');
-                        voluntaryFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
                         voluntaryFromField.style.backgroundColor = 'transparent';
-                        voluntaryFromField.removeAttribute('required');
-                        if (voluntaryFromField.value === 'NA') {
-                            voluntaryFromField.value = '';
-                        }
-                    } else if (index > 0 && hasOrganization && previousRowComplete) {
-                        // For other rows, show only if previous row is complete
-                        // Show date input with calendar if organization is filled
-                        voluntaryFromField.type = 'date';
-                        voluntaryFromField.disabled = false;
-                        voluntaryFromField.classList.add('visible');
-                        voluntaryFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
-                        voluntaryFromField.style.backgroundColor = 'transparent';
-                        voluntaryFromField.removeAttribute('required');
-                        if (voluntaryFromField.value === 'NA') {
-                            voluntaryFromField.value = '';
-                        }
                     } else {
-                        // Hide date input if organization is empty or previous row is not complete
-                        voluntaryFromField.type = 'date';
                         voluntaryFromField.classList.remove('visible');
-                        voluntaryFromField.value = '';
-                        voluntaryFromField.removeAttribute('required');
                     }
                 }
                 
-                // Handle Voluntary To field
-                if (voluntaryToField) {
-                    // For first row, always show calendar
-                    if (index === 0) {
-                        // Always show date input with calendar for first row
-                        voluntaryToField.type = 'date';
-                        voluntaryToField.disabled = false;
+                if (voluntaryToField && !voluntaryToField.disabled) {
+                    if (hasOrganization && !isNAValue) {
                         voluntaryToField.classList.add('visible');
-                        voluntaryToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
                         voluntaryToField.style.backgroundColor = 'transparent';
-                        voluntaryToField.removeAttribute('required');
-                        if (voluntaryToField.value === 'NA') {
-                            voluntaryToField.value = '';
-                        }
-                    } else if (index > 0 && hasOrganization && previousRowComplete) {
-                        // For other rows, show only if previous row is complete
-                        // Show date input with calendar if organization is filled
-                        voluntaryToField.type = 'date';
-                        voluntaryToField.disabled = false;
-                        voluntaryToField.classList.add('visible');
-                        voluntaryToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
-                        voluntaryToField.style.backgroundColor = 'transparent';
-                        voluntaryToField.removeAttribute('required');
-                        if (voluntaryToField.value === 'NA') {
-                            voluntaryToField.value = '';
-                        }
                     } else {
-                        // Hide date input if organization is empty or previous row is not complete
-                        voluntaryToField.type = 'date';
                         voluntaryToField.classList.remove('visible');
-                        voluntaryToField.value = '';
-                        voluntaryToField.removeAttribute('required');
                     }
+                }
+                
+                // Update allowNextRow for the next iteration
+                if (allowNextRow) {
+                    allowNextRow = isRowComplete(index);
                 }
             });
         }
 
         function checkLearningFields() {
-            // Get all learning title and date fields
+            // Get all learning fields for sequential row logic
             const titleFields = document.querySelectorAll('textarea[name="learning_title_of_ld[]"]');
             const learningFromFields = document.querySelectorAll('input[name="learning_from[]"]');
             const learningToFields = document.querySelectorAll('input[name="learning_to[]"]');
+            const hoursFields = document.querySelectorAll('input[name="learning_hours[]"]');
+            const typeFields = document.querySelectorAll('textarea[name="learning_type_of_ld[]"]');
+            const conductedFields = document.querySelectorAll('textarea[name="learning_conducted_sponsored_by[]"]');
             
-            // Process each row
+            const isNA = (val) => {
+                const v = (val || '').trim().toUpperCase();
+                return v === 'NA' || v === 'N/A' || v === 'NONE';
+            };
+            
+            const isRowComplete = (index) => {
+                const titleVal = titleFields[index]?.value?.trim() || '';
+                if (titleVal === '') return false; // Empty first column = incomplete
+                if (isNA(titleVal)) return true; // NA in first column = complete (skip row)
+                
+                // Check if all required fields in the row are filled
+                const fromVal = learningFromFields[index]?.value?.trim() || '';
+                const toVal = learningToFields[index]?.value?.trim() || '';
+                const hoursVal = hoursFields[index]?.value?.trim() || '';
+                const typeVal = typeFields[index]?.value?.trim() || '';
+                const conductedVal = conductedFields[index]?.value?.trim() || '';
+                
+                // All fields are required if title is filled (not NA)
+                return (fromVal !== '' || isNA(fromVal)) && 
+                       (toVal !== '' || isNA(toVal)) && 
+                       (hoursVal !== '' || isNA(hoursVal)) &&
+                       (typeVal !== '' || isNA(typeVal)) &&
+                       (conductedVal !== '' || isNA(conductedVal));
+            };
+            
+            const setRowEnabled = (index, enabled) => {
+                const fields = [
+                    titleFields[index],
+                    learningFromFields[index],
+                    learningToFields[index],
+                    hoursFields[index],
+                    typeFields[index],
+                    conductedFields[index]
+                ];
+                
+                fields.forEach(field => {
+                    if (!field) return;
+                    field.disabled = !enabled;
+                    field.classList.toggle('bg-gray-200', !enabled);
+                    field.classList.toggle('text-gray-500', !enabled);
+                    field.classList.toggle('cursor-not-allowed', !enabled);
+                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
+                        field.value = '';
+                        if (field.type === 'date') {
+                            field.classList.remove('visible');
+                        }
+                    }
+                });
+            };
+            
+            // Process each row sequentially
+            let allowNextRow = true;
             titleFields.forEach((titleField, index) => {
                 const learningFromField = learningFromFields[index];
                 const learningToField = learningToFields[index];
                 const hasTitle = titleField.value.trim() !== '';
+                const isNAValue = isNA(titleField.value);
                 
-                // Check if previous row is complete (for sequential logic)
-                let previousRowComplete = true; // Default to true for first row
-                if (index > 0) {
-                    const prevTitleField = titleFields[index - 1];
-                    const prevLearningFromField = learningFromFields[index - 1];
-                    const prevLearningToField = learningToFields[index - 1];
-                    const prevTitleValue = prevTitleField ? prevTitleField.value.trim() : '';
-                    const prevLearningFromValue = prevLearningFromField ? prevLearningFromField.value.trim() : '';
-                    const prevLearningToValue = prevLearningToField ? prevLearningToField.value.trim() : '';
-                    const prevIsNA = prevTitleValue.toUpperCase() === 'NA';
-                    
-                    // Previous row is complete if title is empty, or if title is filled with NA or both dates
-                    previousRowComplete = prevTitleValue === '' || 
-                                          prevIsNA || 
-                                          (prevLearningFromValue !== '' && prevLearningToValue !== '');
+                // First row is always enabled
+                if (index === 0) {
+                    setRowEnabled(index, true);
+                } else {
+                    // Enable row only if previous rows are complete
+                    setRowEnabled(index, allowNextRow);
                 }
                 
-                // Handle Learning From field
-                if (learningFromField) {
-                    // For first row, always show calendar
-                    if (index === 0) {
-                        // Always show date input with calendar for first row
-                        learningFromField.type = 'date';
-                        learningFromField.disabled = false;
+                // Show/hide date fields based on title value and row enabled state
+                if (learningFromField && !learningFromField.disabled) {
+                    if (hasTitle && !isNAValue) {
                         learningFromField.classList.add('visible');
-                        learningFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
                         learningFromField.style.backgroundColor = 'transparent';
-                        learningFromField.removeAttribute('required');
-                        if (learningFromField.value === 'NA') {
-                            learningFromField.value = '';
-                        }
-                    } else if (index > 0 && hasTitle && previousRowComplete) {
-                        // For other rows, show only if previous row is complete
-                        // Show date input with calendar if title is filled
-                        learningFromField.type = 'date';
-                        learningFromField.disabled = false;
-                        learningFromField.classList.add('visible');
-                        learningFromField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
-                        learningFromField.style.backgroundColor = 'transparent';
-                        learningFromField.removeAttribute('required');
-                        if (learningFromField.value === 'NA') {
-                            learningFromField.value = '';
-                        }
                     } else {
-                        // Hide date input if title is empty or previous row is not complete
-                        learningFromField.type = 'date';
                         learningFromField.classList.remove('visible');
-                        learningFromField.value = '';
-                        learningFromField.removeAttribute('required');
                     }
                 }
                 
-                // Handle Learning To field
-                if (learningToField) {
-                    // For first row, always show calendar
-                    if (index === 0) {
-                        // Always show date input with calendar for first row
-                        learningToField.type = 'date';
-                        learningToField.disabled = false;
+                if (learningToField && !learningToField.disabled) {
+                    if (hasTitle && !isNAValue) {
                         learningToField.classList.add('visible');
-                        learningToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
                         learningToField.style.backgroundColor = 'transparent';
-                        learningToField.removeAttribute('required');
-                        if (learningToField.value === 'NA') {
-                            learningToField.value = '';
-                        }
-                    } else if (index > 0 && hasTitle && previousRowComplete) {
-                        // For other rows, show only if previous row is complete
-                        // Show date input with calendar if title is filled
-                        learningToField.type = 'date';
-                        learningToField.disabled = false;
-                        learningToField.classList.add('visible');
-                        learningToField.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
-                        learningToField.style.backgroundColor = 'transparent';
-                        learningToField.removeAttribute('required');
-                        if (learningToField.value === 'NA') {
-                            learningToField.value = '';
-                        }
                     } else {
-                        // Hide date input if title is empty or previous row is not complete
-                        learningToField.type = 'date';
                         learningToField.classList.remove('visible');
-                        learningToField.value = '';
-                        learningToField.removeAttribute('required');
                     }
+                }
+                
+                // Update allowNextRow for the next iteration
+                if (allowNextRow) {
+                    allowNextRow = isRowComplete(index);
                 }
             });
         }
@@ -417,9 +413,12 @@
             // Check voluntary fields on page load
             checkVoluntaryFields();
             
-            // Add event listeners to all voluntary organization fields
-            const voluntaryOrganizationFields = document.querySelectorAll('textarea[name="voluntary_organization[]"]');
-            voluntaryOrganizationFields.forEach(field => {
+            // Add event listeners to all voluntary table fields for sequential logic
+            const voluntaryTableFields = document.querySelectorAll(
+                'textarea[name="voluntary_organization[]"], input[name="voluntary_from[]"], input[name="voluntary_to[]"], ' +
+                'input[name="voluntary_hours[]"], textarea[name="voluntary_position_nature_of_work[]"]'
+            );
+            voluntaryTableFields.forEach(field => {
                 field.addEventListener('input', checkVoluntaryFields);
                 field.addEventListener('change', checkVoluntaryFields);
             });
@@ -427,11 +426,91 @@
             // Check learning fields on page load
             checkLearningFields();
             
-            // Add event listeners to all learning title fields
-            const learningTitleFields = document.querySelectorAll('textarea[name="learning_title_of_ld[]"]');
-            learningTitleFields.forEach(field => {
+            // Add event listeners to all learning table fields for sequential logic
+            const learningTableFields = document.querySelectorAll(
+                'textarea[name="learning_title_of_ld[]"], input[name="learning_from[]"], input[name="learning_to[]"], ' +
+                'input[name="learning_hours[]"], textarea[name="learning_type_of_ld[]"], textarea[name="learning_conducted_sponsored_by[]"]'
+            );
+            learningTableFields.forEach(field => {
                 field.addEventListener('input', checkLearningFields);
                 field.addEventListener('change', checkLearningFields);
+            });
+            
+            // Add sequential logic for Other Information table
+            const checkOtherInfoFields = () => {
+                const skillsFields = document.querySelectorAll('textarea[name="special_skills_hobbies[]"]');
+                const distinctionsFields = document.querySelectorAll('textarea[name="non_academic_distinctions_recognition[]"]');
+                const membershipFields = document.querySelectorAll('textarea[name="membership_in_association_organization[]"]');
+                
+                const isNA = (val) => {
+                    const v = (val || '').trim().toUpperCase();
+                    return v === 'NA' || v === 'N/A' || v === 'NONE';
+                };
+                
+                const isRowComplete = (index) => {
+                    const skillsVal = skillsFields[index]?.value?.trim() || '';
+                    const distinctionsVal = distinctionsFields[index]?.value?.trim() || '';
+                    const membershipVal = membershipFields[index]?.value?.trim() || '';
+                    
+                    // Row is complete if all fields are filled or all are NA
+                    const allEmpty = skillsVal === '' && distinctionsVal === '' && membershipVal === '';
+                    if (allEmpty) return false;
+                    
+                    // If any field has NA, consider it filled
+                    const skillsFilled = skillsVal !== '' || isNA(skillsVal);
+                    const distinctionsFilled = distinctionsVal !== '' || isNA(distinctionsVal);
+                    const membershipFilled = membershipVal !== '' || isNA(membershipVal);
+                    
+                    return skillsFilled && distinctionsFilled && membershipFilled;
+                };
+                
+                const setRowEnabled = (index, enabled) => {
+                    const fields = [
+                        skillsFields[index],
+                        distinctionsFields[index],
+                        membershipFields[index]
+                    ];
+                    
+                    fields.forEach(field => {
+                        if (!field) return;
+                        field.disabled = !enabled;
+                        field.classList.toggle('bg-gray-200', !enabled);
+                        field.classList.toggle('text-gray-500', !enabled);
+                        field.classList.toggle('cursor-not-allowed', !enabled);
+                        if (!enabled && field.tagName === 'TEXTAREA') {
+                            field.value = '';
+                        }
+                    });
+                };
+                
+                // Process each row sequentially
+                let allowNextRow = true;
+                for (let index = 0; index < skillsFields.length; index++) {
+                    // First row is always enabled
+                    if (index === 0) {
+                        setRowEnabled(index, true);
+                    } else {
+                        setRowEnabled(index, allowNextRow);
+                    }
+                    
+                    // Update allowNextRow for the next iteration
+                    if (allowNextRow) {
+                        allowNextRow = isRowComplete(index);
+                    }
+                }
+            };
+            
+            // Check other info fields on page load
+            checkOtherInfoFields();
+            
+            // Add event listeners to all other info table fields
+            const otherInfoTableFields = document.querySelectorAll(
+                'textarea[name="special_skills_hobbies[]"], textarea[name="non_academic_distinctions_recognition[]"], ' +
+                'textarea[name="membership_in_association_organization[]"]'
+            );
+            otherInfoTableFields.forEach(field => {
+                field.addEventListener('input', checkOtherInfoFields);
+                field.addEventListener('change', checkOtherInfoFields);
             });
 
             // Next button gating

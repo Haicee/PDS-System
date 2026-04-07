@@ -443,10 +443,11 @@
               <td class="border border-black text-center py-1">Signature (Sign inside the box)</td>
             </tr>
            <tr>
+            @include('pdsreview.partials.date-format-helper')
   <td>
     <div class="relative flex justify-center py-2">
       <div class="flex items-center space-x-1 relative">
-        <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
+        <div class="text-3xl text-center">{{ format_pds_date($declaration->date_accomplished) ?? '—' }}</div>
       </div>
     </div>
   </td>
@@ -458,10 +459,11 @@
         </td>
       </tr>
     </table>
+    @include('pdsreview.partials.date-format-helper')
     <table class="border-3 border-t-0 border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
       <tr>
         <td class="p-2 text-center align-middle font-semibold text-sm">
-          SUBSCRIBED AND SWORN to before me this _____________________________ , affiant exhibiting his/her validly issued government ID as indicated above.
+          SUBSCRIBED AND SWORN to before me this <span style="border-bottom:1px solid black; min-width:150px; display:inline-block;">{{ format_pds_date($declaration->date_accomplished) ?? '' }}</span>, affiant exhibiting his/her validly issued government ID as indicated above.
         </td>
       </tr>
       <tr>

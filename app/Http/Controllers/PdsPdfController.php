@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Spatie\Browsershot\Browsershot;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;    
 use Illuminate\Support\Facades\DB;
@@ -11,69 +12,37 @@ use Illuminate\Support\Facades\Storage;
 
 class PdsPdfController extends Controller
 {
-    /**
-     * Content scale configurations for different zoom levels
-     */
-    private function getContentScale(string $scaleType = 'normal'): float
-    {
-        return match($scaleType) {
-            'small' => 0.8,
-            'normal' => 1.0,
-            'large' => 1.2,
-            'xlarge' => 1.4,
-            default => 1.0
-        };
-    }
-
-    /**
-     * Parse individual table scales from request
-     */
-    private function getTableScales(Request $request): array
-    {
-        return [
-            'firstTableScale' => $request->input('first_table_scale', $request->input('scale', 'normal')),
-            'secondTableScale' => $request->input('second_table_scale', $request->input('scale', 'normal')),
-            'thirdTableScale' => $request->input('third_table_scale', $request->input('scale', 'normal')),
-            'fourthTableScale' => $request->input('fourth_table_scale', $request->input('scale', 'normal')),
-        ];
-    }
     // This method will render the PDF preview (auth)
     public function preview1(Request $request)
     {
+        // Extend PHP execution time for PDF generation
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
+        
         $userId = Auth::id();
         if (!$userId) {
             abort(403, 'Unauthorized');
         }
-
-        // Allow enough time for Browsershot/Chrome to generate the PDF (default PHP max is usually 30s)
-        @set_time_limit(240);
 
         // If debug=1, show raw HTML for troubleshooting
         if ($request->boolean('debug')) {
             return $this->renderPdfView($userId);
         }
 
-        $scaleType = $request->input('scale', 'normal');
-        $contentScale = $this->getContentScale($scaleType);
-        $tableScales = $this->getTableScales($request);
-        
-        // Convert scale types to actual values
-        $tableScaleValues = array_map(fn($scale) => $this->getContentScale($scale), $tableScales);
-        
         $data = $this->buildPdfData($userId);
-        // Employee preview: render a lighter PDF by excluding the heavy Work Experience Sheet/remarks attachment page
-        $html = view('pds_form.pdf', $data + [
-                'pdfMode' => true,
-                'contentScale' => $contentScale,
-                'includeRemarks' => false,
-            ] + $tableScaleValues
-        )->render();
-        $pdfBinary = $this->makeShot($html)->pdf();
-
-        return response($pdfBinary, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="PDS_preview.pdf"'
-        ]);
+        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
+        
+        try {
+            $pdfBinary = $this->makeShot($html)->pdf();
+            
+            return response($pdfBinary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="PDS_preview.pdf"'
+            ]);
+        } catch (\Exception $e) {
+            // If PDF generation fails, return HTML view with error message
+            return response()->view('pds_form.pdf', $data + ['pdfMode' => true, 'pdfError' => $e->getMessage()]);
+        }
     }
 
     // Signed preview endpoint for Browsershot
@@ -96,20 +65,16 @@ class PdsPdfController extends Controller
     }
 
     // Admin download PDF for a specific user
-    public function downloadForAdmin(int $user, Request $request)
+    public function downloadForAdmin(int $user)
     {
-        $scaleType = $request->input('scale', 'normal');
-        $contentScale = $this->getContentScale($scaleType);
-        $tableScales = $this->getTableScales($request);
-        
-        // Convert scale types to actual values
-        $tableScaleValues = array_map(fn($scale) => $this->getContentScale($scale), $tableScales);
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
         
         $data = $this->buildPdfData($user);
         $personal = $data['personal'];
         $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
 
-        $html = view('pds_form.pdf', $data + ['pdfMode' => true, 'contentScale' => $contentScale] + $tableScaleValues)->render();
+        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
         $pdfBinary = $this->makeShot($html)->pdf();
 
         return response()->streamDownload(
@@ -198,28 +163,20 @@ return compact(
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
     }
 
-    // This method downloads the PDF via Spatie Browsershot
-    public function download(Request $request)
+    // This method downloads the PDF via Browsershot
+    public function download()
     {
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
+        
         $userId = Auth::id();
         if (!$userId) abort(403, 'Unauthorized');
 
-        // Allow enough time for Browsershot/Chrome to generate the PDF (employee download)
-        @set_time_limit(240);
-
-        $scaleType = $request->input('scale', 'normal');
-        $contentScale = $this->getContentScale($scaleType);
-        $tableScales = $this->getTableScales($request);
-        
-        // Convert scale types to actual values
-        $tableScaleValues = array_map(fn($scale) => $this->getContentScale($scale), $tableScales);
-        
         $data = $this->buildPdfData($userId);
         $personal = $data['personal'];
         $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
 
-        $html = view('pds_form.pdf', $data + ['pdfMode' => true, 'contentScale' => $contentScale] + $tableScaleValues)->render();
-
+        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
         $pdfBinary = $this->makeShot($html)->pdf();
 
         return response()->streamDownload(
@@ -252,15 +209,20 @@ return compact(
         $shot = Browsershot::html($html)
         ->paperSize(8.5, 13, 'in') // FORCE inches
         ->margins(10, 10, 10, 10)
-        ->scale(.60)
+        ->scale(.56)
         ->emulateMedia('print')
         ->showBackground()
         ->setOption('printBackground', true)
-        ->timeout(240)
-        // We only use inline styles and data URLs, so we don't need to wait for network idle
-        ->setDelay(500)
+        ->timeout(180)
+        ->noSandbox()
         ->hideHeaderAndFooter()
-        ->setOption('args', ['--disable-dev-shm-usage', '--no-sandbox']);
+        ->disableJavascript()
+        ->setOption('args', [
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-first-run',
+            '--disable-extensions',
+        ]);
 
 
         if (is_file($nodePath)) {
