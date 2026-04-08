@@ -9,8 +9,8 @@
 @endif
 <style>
         /* Print-friendly, spreadsheet-like grid tuned to fit on one A4 page */
-        body { font-family: 'Arial', sans-serif; font-size: 8px; margin: 0 auto; max-width: 100%; width: 100%; }
-        html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: 'Arial', sans-serif; font-size: 18px; margin: 0; padding: 0; max-width: 100%; width: 100%; }
+        html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; min-height: 100%; }
         table { width: 100%; table-layout: fixed; border-collapse: collapse; background: #fff !important; }
         /* Apply 4px border to top-level tables without overlapping; remove stacked seams via border-top reset */
         body > table { border: 4px solid #000; margin-top: 0; }
@@ -37,7 +37,7 @@
           td, th { padding: 3px; }
         }
          table td {
-          font-size: 20px;
+          font-size: 24px;
                       }
         textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         textarea:focus { outline: none; box-shadow: none; }
@@ -184,7 +184,7 @@
             .text-2xl,
             .text-3xl,
             .text-4xl {
-                font-size: 1.6rem !important; /* 4xl */
+                font-size: 2rem !important; /* Even larger for print */
                 line-height: 1.3;
             }
 
@@ -244,20 +244,20 @@
           /* Uniform typography for PDF tables (larger, XL-like) */
           body.pdf-mode table {
               font-family: 'Arial Narrow','Arial',sans-serif;
-              font-size: 14px;
+              font-size: 18px;
               line-height: 1.15;
           }
           body.pdf-mode table td,
           body.pdf-mode table  {
               padding: 5px;
-              font-size: 14px !important;
+              font-size: 18px !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
               font-weight: 400 !important;
               line-height: 1.15 !important;
           }
           body.pdf-mode table td *,
           body.pdf-mode table * {
-              font-size: 14px !important;
+              font-size: 18px !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
               font-weight: 400 !important;
               line-height: 1.15 !important;
@@ -292,9 +292,20 @@
       }
   }
 
-  // If controller already provided data/base64 URLs, keep them; otherwise fall back to storage assets
-  $signatureUrl = $signatureUrl ?? (!empty($signaturePath) ? asset('storage/'.$signaturePath) : null);
-  $photoUrl = $photoUrl ?? (!empty($photoPath) ? asset('storage/'.$photoPath) : null);
+  // For PDF mode, always use base64 encoding (Chrome headless can't access HTTP URLs)
+  // Controller should provide $signatureUrl and $photoUrl as base64, but fallback here if needed
+  if (empty($signatureUrl) && !empty($signaturePath)) {
+      $fullPath = storage_path('app/public/' . $signaturePath);
+      if (file_exists($fullPath)) {
+          $signatureUrl = 'data:image/png;base64,' . base64_encode(file_get_contents($fullPath));
+      }
+  }
+  if (empty($photoUrl) && !empty($photoPath)) {
+      $fullPath = storage_path('app/public/' . $photoPath);
+      if (file_exists($fullPath)) {
+          $photoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents($fullPath));
+      }
+  }
 @endphp
 
 <table style="width:100%; border-collapse:collapse; border-bottom:0;" class="no-scale">
@@ -332,7 +343,7 @@
 
 
   <!-- MAIN TABLE -->
-  <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow', Arial, sans-serif; font-size:14px; border:4px solid black; border-bottom:0;">
+  <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow', Arial, sans-serif; font-size:18px; border:4px solid black; border-bottom:0;">
     <!-- FIXED GRID -->
     <colgroup>
       <col style="width:8%">
@@ -390,7 +401,7 @@
         </div>
       </td>
     </tr>
-
+@include('pdsreview.partials.date-format-helper')
     <!-- DATE OF BIRTH + CITIZENSHIP -->
     <tr>
       <td class="bg-[#e7e7e7] px-2 align-middle border-black border" style="background-color:#e7e7e7;">
@@ -754,7 +765,7 @@
 
 
   {{-- II. FAMILY BACKGROUND --}}
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:14px; border:4px solid black; border-bottom:0;" class="border-black border-b-0">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:18px; border:4px solid black; border-bottom:0;" class="border-black border-b-0">
     <colgroup>
       <col style="width:25%">
       <col style="width:10%">
@@ -794,7 +805,7 @@
         </span>
       </td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -803,7 +814,7 @@
         <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $spouse->middlename ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -812,7 +823,7 @@
         <td style="background:#e7e7e7; padding-left:4px;">OCCUPATION</td>
         <td colspan="3" style="border:1px solid black;">{{ $spouse->occupation ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -821,7 +832,7 @@
         <td style="background:#e7e7e7; padding-left:4px;">EMPLOYER/BUSINESS NAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $spouse->employer ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -830,7 +841,7 @@
         <td style="background:#e7e7e7; padding-left:4px;">BUSINESS ADDRESS</td>
         <td colspan="3" style="border:1px solid black;">{{ $spouse->business_address ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -839,7 +850,7 @@
         <td style="background:#e7e7e7; padding-left:4px;">TELEPHONE NO.</td>
         <td colspan="3" style="border:1px solid black;">{{ $spouse->telephone_no ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -848,7 +859,7 @@
         <td style="background:#e7e7e7; padding-left:4px;">24. FATHER'S SURNAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $father->surname ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -862,7 +873,7 @@
         </span>
       </td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -870,7 +881,7 @@
         <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
         <td colspan="3" style="border:1px solid black;" class="border-b-0">{{ $father->middlename ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? ''}}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -878,7 +889,7 @@
     <tr>
         <td style="background:#e7e7e7; padding-left:4px; border:1px solid black; border-top:1px solid black;" colspan="4">25. MOTHER'S MAIDEN NAME</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -886,7 +897,7 @@
         <td style="background:#e7e7e7; padding-left:8px;">SURNAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $mother->surname ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -894,7 +905,7 @@
         <td style="background:#e7e7e7; padding-left:8px;">FIRST NAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $mother->firstname ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? ''}}</td>
         @php $childIndex++; @endphp
     </tr>
 
@@ -902,7 +913,7 @@
         <td style="background:#e7e7e7; padding-left:8px; border-bottom:0;">MIDDLE NAME</td>
         <td colspan="3" style="border:1px solid black; border-bottom:0;" class="border-b-0">{{ $mother->middlename ?? '—' }}</td>
         <td style="border:1px solid black; text-align:center; border-bottom: 0;">{{ $childNames[$childIndex] ?? '' }}</td>
-        <td style="border:1px solid black; text-align:center; border-bottom: 0;">{{ $childDobs[$childIndex] ?? '' }}</td>
+        <td style="border:1px solid black; text-align:center; border-bottom: 0;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 </table>
@@ -1323,8 +1334,6 @@
     <div class="h-full w-full flex flex-col items-center justify-center p-2">
         @if($signatureUrl)
             <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:100px; object-fit:contain;">
-        @else
-            <div class="text-xs text-gray-600">No signature on file</div>
         @endif
     </div>
 </td>
@@ -1332,11 +1341,11 @@
     <td class="border text-center text-xl font-bold italic align-middle" colspan="2">
       DATE
     </td>
-
+@include('pdsreview.partials.date-format-helper')
     <td colspan="3"
           class="border h-10">
           <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;"> 
-            {{ $declaration->date_accomplished ?? '—' }}
+            {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
       </td>
 </table>
@@ -1399,7 +1408,7 @@
         <tr class="text-lg align-middle" style="{{ $bottom }}">
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->eligibility ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->rating ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->exam_date ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ format_pds_date($row?->exam_date) ?: ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->exam_place ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->license_no ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->validity ?? ' ' }}</td>
@@ -1442,18 +1451,17 @@
         <th style="border:1px solid black;">FROM</th>
         <th style="border:1px solid black;">TO</th>
     </tr>
-
+@include('pdsreview.partials.date-format-helper')
     @php
         $workRows = ($workExperiences ?? ($work ?? collect()))->values(); // keep user-entered order
         $workRows = $workRows->take(23); // cap to 20 rows max in PDF
         $maxWorkRows = max(23, $workRows->count());
     @endphp
-
     @for ($i = 0; $i < $maxWorkRows; $i++)
         @php $workRow = $workRows[$i] ?? null; @endphp
         <tr class="text-lg align-middle">
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->from ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->to ?? ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ format_pds_date($workRow?->from) ?: ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ format_pds_date($workRow?->to) ?: ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->position_title ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->department ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->status ?? ' ' }}</td>
@@ -1464,7 +1472,7 @@
 
 {{-- SIGNATURE & DATE --}}
 <table class="section-table"
-       style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-style:italic;">
+       style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif';">
     <colgroup>
         <col style="width:17%;">
         <col style="width:20%;">
@@ -1480,8 +1488,6 @@
             <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
                 @if($signatureUrl)
                   <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
-                @else
-                  <div class="text-xs" style="color:#666;">No signature on file</div>
                 @endif
             </div>
         </td>
@@ -1493,7 +1499,7 @@
          <td colspan="2"
           class="h-10">
           <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
-            {{ $declaration->date_accomplished ?? '—' }}
+            {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
       </td>
     </tr>
@@ -1572,8 +1578,8 @@
       @endphp
       <tr style="{{ $bottom }}">
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->organization ?? ' ' }}</td>
-        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->from ?? ' ' }}</td>
-        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->to ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->from) ?: ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->to) ?: ' ' }}</td>
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->hours ?? ' ' }}</td>
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->position ?? ' ' }}</td>
       </tr>
@@ -1655,8 +1661,8 @@
     @endphp
     <tr style="{{ $bottom }}">
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->title ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->from ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->to ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->from) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->to) ?: ' ' }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->hours ?? ' ' }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->type_of_ld ?? ' ' }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->conducted_by ?? ' ' }}</td>
@@ -1728,8 +1734,6 @@
             <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
                 @if($signatureUrl)
                   <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
-                @else
-                  <div class="text-xs" style="color:#666;">No signature on file</div>
                 @endif
             </div>
         </td>
@@ -1741,7 +1745,7 @@
         <td 
           class="h-10">
           <div class="h-full w-full flex items-center justify-center text-center" style="font-size: 30px; border-top:0;">
-            {{ $declaration->date_accomplished ?? '—' }}
+            {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
       </td>
     </tr>
@@ -1753,7 +1757,7 @@
   <div class="w-full font-serif text-sm">
   <div class="pds-sheet w-full" style="max-width:100%;">
 
-   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;">
+   <table class="section-table declarations-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0; font-size:12px;">
     <!-- ======================= 34 ======================= -->
 <tr>
   <td style="border:1px solid black; width:66%; vertical-align:top; padding:10px;">
@@ -2209,12 +2213,7 @@
                        style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"
                        alt="Photo">
                 @else
-                  <div id="photoPlaceholder" style="font-style:italic; color:#444; text-align:center;">
-                      Passport-sized unfiltered<br>
-                      picture taken within<br>
-                      the last 6 months<br>
-                      4.5 cm × 3.5 cm
-                  </div>
+            
                 @endif
 
             </div>
@@ -2351,7 +2350,6 @@
         @if($signatureUrl)
           <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:3.5cm; object-fit:contain;">
         @else
-          (wet signature / e-signature / digital certificate)
         @endif
     </div>
 </td>
@@ -2362,7 +2360,7 @@
   <td>
     <div class="relative flex justify-center py-2  text-base">
       <div class="flex items-center space-x-1 relative">
-        <span class="text-base text-center" style="font-size: 30px;">{{ $declaration->date_accomplished ?? '—' }}</span>
+        <span class="text-base text-center" style="font-size: 30px;">{{ format_pds_date($declaration->date_accomplished) ?? '—' }}</span>
       </div>
     </div>
   </td>
@@ -2377,27 +2375,20 @@
     <table class="section-table  border-t-0 border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
       <tr>
         <td class="p-2 text-center align-middle font-semibold text-sm">
-          SUBSCRIBED AND SWORN to before me this _____________________________ , affiant exhibiting his/her validly issued government ID as indicated above.
+          SUBSCRIBED AND SWORN to before me this <span style="border-bottom:1px solid black; min-width:150px; display:inline-block;">{{ format_pds_date($declaration->date_accomplished) ?? '' }}</span>, affiant exhibiting his/her validly issued government ID as indicated above.
         </td>
       </tr>
       <tr>
         <td class="p-2 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-2">
             <tr>
-  <td class="border-black text-center align-middle italic text-red-600 relative">
-
+  <td class="border-black text-center align-middle italic text-red-600 relative" style="height:6rem;">
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:3.5cm;">
-    @else
-      <!-- Placeholder / Text -->
-      <div id="signaturePlaceholder">
-        
-      </div>
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:6rem;">
     @endif
-
   </td>
 </tr>
-            <tr><td class="border-black border text-center py-2 font-semibold text-base ">Person Administering Oath</td></tr>
+            <tr><td class="border-black border text-center py-2 font-semibold text-base">Person Administering Oath</td></tr>
           </table>
         </td>
       </tr>
@@ -2417,6 +2408,10 @@
 <style>
   /* Allow long remarks to naturally flow across PDF pages */
   .remarks-table { page-break-inside: auto; page-break-after: auto; }
+  /* Override pdf-mode !important for the declarations section */
+  body.pdf-mode table.declarations-table,
+  body.pdf-mode table.declarations-table td,
+  body.pdf-mode table.declarations-table * { font-size: 12px !important; }
   .remarks-table tr, .remarks-table td { page-break-inside: auto; }
   .remarks-content { page-break-inside: auto; page-break-after: auto; }
   body { margin: 0; padding: 0; }
@@ -2448,14 +2443,64 @@
 @endphp
 
 @for ($i = 0; $i < $maxRemark; $i++)
-@php $remark = $remarkRows[$i]->remarks ?? ''; @endphp
+@php 
+  $row = $remarkRows[$i] ?? null;
+  $duration = $row->duration ?? '';
+  $position = $row->position_title ?? '';
+  $office = $row->office_unit ?? '';
+  $supervisor = $row->immediate_supervisor ?? '';
+  $agency = $row->agency_location ?? '';
+  $accomplishments = $row->accomplishments ?? [];
+  if (is_string($accomplishments)) {
+    $accomplishments = json_decode($accomplishments, true) ?? [];
+  }
+  $duties = $row->duties ?? '';
+
+  $lineItems = collect([
+      $duration,
+      $position,
+      $office,
+      $supervisor,
+      $agency,
+    ])
+    ->map(function ($value) {
+        return isset($value) ? trim($value) : '';
+    })
+    ->filter(function ($value) {
+        return $value !== '';
+    })
+    ->values();
+
+  if (!empty($accomplishments)) {
+      foreach ($accomplishments as $acc) {
+          $acc = isset($acc) ? trim($acc) : '';
+          if ($acc !== '') {
+              $lineItems->push($acc);
+          }
+      }
+  }
+
+  if (isset($duties)) {
+      $dutiesTrimmed = trim($duties);
+      if ($dutiesTrimmed !== '') {
+          $lineItems->push($dutiesTrimmed);
+      }
+  }
+
+  $remarkHtml = $lineItems
+      ->map(function ($line) {
+          return e($line);
+      })
+      ->implode('<br>');
+
+  $hasData = $remarkHtml !== '';
+@endphp
 <tr>
 <td class="border-2 border-black relative align-top">
   <div
-    id="remarks-prototype"
-    class="remarks-content border-none w-full p-5 text-sm"
-    style="min-height:350px; white-space:pre-wrap; box-sizing:border-box; page-break-inside:auto; overflow:visible;"
-  >{{ $remark ?: "Sample: If applying to Supervising Administrative Officer\n\n•\tDuration:  February 11, 2011 – present\n•\tPosition:  Human Resource Management Officer III\n•\tName of Office/Unit: Finance and Administrative Service\n•\tImmediate Supervisor: Maria Estrada\n•\t Name of Agency/Organization and Location: Department of Human Resources, Metro Manila\n\n•\tList of Accomplishments and Contributions (if any)\n - Developed recruitment plan\n - Designed training program for retirees under EO 366\n \n•\tSummary of Actual Duties\n  - Responsible for the management of the recruitment and selection process and the coordination of training activities of the Department; provides assistance in the management of the Division’s programs and activities and performs other related functions." }}</div>
+    class="remarks-content border-none w-full p-5 text-xl"
+    style="white-space:pre-line; box-sizing:border-box; page-break-inside:auto; overflow:visible; font-size:20px; line-height:1.3;"
+  >@if($hasData){!! $remarkHtml !!}@endif</div>
 </td>
 </tr>
 @endfor
@@ -2472,8 +2517,6 @@
         alt="Signature"
         style="max-height:140px; object-fit:contain; margin-top:0; margin-bottom:-30px;"
       >
-    @else
-      <div class="text-xs" style="color:#666; margin-top:0; margin-bottom:-15px;">No signature on file</div>
     @endif
     <span>{{ auth()->user()->name ?? 'Employee' }}</span>
     <div class="border-b-2 border-black" style="height:20px; width:100%;"></div>
@@ -2484,7 +2527,7 @@
 <div class="w-full flex justify-end" style="margin-top:50px; padding-right:8px; font-family:'Arial Narrow','Arial',sans-serif;">
   <div class="text-center relative" style="width:460px; margin-left:auto;">
     <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
-            {{ $declaration->date_accomplished ?? '—' }}
+            {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
     <div class="border-b-2 border-black w-full absolute mt-10" style="bottom:26px; left:0; width:100%;"></div>
     <div class="text-sm" style="margin-top:8px; margin-bottom:40px">DATE</div>
@@ -2500,4 +2543,3 @@
 </body>
 </html>
 @endif
-

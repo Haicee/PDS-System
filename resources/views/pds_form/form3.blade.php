@@ -2,11 +2,6 @@
 <div id="autosaveOverlay3" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form3" method="POST" action="{{ route('pds.saveStep', [3], false) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
     <style>
   table {
     border-collapse: collapse;
@@ -41,6 +36,204 @@
         .autosave-overlay.hidden { display: none; }
     </style>
     <script>
+        function checkVoluntaryFields() {
+            // Get all voluntary fields for sequential row logic
+            const organizationFields = document.querySelectorAll('textarea[name="voluntary_organization[]"]');
+            const voluntaryFromFields = document.querySelectorAll('input[name="voluntary_from[]"]');
+            const voluntaryToFields = document.querySelectorAll('input[name="voluntary_to[]"]');
+            const hoursFields = document.querySelectorAll('input[name="voluntary_hours[]"]');
+            const positionFields = document.querySelectorAll('textarea[name="voluntary_position_nature_of_work[]"]');
+            
+            const isNA = (val) => {
+                const v = (val || '').trim().toUpperCase();
+                return v === 'NA' || v === 'N/A' || v === 'NONE';
+            };
+            
+            const isRowComplete = (index) => {
+                const orgVal = organizationFields[index]?.value?.trim() || '';
+                if (orgVal === '') return false; // Empty first column = incomplete
+                if (isNA(orgVal)) return true; // NA in first column = complete (skip row)
+                
+                // Check if all required fields in the row are filled
+                const fromVal = voluntaryFromFields[index]?.value?.trim() || '';
+                const toVal = voluntaryToFields[index]?.value?.trim() || '';
+                const hoursVal = hoursFields[index]?.value?.trim() || '';
+                const posVal = positionFields[index]?.value?.trim() || '';
+                
+                // All fields are required if organization is filled (not NA)
+                return (fromVal !== '' || isNA(fromVal)) && 
+                       (toVal !== '' || isNA(toVal)) && 
+                       (hoursVal !== '' || isNA(hoursVal)) &&
+                       (posVal !== '' || isNA(posVal));
+            };
+            
+            const setRowEnabled = (index, enabled) => {
+                const fields = [
+                    organizationFields[index],
+                    voluntaryFromFields[index],
+                    voluntaryToFields[index],
+                    hoursFields[index],
+                    positionFields[index]
+                ];
+                
+                fields.forEach(field => {
+                    if (!field) return;
+                    field.disabled = !enabled;
+                    field.classList.toggle('bg-gray-200', !enabled);
+                    field.classList.toggle('text-gray-500', !enabled);
+                    field.classList.toggle('cursor-not-allowed', !enabled);
+                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
+                        field.value = '';
+                        if (field.type === 'date') {
+                            field.classList.remove('visible');
+                        }
+                    }
+                });
+            };
+            
+            // Process each row sequentially
+            let allowNextRow = true;
+            organizationFields.forEach((organizationField, index) => {
+                const voluntaryFromField = voluntaryFromFields[index];
+                const voluntaryToField = voluntaryToFields[index];
+                const hasOrganization = organizationField.value.trim() !== '';
+                const isNAValue = isNA(organizationField.value);
+                
+                // First row is always enabled
+                if (index === 0) {
+                    setRowEnabled(index, true);
+                } else {
+                    // Enable row only if previous rows are complete
+                    setRowEnabled(index, allowNextRow);
+                }
+                
+                // Show/hide date fields based on organization value and row enabled state
+                if (voluntaryFromField && !voluntaryFromField.disabled) {
+                    if (hasOrganization && !isNAValue) {
+                        voluntaryFromField.classList.add('visible');
+                        voluntaryFromField.style.backgroundColor = 'transparent';
+                    } else {
+                        voluntaryFromField.classList.remove('visible');
+                    }
+                }
+                
+                if (voluntaryToField && !voluntaryToField.disabled) {
+                    if (hasOrganization && !isNAValue) {
+                        voluntaryToField.classList.add('visible');
+                        voluntaryToField.style.backgroundColor = 'transparent';
+                    } else {
+                        voluntaryToField.classList.remove('visible');
+                    }
+                }
+                
+                // Update allowNextRow for the next iteration
+                if (allowNextRow) {
+                    allowNextRow = isRowComplete(index);
+                }
+            });
+        }
+
+        function checkLearningFields() {
+            // Get all learning fields for sequential row logic
+            const titleFields = document.querySelectorAll('textarea[name="learning_title_of_ld[]"]');
+            const learningFromFields = document.querySelectorAll('input[name="learning_from[]"]');
+            const learningToFields = document.querySelectorAll('input[name="learning_to[]"]');
+            const hoursFields = document.querySelectorAll('input[name="learning_hours[]"]');
+            const typeFields = document.querySelectorAll('textarea[name="learning_type_of_ld[]"]');
+            const conductedFields = document.querySelectorAll('textarea[name="learning_conducted_sponsored_by[]"]');
+            
+            const isNA = (val) => {
+                const v = (val || '').trim().toUpperCase();
+                return v === 'NA' || v === 'N/A' || v === 'NONE';
+            };
+            
+            const isRowComplete = (index) => {
+                const titleVal = titleFields[index]?.value?.trim() || '';
+                if (titleVal === '') return false; // Empty first column = incomplete
+                if (isNA(titleVal)) return true; // NA in first column = complete (skip row)
+                
+                // Check if all required fields in the row are filled
+                const fromVal = learningFromFields[index]?.value?.trim() || '';
+                const toVal = learningToFields[index]?.value?.trim() || '';
+                const hoursVal = hoursFields[index]?.value?.trim() || '';
+                const typeVal = typeFields[index]?.value?.trim() || '';
+                const conductedVal = conductedFields[index]?.value?.trim() || '';
+                
+                // All fields are required if title is filled (not NA)
+                return (fromVal !== '' || isNA(fromVal)) && 
+                       (toVal !== '' || isNA(toVal)) && 
+                       (hoursVal !== '' || isNA(hoursVal)) &&
+                       (typeVal !== '' || isNA(typeVal)) &&
+                       (conductedVal !== '' || isNA(conductedVal));
+            };
+            
+            const setRowEnabled = (index, enabled) => {
+                const fields = [
+                    titleFields[index],
+                    learningFromFields[index],
+                    learningToFields[index],
+                    hoursFields[index],
+                    typeFields[index],
+                    conductedFields[index]
+                ];
+                
+                fields.forEach(field => {
+                    if (!field) return;
+                    field.disabled = !enabled;
+                    field.classList.toggle('bg-gray-200', !enabled);
+                    field.classList.toggle('text-gray-500', !enabled);
+                    field.classList.toggle('cursor-not-allowed', !enabled);
+                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
+                        field.value = '';
+                        if (field.type === 'date') {
+                            field.classList.remove('visible');
+                        }
+                    }
+                });
+            };
+            
+            // Process each row sequentially
+            let allowNextRow = true;
+            titleFields.forEach((titleField, index) => {
+                const learningFromField = learningFromFields[index];
+                const learningToField = learningToFields[index];
+                const hasTitle = titleField.value.trim() !== '';
+                const isNAValue = isNA(titleField.value);
+                
+                // First row is always enabled
+                if (index === 0) {
+                    setRowEnabled(index, true);
+                } else {
+                    // Enable row only if previous rows are complete
+                    setRowEnabled(index, allowNextRow);
+                }
+                
+                // Show/hide date fields based on title value and row enabled state
+                if (learningFromField && !learningFromField.disabled) {
+                    if (hasTitle && !isNAValue) {
+                        learningFromField.classList.add('visible');
+                        learningFromField.style.backgroundColor = 'transparent';
+                    } else {
+                        learningFromField.classList.remove('visible');
+                    }
+                }
+                
+                if (learningToField && !learningToField.disabled) {
+                    if (hasTitle && !isNAValue) {
+                        learningToField.classList.add('visible');
+                        learningToField.style.backgroundColor = 'transparent';
+                    } else {
+                        learningToField.classList.remove('visible');
+                    }
+                }
+                
+                // Update allowNextRow for the next iteration
+                if (allowNextRow) {
+                    allowNextRow = isRowComplete(index);
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.querySelector('#pds-form3');
             if (!form) return;
@@ -216,6 +409,109 @@
                 f.addEventListener('input', refreshRows);
             });
             refreshRows();
+
+            // Check voluntary fields on page load
+            checkVoluntaryFields();
+            
+            // Add event listeners to all voluntary table fields for sequential logic
+            const voluntaryTableFields = document.querySelectorAll(
+                'textarea[name="voluntary_organization[]"], input[name="voluntary_from[]"], input[name="voluntary_to[]"], ' +
+                'input[name="voluntary_hours[]"], textarea[name="voluntary_position_nature_of_work[]"]'
+            );
+            voluntaryTableFields.forEach(field => {
+                field.addEventListener('input', checkVoluntaryFields);
+                field.addEventListener('change', checkVoluntaryFields);
+            });
+
+            // Check learning fields on page load
+            checkLearningFields();
+            
+            // Add event listeners to all learning table fields for sequential logic
+            const learningTableFields = document.querySelectorAll(
+                'textarea[name="learning_title_of_ld[]"], input[name="learning_from[]"], input[name="learning_to[]"], ' +
+                'input[name="learning_hours[]"], textarea[name="learning_type_of_ld[]"], textarea[name="learning_conducted_sponsored_by[]"]'
+            );
+            learningTableFields.forEach(field => {
+                field.addEventListener('input', checkLearningFields);
+                field.addEventListener('change', checkLearningFields);
+            });
+            
+            // Add sequential logic for Other Information table
+            const checkOtherInfoFields = () => {
+                const skillsFields = document.querySelectorAll('textarea[name="special_skills_hobbies[]"]');
+                const distinctionsFields = document.querySelectorAll('textarea[name="non_academic_distinctions_recognition[]"]');
+                const membershipFields = document.querySelectorAll('textarea[name="membership_in_association_organization[]"]');
+                
+                const isNA = (val) => {
+                    const v = (val || '').trim().toUpperCase();
+                    return v === 'NA' || v === 'N/A' || v === 'NONE';
+                };
+                
+                const isRowComplete = (index) => {
+                    const skillsVal = skillsFields[index]?.value?.trim() || '';
+                    const distinctionsVal = distinctionsFields[index]?.value?.trim() || '';
+                    const membershipVal = membershipFields[index]?.value?.trim() || '';
+                    
+                    // Row is complete if all fields are filled or all are NA
+                    const allEmpty = skillsVal === '' && distinctionsVal === '' && membershipVal === '';
+                    if (allEmpty) return false;
+                    
+                    // If any field has NA, consider it filled
+                    const skillsFilled = skillsVal !== '' || isNA(skillsVal);
+                    const distinctionsFilled = distinctionsVal !== '' || isNA(distinctionsVal);
+                    const membershipFilled = membershipVal !== '' || isNA(membershipVal);
+                    
+                    return skillsFilled && distinctionsFilled && membershipFilled;
+                };
+                
+                const setRowEnabled = (index, enabled) => {
+                    const fields = [
+                        skillsFields[index],
+                        distinctionsFields[index],
+                        membershipFields[index]
+                    ];
+                    
+                    fields.forEach(field => {
+                        if (!field) return;
+                        field.disabled = !enabled;
+                        field.classList.toggle('bg-gray-200', !enabled);
+                        field.classList.toggle('text-gray-500', !enabled);
+                        field.classList.toggle('cursor-not-allowed', !enabled);
+                        if (!enabled && field.tagName === 'TEXTAREA') {
+                            field.value = '';
+                        }
+                    });
+                };
+                
+                // Process each row sequentially
+                let allowNextRow = true;
+                for (let index = 0; index < skillsFields.length; index++) {
+                    // First row is always enabled
+                    if (index === 0) {
+                        setRowEnabled(index, true);
+                    } else {
+                        setRowEnabled(index, allowNextRow);
+                    }
+                    
+                    // Update allowNextRow for the next iteration
+                    if (allowNextRow) {
+                        allowNextRow = isRowComplete(index);
+                    }
+                }
+            };
+            
+            // Check other info fields on page load
+            checkOtherInfoFields();
+            
+            // Add event listeners to all other info table fields
+            const otherInfoTableFields = document.querySelectorAll(
+                'textarea[name="special_skills_hobbies[]"], textarea[name="non_academic_distinctions_recognition[]"], ' +
+                'textarea[name="membership_in_association_organization[]"]'
+            );
+            otherInfoTableFields.forEach(field => {
+                field.addEventListener('input', checkOtherInfoFields);
+                field.addEventListener('change', checkOtherInfoFields);
+            });
 
             // Next button gating
             const nextBtn = document.getElementById('pds3-next');
@@ -692,9 +988,31 @@
    @for ($i = 0; $i < 7; $i++)
       <tr>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Organization' : '' }}" name="voluntary_organization[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="voluntary_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="voluntary_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="voluntary_hours[]"></textarea></td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="voluntary_from[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'From' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="voluntary_to[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'To' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10"><input type="number" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="voluntary_hours[]" class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0;" min="0"/></td>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position/Nature of Work' : '' }}" name="voluntary_position_nature_of_work[]"></textarea></td>
       </tr>
    @endfor
@@ -747,9 +1065,31 @@
     @for ($i = 0; $i < 27; $i++)
      <tr>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Title of L&D / Training' : '' }}" name="learning_title_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="learning_from[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="learning_to[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="learning_hours[]"></textarea></td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="learning_from[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'From' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="learning_to[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+            placeholder="{{ $i === 0 ? 'To' : '' }}"/>
+        </div>
+      </td>
+      <td class="border h-10"><input type="number" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="learning_hours[]" class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0;" min="0"/></td>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Type of L&D' : '' }}" name="learning_type_of_ld[]"></textarea></td>
       <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Conducted/Sponsored By' : '' }}" name="learning_conducted_sponsored_by[]"></textarea></td>
      </tr>
@@ -930,6 +1270,42 @@ input[type="date"]::-moz-datetime-edit-day-field {
 input[type="date"]::-moz-datetime-edit-year-field {
   color: #000000;
   text-align: center !important;
+}
+
+/* Hide voluntary and learning date inputs by default */
+input[name="voluntary_from[]"], input[name="voluntary_to[]"], 
+input[name="learning_from[]"], input[name="learning_to[]"] {
+  display: none !important;
+}
+
+/* Show date inputs when they should be visible */
+input[type="date"].visible {
+  display: block !important;
+}
+
+/* Make calendar icon visible and clickable with blue stroke */
+input[type="date"].visible::-webkit-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(4500%) hue-rotate(190deg) brightness(95%) contrast(150%) !important;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  border-radius: 2px;
+}
+
+input[type="date"].visible::-moz-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  border-radius: 2px;
 }
 </style>
 

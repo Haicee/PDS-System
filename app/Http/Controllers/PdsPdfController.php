@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Spatie\Browsershot\Browsershot;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;    
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,10 @@ class PdsPdfController extends Controller
     // This method will render the PDF preview (auth)
     public function preview1(Request $request)
     {
+        // Extend PHP execution time for PDF generation
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
+        
         $userId = Auth::id();
         if (!$userId) {
             abort(403, 'Unauthorized');
@@ -26,12 +31,18 @@ class PdsPdfController extends Controller
 
         $data = $this->buildPdfData($userId);
         $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
-        $pdfBinary = $this->makeShot($html)->pdf();
-
-        return response($pdfBinary, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="PDS_preview.pdf"'
-        ]);
+        
+        try {
+            $pdfBinary = $this->makeShot($html)->pdf();
+            
+            return response($pdfBinary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="PDS_preview.pdf"'
+            ]);
+        } catch (\Exception $e) {
+            // If PDF generation fails, return HTML view with error message
+            return response()->view('pds_form.pdf', $data + ['pdfMode' => true, 'pdfError' => $e->getMessage()]);
+        }
     }
 
     // Signed preview endpoint for Browsershot
@@ -56,12 +67,15 @@ class PdsPdfController extends Controller
     // Admin download PDF for a specific user
     public function downloadForAdmin(int $user)
     {
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
+        
         $data = $this->buildPdfData($user);
         $personal = $data['personal'];
         $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
 
         $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
-        $pdfBinary =  $this->makeShot($html)->pdf();
+        $pdfBinary = $this->makeShot($html)->pdf();
 
         return response()->streamDownload(
             function () use ($pdfBinary) {
@@ -149,9 +163,12 @@ return compact(
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
     }
 
-    // This method downloads the PDF via Spatie Browsershot
+    // This method downloads the PDF via Browsershot
     public function download()
     {
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
+        
         $userId = Auth::id();
         if (!$userId) abort(403, 'Unauthorized');
 
@@ -160,8 +177,7 @@ return compact(
         $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
 
         $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
-
-        $pdfBinary =  $this->makeShot($html)->pdf();
+        $pdfBinary = $this->makeShot($html)->pdf();
 
         return response()->streamDownload(
             function () use ($pdfBinary) {
@@ -197,11 +213,16 @@ return compact(
         ->emulateMedia('print')
         ->showBackground()
         ->setOption('printBackground', true)
-        ->waitUntilNetworkIdle()
-        ->timeout(240)
-        ->setDelay(1000)
+        ->timeout(180)
+        ->noSandbox()
         ->hideHeaderAndFooter()
-        ->setOption('args', ['--disable-dev-shm-usage', '--no-sandbox']);
+        ->disableJavascript()
+        ->setOption('args', [
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-first-run',
+            '--disable-extensions',
+        ]);
 
 
         if (is_file($nodePath)) {

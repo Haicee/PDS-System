@@ -442,6 +442,13 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 bg-white text-[11px] sm:text-xs text-slate-700">
+                                    <template x-if="filteredSorted().length === 0">
+                                        <tr>
+                                            <td colspan="7" class="px-4 sm:px-6 py-8 text-center text-slate-400 text-sm">
+                                                No employee registered yet.
+                                            </td>
+                                        </tr>
+                                    </template>
                                     <template x-for="employee in filteredSorted()" :key="employee.id">
                                         <tr class="hover:bg-slate-50"
                                             x-data="{

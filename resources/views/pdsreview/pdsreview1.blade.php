@@ -6,6 +6,7 @@
 @else
 <x-app-layout>
 @endif
+@include('pdsreview.partials.date-format-helper')
     <form method="POST" action="{{ route('pds.saveStep', 1) }}" enctype="multipart/form-data">
     @csrf
     @if (empty($pdfMode))
@@ -121,7 +122,7 @@
         <p class="text-xs font-normal ml-4">(dd/mm/yyyy)</p>
       </td>
       <td class="border h-10">
-        <div class="py-2 text-lg">{{ $personal->date_of_birth ?? '—' }}</div>
+        <div class="py-2 text-lg">{{ format_pds_date($personal->date_of_birth) ?: '—' }}</div>
       </td>
 
       <td rowspan="3" class="bg-[#e7e7e7] px-2 align-top border-l-5">
@@ -433,6 +434,7 @@
         $childRowCount = max(14, count($childNames), count($childDobs));
         $childNames = array_pad($childNames, $childRowCount, '');
         $childDobs = array_pad($childDobs, $childRowCount, '');
+        $childDobs = array_map('format_pds_date', $childDobs);
         $childIndex = 0;
       @endphp
 
@@ -1058,13 +1060,13 @@
       <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('elementary','from') }}
+            {{ format_pds_date($eduVal('elementary','from')) }}
       </td>
 
      <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('elementary','to') }}
+            {{ format_pds_date($eduVal('elementary','to')) }}
       </td>
 
       <td
@@ -1090,8 +1092,8 @@
       <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($getField($rec,'from')) }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($getField($rec,'to')) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
@@ -1119,13 +1121,13 @@
       <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('secondary','from') }}
+            {{ format_pds_date($eduVal('secondary','from')) }}
       </td>
 
      <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('secondary','to') }}
+            {{ format_pds_date($eduVal('secondary','to')) }}
       </td>
 
      <td
@@ -1151,8 +1153,8 @@
       <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($getField($rec,'from')) }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($getField($rec,'to')) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
@@ -1178,13 +1180,13 @@
       <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('vocational','from') }}
+            {{ format_pds_date($eduVal('vocational','from')) }}
       </td>
 
      <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('vocational','to') }}
+            {{ format_pds_date($eduVal('vocational','to')) }}
       </td>
 
      <td
@@ -1210,8 +1212,8 @@
       <td class="border text-center align-middle h-20">&nbsp;</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $eduRowSchool($rec) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'to') }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($getField($rec,'from')) }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($getField($rec,'to')) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'highest_level') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'year_graduated') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
@@ -1237,13 +1239,13 @@
       <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('college','from') }}
+            {{ format_pds_date($eduVal('college','from')) }}
       </td>
 
      <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('college','to') }}
+            {{ format_pds_date($eduVal('college','to')) }}
       </td>
 
      <td
@@ -1296,13 +1298,13 @@
       <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('graduate_studies','from') }}
+            {{ format_pds_date($eduVal('graduate_studies','from')) }}
       </td>
 
      <td
           class="border h-10 align-middle">
           <div class="h-full w-full px-2 flex items-center justify-center">
-            {{ $eduVal('graduate_studies','to') }}
+            {{ format_pds_date($eduVal('graduate_studies','to')) }}
       </td>
 
      <td
@@ -1339,25 +1341,29 @@
  
 
   <tr>
-    <td class="border h-2 text-center text-xl font-bold italic align-middle">
-      SIGNATURE
-    </td>
+    <td class="border text-center font-bold text-xl border align-middle italic">
+            SIGNATURE
+        </td>
 
-    <td class="border" colspan="2">
-      <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
-        @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
-        @if($signatureUrl)
-          <img src="{{ $signatureUrl }}"
+        <td class="border" colspan="2">
+          <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
+            @php
+              $signatureCleanPath = !empty($signaturePath) ? preg_replace('/^public\//', '', $signaturePath) : null;
+              $signatureUrl = !empty($signatureCleanPath) ? asset('storage/'.$signatureCleanPath) : null;
+            @endphp
+            @if($signatureUrl)
+              <img src="{{ $signatureUrl }}"
      alt="Signature"
      class="object-contain"
      style="max-height: 150px;
             mix-blend-mode: multiply;
-            filter: contrast(1.2) brightness(1.1);">
-        @else
-          <div class="text-xs text-gray-600">No signature on file</div>
-        @endif
-      </div>
-    </td>
+            filter: contrast(1.2) brightness(1.1);"
+     onerror="this.alt='';this.style.display='none';">
+            @else
+              <div class="text-xs text-gray-600">No signature on file</div>
+            @endif
+          </div>
+        </td>
 
     <td class="border text-center text-xl font-bold italic align-middle" colspan="2">
       DATE
@@ -1366,7 +1372,7 @@
     <td colspan="3"
           class="border h-10">
           <div class="h-full w-full flex items-center justify-center">
-         <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
+         <div class="text-3xl text-center">{{ format_pds_date($declaration->date_accomplished) ?: '—' }}</div>
       </td>
 </table>
 

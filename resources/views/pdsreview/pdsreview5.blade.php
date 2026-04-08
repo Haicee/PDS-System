@@ -8,6 +8,10 @@
 <x-app-layout>
 @endif
 <form method="POST" action="{{ route('pds.submit') }}" class="w-full" enctype="multipart/form-data">
+    <div class="max-w-6xl mx-auto p-4 flex justify-end gap-3">
+      <a href="{{ route('pdsreview1.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">Preview PDF</a>
+      <a href="{{ route('pds.pdf.download') }}" class="px-4 py-2 bg-slate-700 text-white rounded shadow border border-slate-800 hover:bg-slate-800">Download PDF</a>
+    </div>
 @csrf
 
 
@@ -75,36 +79,44 @@ window.addEventListener('load', () => {
 </tr>
 
 @php
-  $remarkRows = ($remarks ?? collect())->values();
-  $maxRemark = max(1, $remarkRows->count());
+  $workExperiences = ($workExperiences ?? collect())->values();
+  $maxWorkExperience = max(1, $workExperiences->count());
 @endphp
 
-@for ($i = 0; $i < $maxRemark; $i++)
-@php $remark = $remarkRows[$i]->remarks ?? ''; @endphp
+@for ($i = 0; $i < $maxWorkExperience; $i++)
+@php 
+  $work = $workExperiences[$i] ?? null; 
+  $accomplishmentsList = [];
+  if ($work) {
+      if (is_array($work->accomplishments)) {
+          $accomplishmentsList = $work->accomplishments;
+      } elseif (is_string($work->accomplishments) && $work->accomplishments !== '') {
+          $decoded = json_decode($work->accomplishments, true);
+          $accomplishmentsList = is_array($decoded) ? $decoded : [];
+      }
+  }
+@endphp
 <tr>
 <td class="border-2 border-black relative align-top">
-<textarea
-id="remarks-prototype"
-name="remarks[]"
-class="border-none w-full h-full p-5 resize-none text-sm focus:outline-none"
-style="min-height:350px; white-space:pre-wrap; overflow:hidden;"
-disabled
-placeholder="Sample: If applying to Supervising Administrative Officer
+<div class="p-3 text-sm space-y-2">
+    <div class="whitespace-pre-wrap">{{ $work->duration ?? '' }}</div>
+    <div class="whitespace-pre-wrap">{{ $work->position_title ?? '' }}</div>
+    <div class="whitespace-pre-wrap">{{ $work->office_unit ?? '' }}</div>
+    <div class="whitespace-pre-wrap">{{ $work->immediate_supervisor ?? '' }}</div>
+    <div class="whitespace-pre-wrap">{{ $work->agency_location ?? '' }}</div>
 
-•\tDuration:  February 11, 2011 – present
-•\tPosition:  Human Resource Management Officer III
-•\tName of Office/Unit: Finance and Administrative Service
-•\tImmediate Supervisor: Maria Estrada
-•\t Name of Agency/Organization and Location: Department of Human Resources, Metro Manila
+    @if(!empty($accomplishmentsList))
+        <div class="space-y-1">
+            @foreach($accomplishmentsList as $accomplishment)
+                @if(!empty(trim($accomplishment)))
+                    <div class="whitespace-pre-wrap">{{ $accomplishment }}</div>
+                @endif
+            @endforeach
+        </div>
+    @endif
 
-•\tList of Accomplishments and Contributions (if any)
- - Developed recruitment plan
- - Designed training program for retirees under EO 366
- 
-•\tSummary of Actual Duties
-  - Responsible for the management of the recruitment and selection process and the coordination of training activities of the Department; provides assistance in the management of the Division’s programs and activities and performs other related functions.
-"
->{{ $remark }}</textarea>
+    <div class="whitespace-pre-wrap">{{ $work->duties ?? '' }}</div>
+</div>
 </td>
 </tr>
 @endfor
@@ -115,9 +127,12 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <!-- SIGNATURE -->
 <div class="w-full flex justify-end mt-[3cm] pr-6">
 <div class="w-[350px] text-center flex flex-col items-center">
-  @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+  @php
+    $signatureCleanPath = !empty($signaturePath) ? preg_replace('/^public\//', '', $signaturePath) : null;
+    $signatureUrl = !empty($signatureCleanPath) ? asset('storage/'.$signatureCleanPath) : null;
+  @endphp
   @if($signatureUrl)
-    <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-48 object-contain" style="mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);">
+    <img src="{{ $signatureUrl }}" alt="Signature" class="max-h-48 object-contain" style="mix-blend-mode: multiply; filter: contrast(1.2) brightness(1.1);" onerror="this.alt='';this.style.display='none';">
   @else
     <div class="text-xs text-gray-600">No signature on file</div>
   @endif
@@ -131,9 +146,9 @@ placeholder="Sample: If applying to Supervising Administrative Officer
 <div class="w-[350px] text-center relative">
 
 <div class="border-b-2 border-black w-full absolute bottom-6 left-0"></div>
-
+@include('pdsreview.partials.date-format-helper')
 <div class="flex justify-center space-x-1 relative">
-<div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
+<div class="text-3xl text-center">{{ format_pds_date($declaration->date_accomplished) ?? '—' }}</div>
 </div>
 
 <div class="text-sm">DATE</div>

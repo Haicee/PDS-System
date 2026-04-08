@@ -4,12 +4,26 @@
 <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', [1], false) }}" enctype="multipart/form-data">
     @csrf
     <style>
+      textarea.no-uppercase {
+        text-transform: none !important;
+      }
+      textarea[name="email_address"] {
+        text-transform: none !important;
+      }
+      .no-uppercase, .no-uppercase * {
+        text-transform: none !important;
+      }
         /* Print-friendly, spreadsheet-like grid */
         table { border-collapse: collapse; width: 100%; }
         td, th { padding: 4px; vertical-align: top; }
         /* Only apply borders where classes already exist */
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
+        
+        /* Prevent uppercase conversion for email field */
+        .no-uppercase {
+            text-transform: none !important;
+        }
         .signature-box {
             position: relative;
             background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
@@ -112,8 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
         countryInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // Force textarea input to uppercase
-    document.querySelectorAll('textarea').forEach(el => {
+    // Force textarea input to uppercase (except email field)
+    document.querySelectorAll('textarea:not([name="email_address"])').forEach(el => {
         el.addEventListener('input', () => {
             const start = el.selectionStart;
             const end = el.selectionEnd;
@@ -131,6 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return v === 'NA' || v === 'N/A' || v === 'NONE';
     };
 
+    // Convert email to lowercase when loaded from database
+    const emailField = document.querySelector('textarea[name="email_address"]');
+    if (emailField && emailField.value) {
+        emailField.value = emailField.value.toLowerCase();
+    }
+
     // Collect []-suffixed fields
     const names = new Set();
     document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
@@ -144,165 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (name) names.add(name);
     });
 
-    // Education dynamic extra rows
-    const extraPrototype = document.getElementById('education-extra-prototype');
-    const addButtons = Array.from(document.querySelectorAll('[data-education-add]'));
-    const addRows = Array.from(document.querySelectorAll('tr[data-education-base]')).filter(row => row.querySelector('td.add-btn-cell.has-add-btn'));
-
-    // Hover highlight spans entire row for add-enabled rows (anywhere in the row)
-    addRows.forEach(row => {
-        row.addEventListener('mouseenter', () => row.classList.add('row-add-hover'));
-        row.addEventListener('mouseleave', () => row.classList.remove('row-add-hover'));
-    });
-
-    const autoHeight = (ta) => {
-        ta.addEventListener('input', () => {
-            ta.style.height = 'auto';
-            ta.style.height = ta.scrollHeight + 'px';
-        });
-    };
-
-    const enforceUppercase = (ta) => {
-        ta.style.textTransform = 'uppercase';
-        ta.addEventListener('input', () => {
-            const start = ta.selectionStart;
-            const end = ta.selectionEnd;
-            ta.value = (ta.value || '').toUpperCase();
-            ta.selectionStart = start;
-            ta.selectionEnd = end;
-        });
-    };
-
-    const addEducationRow = (level = '', values = {}, baseRowHint = null) => {
-        if (!extraPrototype) return;
-        const levelKey = (level || '').trim();
-        const fragment = extraPrototype.content.cloneNode(true);
-        const row = fragment.querySelector('tr');
-        row.dataset.educationExtra = '1';
-        row.dataset.educationLevel = levelKey;
-
-        const textareas = Array.from(fragment.querySelectorAll('textarea'));
-        textareas.forEach((ta, idx) => {
-            const name = ta.getAttribute('name');
-            if (idx === 0) {
-                if (levelKey) {
-                    ta.value = levelKey;
-                }
-                ta.readOnly = true;
-                ta.classList.add('pointer-events-none', 'bg-transparent', 'text-transparent', 'caret-transparent', 'select-none');
-            }
-            if (name && values[name] !== undefined) {
-                ta.value = values[name] ?? '';
-            }
-            ta.required = true;
-            autoHeight(ta);
-            enforceUppercase(ta);
-        });
-
-        // Register required validation on newly added fields
-        textareas.forEach(ta => {
-            if (!requiredFields.includes(ta)) {
-                requiredFields.push(ta);
-                ta.addEventListener('input', validateRequired);
-                ta.addEventListener('change', validateRequired);
-            }
-        });
-
-        validateRequired();
-
-        const removeBtn = fragment.querySelector('[data-education-remove]');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                row.remove();
-                triggerPersist();
-            });
-        }
-
-        const baseRow = baseRowHint || document.querySelector(`tr[data-education-base="${CSS.escape(levelKey)}"]`);
-        if (baseRow) {
-            let insertAfter = baseRow;
-            while (
-                insertAfter.nextElementSibling &&
-                insertAfter.nextElementSibling.dataset.educationExtra === '1' &&
-                insertAfter.nextElementSibling.dataset.educationLevel === levelKey
-            ) {
-                insertAfter = insertAfter.nextElementSibling;
-            }
-            insertAfter.insertAdjacentElement('afterend', row);
-        } else {
-            extraPrototype.parentElement.insertBefore(row, extraPrototype);
-        }
-
-        triggerPersist();
-    };
-
-    addButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const level = (btn.getAttribute('data-education-add') || '').trim();
-            const baseRow = btn.closest('tr');
-            addEducationRow(level, {}, baseRow);
-        });
-    });
-
-    // Restore dynamic education rows from cache/draft so refresh keeps added rows (cache-first like form2)
-    const hydrateExistingExtras = () => {
-        // Prefer local cache (captures unsent changes)
-        let source = {};
-        try {
-            source = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
-        } catch (e) {
-            source = {};
-        }
-
-        const serverSource = (draftData && Object.keys(draftData).length) ? draftData : sessionData;
-        const hasLocalCache = Object.keys(source).length > 0;
-
-        // Backfill only missing keys from server draft/session; never override cached values
-        if (serverSource) {
-            Object.entries(serverSource).forEach(([k, v]) => {
-                if (!hasLocalCache && source[k] === undefined) {
-                    source[k] = v;
-                }
-            });
-        }
-
-        if (!Object.keys(source).length) return;
-
-        const keys = [
-            'education_extra_level',
-            'education_extra_school_name',
-            'education_extra_basic_education',
-            'education_extra_from',
-            'education_extra_to',
-            'education_extra_highest_level',
-            'education_extra_year_graduated',
-            'education_extra_scholarship_acadhonors'
-        ];
-
-        const getArray = (obj, key) => {
-            if (Array.isArray(obj[key])) return obj[key];
-            const bracketKey = `${key}[]`;
-            if (Array.isArray(obj[bracketKey])) return obj[bracketKey];
-            return [];
-        };
-
-        const arrays = Object.fromEntries(keys.map(k => [k, getArray(source, k)]));
-        const maxLen = Math.max(0, ...Object.values(arrays).map(arr => arr.length));
-
-        for (let i = 0; i < maxLen; i++) {
-            const level = arrays.education_extra_level[i] || '';
-            const values = {};
-            let hasData = (level || '').trim().length > 0;
-            keys.forEach(k => {
-                values[`${k}[]`] = arrays[k][i] ?? '';
-                if (!hasData && (arrays[k][i] ?? '').toString().trim().length > 0) {
-                    hasData = true;
-                }
-            });
-            if (!hasData) continue; // skip empty cached rows
-            addEducationRow(level, values);
-        }
-    };
 
     // Special handling: children rows
     const childrenNameFields = Array.from(document.querySelectorAll('textarea[name="children_familybg[]"]'));
@@ -565,9 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     validateRequired();
 
-    // Hydrate any cached/auto-saved dynamic education rows on load (requires validateRequired/requiredFields)
-    hydrateExistingExtras();
-
     if (form && nextBtn) {
         form.addEventListener('submit', (e) => {
             // Ensure country is set on submit
@@ -742,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <tr>
       <td class="bg-[#e7e7e7] px-2 align-middle border">
     3. DATE OF BIRTH
-    <p class="text-xs font-normal ml-7">(dd/mm/yyyy)</p>
+    <p class="text-base font-normal ml-6">(dd/mm/yyyy)</p>
   </td>
 
   <td class="border h-10">
@@ -1071,6 +929,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr>
           <td class="px-2 py-1 align-top border-r border-black">
             18. PERMANENT ADDRESS
+            <button type="button" 
+                    onclick="copyResidentialToPermanent()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-2 rounded transition-colors duration-200 mt-10 text-center"
+                    style="font-size: 15px; white-space: nowrap; display: block; width: fit-content; margin-left: auto; margin-right: auto;">
+              Same as Above
+            </button>
           </td>
         </tr>
       </table>
@@ -1166,7 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </td>    
 
-    <tr>
+  <tr>
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border">10. UMID ID NO.</td>
       <td class="border px-2 h-10">
 
@@ -1360,9 +1224,10 @@ document.addEventListener('DOMContentLoaded', () => {
       rows="1"
       class="w-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden align-top px-2"
+             whitespace-pre-wrap overflow-hidden align-top px-2 no-uppercase"
       placeholder="Enter Email Address"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
+      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'; this.value = this.value;"
+      style="text-transform: none !important;"
     ></textarea>
             </div>
             </td>
@@ -1417,6 +1282,7 @@ document.addEventListener('DOMContentLoaded', () => {
       border-bottom-color: #059669;
     }
   </style>
+   <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -1529,14 +1395,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1580,14 +1447,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1629,14 +1497,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1679,14 +1548,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1729,14 +1599,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1778,14 +1649,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1831,14 +1703,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1896,14 +1769,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1948,14 +1822,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1986,14 +1861,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2038,14 +1914,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2090,14 +1967,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2142,14 +2020,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2392,7 +2271,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative add-btn-cell has-add-btn">
+          class="border h-10">
           <div class="h-full w-full">
          <textarea
       name="education[secondary][scholarship_acadhonors]"
@@ -2404,11 +2283,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="SECONDARY" aria-label="Add secondary row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="VOCATIONAL / TRADE COURSE">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2509,11 +2387,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="VOCATIONAL / TRADE COURSE" aria-label="Add vocational row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="COLLEGE">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">COLLEGE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2614,11 +2491,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="COLLEGE" aria-label="Add college row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="GRADUATE STUDIES">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2707,7 +2583,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative add-btn-cell has-add-btn">
+          class="border h-10">
           <div class="h-full w-full">
          <textarea
       name="education[graduate_studies][scholarship_acadhonors]"
@@ -2719,82 +2595,8 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="GRADUATE STUDIES" aria-label="Add graduate row">+</button>
       </td>
   </tr>
-
-  <!-- Dynamic extra education rows (hydrated client-side) -->
-  <tbody id="education-extra-rows"></tbody>
-
-  <!-- Prototype for dynamic education row -->
-  <template id="education-extra-prototype">
-    <tr data-education-extra-row>
-      <td class="border text-center align-middle h-20">
-        <textarea name="education_extra_level[]" rows="1"
-          class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-          oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_school_name[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_basic_education[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_from[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_to[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus-ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_highest_level[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_year_graduated[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10 relative">
-        <div class="h-full w-full">
-          <textarea name="education_extra_scholarship_acadhonors[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-        <button type="button" data-education-remove class="absolute -right-7 top-2 text-red-600 font-bold text-lg px-1">✕</button>
-      </td>
-    </tr>
-  </template>
-
- 
 
   <tr>
     <td class="border h-2 text-center text-xl font-bold italic align-middle">
@@ -2858,7 +2660,134 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     </form>
 <script>
+        function copyResidentialToPermanent() {
+            // Copy residential address to permanent address
+            const fields = [
+                'house_block_lot', 'permanent_house_block_lot',
+                'street', 'permanent_street', 
+                'subdivision_village', 'permanent_subdivision_village',
+                'baranggay', 'permanent_baranggay',
+                'city_municipality', 'permanent_city_municipality',
+                'province', 'permanent_province'
+            ];
+            
+            let hasChanges = false;
+            
+            for (let i = 0; i < fields.length; i += 2) {
+                const sourceField = document.querySelector(`[name="${fields[i]}"]`);
+                const targetField = document.querySelector(`[name="${fields[i+1]}"]`);
+                
+                if (sourceField && targetField) {
+                    const oldValue = targetField.value;
+                    targetField.value = sourceField.value;
+                    // Trigger the auto-resize for textareas
+                    targetField.style.height = 'auto';
+                    targetField.style.height = targetField.scrollHeight + 'px';
+                    
+                    // Check if value actually changed
+                    if (oldValue !== targetField.value) {
+                        hasChanges = true;
+                        // Trigger input event to notify autosave
+                        targetField.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            }
+            
+            // Trigger autosave if any changes were made
+            if (hasChanges && typeof persist === 'function') {
+                hasUserInput = true;
+                persist();
+            }
+        }
+
+        function checkChildrenFields() {
+            // Get all children name and date of birth fields
+            const childrenNameFields = document.querySelectorAll('textarea[name="children_familybg[]"]');
+            const childrenDobFields = document.querySelectorAll('input[name="children_dateofbirth_familybg[]"]');
+            
+            // Check if first child name is "NA"
+            const firstChildName = childrenNameFields[0]?.value.trim().toUpperCase() || '';
+            const isNA = firstChildName === 'NA' || firstChildName === 'N/A' || firstChildName === 'N.A.';
+            
+            // Process each row
+            childrenNameFields.forEach((nameField, index) => {
+                const dobField = childrenDobFields[index];
+                const hasName = nameField.value.trim() !== '';
+                
+                if (index === 0) {
+                    // First row - check NA logic and sequential logic
+                    if (isNA) {
+                        // If first child is NA, disable first row too
+                        nameField.disabled = false; // Allow editing to remove NA
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            dobField.disabled = true;
+                            dobField.style.backgroundColor = '#f5f5f5';
+                            dobField.style.display = 'none';
+                            dobField.value = '';
+                        }
+                    } else {
+                        // Normal sequential logic for first row
+                        nameField.disabled = false;
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            if (hasName) {
+                                dobField.disabled = false;
+                                dobField.style.display = 'block';
+                                dobField.style.backgroundColor = 'transparent';
+                            } else {
+                                dobField.style.display = 'none';
+                                dobField.value = '';
+                            }
+                        }
+                    }
+                } else {
+                    // Remaining rows - check NA logic and sequential logic
+                    if (isNA) {
+                        // If first child is NA, disable all remaining rows
+                        nameField.disabled = true;
+                        nameField.style.backgroundColor = '#f5f5f5';
+                        nameField.value = '';
+                        
+                        if (dobField) {
+                            dobField.disabled = true;
+                            dobField.style.backgroundColor = '#f5f5f5';
+                            dobField.style.display = 'none';
+                            dobField.value = '';
+                        }
+                    } else {
+                        // Normal sequential logic for remaining rows
+                        nameField.disabled = false;
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            if (hasName) {
+                                dobField.disabled = false;
+                                dobField.style.display = 'block';
+                                dobField.style.backgroundColor = 'transparent';
+                            } else {
+                                dobField.style.display = 'none';
+                                dobField.value = '';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+
+  // Check children fields on page load
+  checkChildrenFields();
+  
+  // Add event listeners to all children name fields
+  const childrenNameFields = document.querySelectorAll('textarea[name="children_familybg[]"]');
+  childrenNameFields.forEach(field => {
+    field.addEventListener('input', checkChildrenFields);
+    field.addEventListener('change', checkChildrenFields);
+  });
 
   const form = document.querySelector('#pds-form1');
   const autosaveOverlay = document.getElementById('autosaveOverlay');
@@ -3277,11 +3206,6 @@ document.addEventListener('DOMContentLoaded', () => {
     hasUserInput = true;
     persist();
   });
-  form.addEventListener('change', (e) => {
-    console.log('Form change event triggered on:', e.target.name, e.target.type);
-    hasUserInput = true;
-    persist();
-  });
 
   // Sync all date fields across forms using localStorage - form1 is the master
   // Exclude personal DOB (date_of_birth) so it stays independent
@@ -3349,31 +3273,31 @@ input[type="date"] {
   margin-left: 100px;
 }
 
-/* Make calendar icon bigger and black in WebKit browsers (Chrome, Safari, Edge) */
+/* Make calendar icon bigger and blue in WebKit browsers (Chrome, Safari, Edge) */
 input[type="date"]::-webkit-calendar-picker-indicator {
   width: 30px;
   height: 30px;
   cursor: pointer;
   background-size: 30px 30px;
   background-color: transparent;
-  filter: invert(0) brightness(0) !important;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   opacity: 1 !important;
-  -webkit-filter: invert(0) brightness(0) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(4500%) hue-rotate(190deg) brightness(95%) contrast(150%) !important;
   vertical-align: middle;
   position: absolute;
   right: 5px;
 }
 
-/* Make calendar icon bigger and black in Firefox */
+/* Make calendar icon bigger and blue in Firefox */
 input[type="date"]::-moz-calendar-picker-indicator {
   width: 30px;
   height: 30px;
   cursor: pointer;
   background-size: 30px 30px;
   background-color: transparent;
-  filter: invert(0) brightness(0) !important;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   opacity: 1 !important;
-  -webkit-filter: invert(0) brightness(0) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   vertical-align: middle;
   position: absolute;
   right: 5px;
@@ -3444,5 +3368,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+<script>
+// Immediate protection for email field - runs before any other scripts
+document.addEventListener('DOMContentLoaded', () => {
+    const emailField = document.querySelector('textarea[name="email_address"]');
+    if (emailField) {
+        // Force text-transform to none with highest priority
+        emailField.style.textTransform = 'none';
+        emailField.style.setProperty('text-transform', 'none', 'important');
+        emailField.classList.add('no-uppercase');
+        
+        // Remove ALL event listeners (clean slate)
+        const clone = emailField.cloneNode(true);
+        clone.value = emailField.value;
+        emailField.parentNode.replaceChild(clone, emailField);
+        
+        // Ensure style is maintained
+        clone.style.textTransform = 'none';
+        clone.style.setProperty('text-transform', 'none', 'important');
+    }
+});
+</script>
+
 
 </x-app-layout>

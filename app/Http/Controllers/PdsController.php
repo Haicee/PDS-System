@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PdsRejection;
 use App\Models\PdsSubmission;
+use App\Models\PdsForm5Remark;
 
 class PdsController extends Controller
 {
@@ -223,10 +224,11 @@ class PdsController extends Controller
         $signaturePath = $signatureFiles->signature_file_path ?? null;
         $photoPath = $signatureFiles->photo_file_path ?? null;
 
-        $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
+        // Get work experience data from the new pds_form5_remarks table
+        $workExperiences = PdsForm5Remark::where('user_id', $userId)->get();
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
-        return view('pdsreview.pdsreview5', compact('remarks', 'declaration', 'signaturePath', 'photoPath'));
+        return view('pdsreview.pdsreview5', compact('workExperiences', 'declaration', 'signaturePath', 'photoPath'));
     }
 
     private function redirectIfRejected(int $userId)

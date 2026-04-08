@@ -1,11 +1,6 @@
 <x-app-layout>
 <form id="pds-form4" method="POST" action="{{ route('pds.saveStep', [4], false) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
   <style>
     body { font-family: 'Arial Narrow','Arial',sans-serif; }
     table { border-collapse: collapse; }
@@ -909,17 +904,6 @@
         });
 
         if (!firstMissing) {
-          const photoProvided = (() => {
-            const hasFile = photoFileInput && photoFileInput.files && photoFileInput.files.length > 0;
-            const hasData = photoDataInput && (photoDataInput.value || '').trim() !== '';
-            return hasFile || hasData;
-          })();
-          if (!photoProvided && photoFileInput) {
-            firstMissing = photoFileInput;
-          }
-        }
-
-        if (!firstMissing) {
           for (const name of govFields) {
             const field = form.querySelector(`[name="${name}"]`);
             if (field && !field.disabled && !field.readOnly && (field.value || '').trim() === '') {
@@ -1523,7 +1507,7 @@
         <!-- Upload option -->
         <label class="px-3 py-1 bg-indigo-600 text-white rounded shadow cursor-pointer">
           Upload photo
-          <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhotoFromFile(this.files[0])" required>
+          <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhotoFromFile(this.files[0])">
         </label>
         <input type="hidden" id="photoData" name="photo_data">
       </div>
@@ -1648,7 +1632,6 @@
         <input
           type="date"
           name="date4"
-          required
           class="w-full h-full text-center text-lg bg-transparent border-none focus:outline-none px-2 py-1"
         />
       </div>
@@ -1665,8 +1648,24 @@
     <table class="border-3 border-t-0 border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
       <tr>
         <td class="p-2 text-center align-middle font-semibold text-sm">
-          SUBSCRIBED AND SWORN to before me this _____________________________ , affiant exhibiting his/her validly issued government ID as indicated above.
+          SUBSCRIBED AND SWORN to before me this <span id="masterDateDisplay" style="display: inline-block; border-bottom: 1px solid black; min-width: 150px;"></span>, affiant exhibiting his/her validly issued government ID as indicated above.
         </td>
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            const masterDate = localStorage.getItem('pds_master_date');
+            const dateDisplay = document.getElementById('masterDateDisplay');
+            if (masterDate) {
+              // Format YYYY-MM-DD to DD/MM/YY
+              const date = new Date(masterDate);
+              const day = String(date.getDate()).padStart(2, '0');
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const year = String(date.getFullYear()); // Get last 2 digits
+              dateDisplay.textContent = `${day}/${month}/${year}`;
+            } else {
+              dateDisplay.textContent = '_____________________________';
+            }
+          });
+        </script>
       </tr>
       <tr>
         <td class="p-2 align-top text-center">

@@ -8,9 +8,13 @@
 <x-app-layout>
 @endif
 <form method="POST" action="{{ route('pds.saveStep', 3) }}" enctype="multipart/form-data">
+    <div class="max-w-6xl mx-auto p-4 flex justify-end gap-3">
+      <a href="{{ route('pdsreview1.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">Preview PDF</a>
+      <a href="{{ route('pds.pdf.download') }}" class="px-4 py-2 bg-slate-700 text-white rounded shadow border border-slate-800 hover:bg-slate-800">Download PDF</a>
+    </div>
 @csrf
     <style>
-  body { margin: 24px; }
+  body { margin: 0px; }
   table {
     border-collapse: collapse;
     width: 100%;
@@ -156,7 +160,7 @@
         });
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
-
+ @include('pdsreview.partials.date-format-helper')
     <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
 
       <colgroup>
@@ -205,8 +209,8 @@
   @php $row = $volRows[$i] ?? null; @endphp
   <tr>
     <td class="border align-middle text-center">{{ $row->organization ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->from ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->to ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ format_pds_date($row->from) ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ format_pds_date($row->to) ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->hours ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->position ?? ' ' }}</td>
   </tr>
@@ -267,8 +271,8 @@
   @php $trow = $trainingRows[$i] ?? null; @endphp
   <tr>
     <td class="border align-middle text-center">{{ $trow->title ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $trow->from ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $trow->to ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ format_pds_date($trow->from) ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ format_pds_date($trow->to) ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow->hours ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow->conducted_by ?? ' ' }}</td>
@@ -336,14 +340,18 @@
 
        <td class="border" colspan="2">
       <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
-        @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+        @php
+          $signatureCleanPath = !empty($signaturePath) ? preg_replace('/^public\//', '', $signaturePath) : null;
+          $signatureUrl = !empty($signatureCleanPath) ? asset('storage/'.$signatureCleanPath) : null;
+        @endphp
         @if($signatureUrl)
           <img src="{{ $signatureUrl }}"
      alt="Signature"
      class="object-contain"
      style="max-height: 150px;
             mix-blend-mode: multiply;
-            filter: contrast(1.2) brightness(1.1);">
+            filter: contrast(1.2) brightness(1.1);"
+     onerror="this.alt='';this.style.display='none';">
         @else
           <div class="text-xs text-gray-600">No signature on file</div>
         @endif
@@ -358,7 +366,7 @@
         <td colspan="2"
           class="border">
           <div class="h-full w-full flex items-center justify-center">
-         <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
+         <div class="text-3xl text-center">{{format_pds_date($declaration->date_accomplished) ?? '—' }}</div>
       </td>
       </tr>
     </table>
