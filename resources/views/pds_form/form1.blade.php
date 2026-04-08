@@ -1242,7 +1242,10 @@ document.addEventListener('DOMContentLoaded', () => {
   </table>
 
 
+<<<<<<< HEAD
    <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+=======
+>>>>>>> dc9d6034f6ba41402addb6c20f822c4de336e6f4
    <table data-section="family_background" class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
   <style>
     /* Show education add buttons only on hover */
@@ -1283,6 +1286,10 @@ document.addEventListener('DOMContentLoaded', () => {
       border-bottom-color: #059669;
     }
   </style>
+<<<<<<< HEAD
+=======
+   <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+>>>>>>> dc9d6034f6ba41402addb6c20f822c4de336e6f4
 
     <!-- FIXED GRID -->
     <colgroup>

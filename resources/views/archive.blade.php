@@ -204,7 +204,7 @@
         x-on:open-delete.window="requestDelete($event.detail)">
         
 
-        <div class="mx-auto px-2 sm:px-6 md:px-12 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)]">
+        <div class="mx-auto px-2 sm:px-6 md:px-12 lg:px-20 flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)]">
 
             <div class="flex flex-row flex-nowrap items-center justify-between gap-2 sm:gap-3 lg:gap-4">
                 <div class="flex-1 min-w-0">
