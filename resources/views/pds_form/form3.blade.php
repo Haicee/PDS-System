@@ -352,6 +352,12 @@
                 const active = fields.filter(f => f && !f.disabled && !f.readOnly);
                 const optionalNames = new Set();
 
+                // Check if first column has NA - if so, row is complete
+                const firstField = active[0];
+                if (firstField && isNA(firstField.value)) {
+                    return { allBlank: false, allNA: true, incomplete: false };
+                }
+
                 const allBlank = active.every(f => (f.value || '').trim() === '');
                 const allNA = active.length && active.every(f => isNA(f.value));
 
@@ -560,6 +566,12 @@
 
                     const active = rowFields.filter(f => f && !f.disabled && !f.readOnly);
                     if (!active.length) continue;
+
+                    // Check if first column has NA - if so, skip validation for this row
+                    const firstColumnField = active.find(f => f.name === names[0]);
+                    if (firstColumnField && isNA(firstColumnField.value)) {
+                        continue; // Skip this row if first column is NA
+                    }
 
                     const rowHasData = active.some(f => !optionalNames.has(f.name) && !isNA(f.value) && (f.value || '').trim() !== '');
                     if (!rowHasData) continue;
@@ -946,7 +958,7 @@
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
-    <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
+    <table data-section="voluntary_work" class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
 
       <colgroup>
         <col style="width: 29.5%;">
@@ -1020,7 +1032,7 @@
     </table>
     
 
-    <table class="border border-black font-['Arial_Narrow','Arial',sans-serif]">
+    <table data-section="learning_development" class="border border-black font-['Arial_Narrow','Arial',sans-serif]">
       
       <colgroup>
         <col style="width: 45.5%;">
@@ -1097,7 +1109,7 @@
 
     </table>
 
-    <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
+    <table data-section="other_information" class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
 
       <colgroup>
         <col style="width: 5.11%;">
@@ -1308,4 +1320,19 @@ input[type="date"].visible::-moz-calendar-picker-indicator {
   border-radius: 2px;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 </x-app-layout>

@@ -209,8 +209,8 @@
   @php $row = $volRows[$i] ?? null; @endphp
   <tr>
     <td class="border align-middle text-center">{{ $row->organization ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ format_pds_date($row->from) ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ format_pds_date($row->to) ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->from) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->to) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
     <td class="border align-middle text-center">{{ $row->hours ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->position ?? ' ' }}</td>
   </tr>
@@ -271,8 +271,8 @@
   @php $trow = $trainingRows[$i] ?? null; @endphp
   <tr>
     <td class="border align-middle text-center">{{ $trow->title ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ format_pds_date($trow->from) ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ format_pds_date($trow->to) ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $trow ? (format_pds_date($trow->from) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $trow ? (format_pds_date($trow->to) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
     <td class="border align-middle text-center">{{ $trow->hours ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow->conducted_by ?? ' ' }}</td>

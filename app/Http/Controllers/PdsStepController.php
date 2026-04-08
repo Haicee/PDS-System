@@ -215,8 +215,9 @@ class PdsStepController extends Controller
             session(['pds' => $data, 'pds_owner' => $userId]);
         }
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
-        return view('pds_form.form1', compact('data', 'signaturePath'));
+        return view('pds_form.form1', compact('data', 'signaturePath', 'highlightedSections'));
     }
 
       public function form2()
@@ -232,8 +233,9 @@ class PdsStepController extends Controller
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
-        return view('pds_form.form2', compact('data', 'signaturePath'));
+        return view('pds_form.form2', compact('data', 'signaturePath', 'highlightedSections'));
     }
 
       public function form3()
@@ -249,8 +251,9 @@ class PdsStepController extends Controller
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
-        return view('pds_form.form3', compact('data', 'signaturePath'));
+        return view('pds_form.form3', compact('data', 'signaturePath', 'highlightedSections'));
     }
 
       public function form4()
@@ -266,8 +269,9 @@ class PdsStepController extends Controller
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
-        return view('pds_form.form4', compact('data', 'signaturePath'));
+        return view('pds_form.form4', compact('data', 'signaturePath', 'highlightedSections'));
     }
 
     public function form5()
@@ -283,8 +287,9 @@ class PdsStepController extends Controller
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
         $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
-        return view('pds_form.form5', compact('data', 'signaturePath'));
+        return view('pds_form.form5', compact('data', 'signaturePath', 'highlightedSections'));
     }
 
     /**

@@ -32,6 +32,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'status',
         'location_assigned',
         'role',
+        'is_archive',
+        'archived_at',
+        'archived_by',
+        'last_login_at',
     ];
 
     /**
@@ -54,6 +58,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_archive' => 'boolean',
+            'archived_at' => 'datetime',
         ];
     }
 

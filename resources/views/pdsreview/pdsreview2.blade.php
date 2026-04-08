@@ -85,7 +85,7 @@
   <tr>
     <td class="border align-middle text-center">{{ $row->eligibility ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->rating ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{format_pds_date($row->exam_date) ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->exam_date ?? null) ?: 'NA') : ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->exam_place ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->license_no ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->validity ?? ' ' }}</td>
@@ -144,8 +144,8 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $workRow = $workRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-middle text-center"> {{ format_pds_date($workRow?->from) ?? " " }}</td>
-    <td class="border align-middle text-center">{{ format_pds_date($workRow?->to) ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow ? (format_pds_date($workRow->from ?? null) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $workRow ? (format_pds_date($workRow->to ?? null) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
     <td class="border align-middle text-center">{{ $workRow->position_title ?? " " }}</td>
     <td class="border align-middle text-center">{{ $workRow->department ?? " " }}</td>
     <td class="border align-middle text-center">{{ $workRow->status ?? " " }}</td>

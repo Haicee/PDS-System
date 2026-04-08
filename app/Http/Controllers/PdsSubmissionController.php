@@ -437,8 +437,6 @@ class PdsSubmissionController extends Controller
                 ];
             })->filter($rowHasData);
             if ($work->isNotEmpty()) {
-                $validateNa([$req->input('work_from', [])], 'Work experience');
-
                 $existingWork = DB::table('pds_work_experiences')
                     ->where('user_id', $userId)
                     ->orderBy('id')

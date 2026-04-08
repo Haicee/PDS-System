@@ -179,11 +179,41 @@
                         <p class="text-md text-slate-700" x-text="confirmAction === 'approved' ? 'This will approve the submitted PDS.' : confirmAction === 'rejected' ? 'This will reject the submitted PDS.' : 'This will mark the submitted PDS as pending.'"></p>
                     </div>
                     <template x-if="confirmAction === 'rejected'">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-sm font-medium text-slate-700">Rejection note</label>
-                            <textarea class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-rose-500 focus:ring-rose-200"
-                                rows="3" placeholder="Add a short reason for rejection"
-                                x-model.trim="rejectNote"></textarea>
+                        <div class="flex flex-col gap-3">
+                            <div>
+                                <label class="text-sm font-medium text-slate-700">Incorrect sections <span class="text-xs font-normal text-slate-400">(click to toggle highlight)</span></label>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <template x-for="sec in [
+                                        {key:'personal_information',   label:'I. Personal Information'},
+                                        {key:'family_background',      label:'II. Family Background'},
+                                        {key:'educational_background', label:'III. Educational Background'},
+                                        {key:'civil_service',          label:'IV. Civil Service Eligibility'},
+                                        {key:'work_experience',        label:'V. Work Experience'},
+                                        {key:'voluntary_work',         label:'VI. Voluntary Work'},
+                                        {key:'learning_development',   label:'VII. L&D / Training'},
+                                        {key:'other_information',      label:'VIII. Other Information'},
+                                        {key:'references',             label:'References'},
+                                        {key:'work_experience_sheet',  label:'Work Experience Sheet'}
+                                    ]" :key="sec.key">
+                                        <button type="button"
+                                            class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors"
+                                            :class="rejectSections.includes(sec.key)
+                                                ? 'border-rose-500 bg-rose-500 text-white'
+                                                : 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'"
+                                            @click="rejectSections.includes(sec.key)
+                                                ? rejectSections = rejectSections.filter(s => s !== sec.key)
+                                                : rejectSections.push(sec.key)"
+                                            x-text="sec.label">
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-slate-700">Rejection note <span class="text-xs font-normal text-slate-400">(optional)</span></label>
+                                <textarea class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-rose-500 focus:ring-rose-200"
+                                    rows="3" placeholder="Add a short reason for rejection"
+                                    x-model.trim="rejectNote"></textarea>
+                            </div>
                         </div>
                     </template>
                     <div class="flex gap-3">

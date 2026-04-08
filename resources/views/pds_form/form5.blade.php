@@ -823,7 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </th>
 </table>
 
-<table class="border-black w-full font-['Arial_Narrow','Arial',sans-serif] border-2">
+<table data-section="work_experience_sheet" class="border-black w-full font-['Arial_Narrow','Arial',sans-serif] border-2">
 
 <tr>
   <th class="text-base font-semibold italic bg-[#8a8a8a] text-white border border-black border-b-2">
@@ -1194,4 +1194,19 @@ input[type="date"]::-moz-datetime-edit-year-field {
   text-align: center !important;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 </x-app-layout>

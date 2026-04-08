@@ -5,16 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\PdsRejection;
 use App\Models\PdsSubmission;
 use App\Notifications\PdsStatusUpdated;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 
 class PdsReviewController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $status = $request->query('status');
         $submissions = $this->mappedSubmissions();
 
-        return view('pds-form', compact('submissions'));
+        return view('pds-form', compact('submissions', 'status'));
     }
 
     public function latest(): \Illuminate\Http\JsonResponse
@@ -52,6 +54,8 @@ class PdsReviewController extends Controller
         $data = $request->validate([
             'status' => 'required|in:Pending,Approved,Rejected',
             'note' => 'nullable|string|max:2000',
+            'highlighted_sections' => 'nullable|array',
+            'highlighted_sections.*' => 'string',
         ]);
 
         $submission = PdsSubmission::findOrFail($id);
@@ -71,6 +75,7 @@ class PdsReviewController extends Controller
                     'name' => $submission->name ?? $submission->user?->name ?? 'Unknown',
                     'status' => 'Rejected',
                     'notes' => $data['note'] ?? null,
+                    'highlighted_sections' => $data['highlighted_sections'] ?? null,
                 ]
             );
         } elseif ($submission->user_id) {
@@ -87,6 +92,27 @@ class PdsReviewController extends Controller
             Notification::send($submission->user, new PdsStatusUpdated($submission, $noteToSend));
             $this->trimNotificationHistory($submission->user);
         }
+
+        $employee = $submission->user;
+        $activityPhrase = match ($submission->status) {
+            'Approved' => "Approved the PDS submission.",
+            'Rejected' => "Rejected the PDS submission." . ($data['note'] ? " Reason: {$data['note']}" : ''),
+            'Pending'  => "Set the PDS submission back to Pending.",
+            default    => "Updated PDS status to {$submission->status}.",
+        };
+
+        ActivityLogger::log(
+            'pds_status',
+            $activityPhrase,
+            [
+                'id'    => $employee?->id,
+                'name'  => $submission->name,
+                'email' => $submission->email ?? $employee?->email,
+                'type'  => $submission->type ?? $employee?->type,
+                'unit'  => $submission->unit ?? $employee?->unit,
+            ],
+            ['pds_status' => $submission->status, 'pds_id' => $submission->id]
+        );
 
         return response()->json([
             'success' => true,

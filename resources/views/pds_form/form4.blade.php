@@ -1470,7 +1470,7 @@
 
     </table> 
 
-    <table class="w-full h-full border-l-2 border-b-0 border-black font-['Arial_Narrow','Arial',sans-serif]">
+    <table data-section="references" class="w-full h-full border-l-2 border-b-0 border-black font-['Arial_Narrow','Arial',sans-serif]">
       <tr>
         <td class="border-l-3 border border-t-2 border-r-2 border-b-3 border-black" colspan="3">
           <span class="ml-2">41. REFERENCES </span><span class="font-semibold">(Person not related by consanguinity or affinity to applicant / appointee)</span>
@@ -1782,4 +1782,19 @@ input[type="date"]::-moz-datetime-edit-year-field {
   text-align: center;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 </x-app-layout>

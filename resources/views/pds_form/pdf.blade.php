@@ -1333,7 +1333,7 @@
  <td class="border" colspan="2">
     <div class="h-full w-full flex flex-col items-center justify-center p-2">
         @if($signatureUrl)
-            <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:100px; object-fit:contain;">
+            <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:150px; object-fit:contain;">
         @endif
     </div>
 </td>
@@ -1343,7 +1343,7 @@
     </td>
 @include('pdsreview.partials.date-format-helper')
     <td colspan="3"
-          class="border h-10">
+          class="border h-16">
           <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;"> 
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
@@ -1408,7 +1408,7 @@
         <tr class="text-lg align-middle" style="{{ $bottom }}">
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->eligibility ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->rating ?? ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ format_pds_date($row?->exam_date) ?: ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row ? (format_pds_date($row->exam_date ?? null) ?: 'NA') : ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->exam_place ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->license_no ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle; {{ $bottom }}">{{ $row->validity ?? ' ' }}</td>
@@ -1460,8 +1460,8 @@
     @for ($i = 0; $i < $maxWorkRows; $i++)
         @php $workRow = $workRows[$i] ?? null; @endphp
         <tr class="text-lg align-middle">
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ format_pds_date($workRow?->from) ?: ' ' }}</td>
-            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ format_pds_date($workRow?->to) ?: ' ' }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow ? (format_pds_date($workRow->from ?? null) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
+            <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow ? (format_pds_date($workRow->to ?? null) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->position_title ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->department ?? ' ' }}</td>
             <td style="border:1px solid black; text-align:center; vertical-align:middle;">{{ $workRow->status ?? ' ' }}</td>
@@ -1487,7 +1487,7 @@
         <td colspan="2" style="border:1px solid black; border-top:0;">
             <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
                 @if($signatureUrl)
-                  <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
+                  <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:150px; object-fit:contain;">
                 @endif
             </div>
         </td>
@@ -1497,7 +1497,7 @@
         </td>
 
          <td colspan="2"
-          class="h-10">
+          class="h-16">
           <div class="h-full w-full flex items-center justify-center text-lg text-center" style="font-size: 30px;">
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
@@ -1578,9 +1578,9 @@
       @endphp
       <tr style="{{ $bottom }}">
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->organization ?? ' ' }}</td>
-        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->from) ?: ' ' }}</td>
-        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->to) ?: ' ' }}</td>
-        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->hours ?? ' ' }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->from) ?: ($i === 0 ? 'NA' : ' ') }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->to) ?: ($i === 0 ? 'NA' : ' ') }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->hours ?? ($i === 0 ? 'NA' : ' ') }}</td>
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->position ?? ' ' }}</td>
       </tr>
     @endfor
@@ -1661,9 +1661,9 @@
     @endphp
     <tr style="{{ $bottom }}">
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->title ?? ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->from) ?: ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->to) ?: ' ' }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->hours ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->from) ?: ($i === 0 ? 'NA' : ' ') }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->to) ?: ($i === 0 ? 'NA' : ' ') }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->hours ?? ($i === 0 ? 'NA' : ' ') }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->type_of_ld ?? ' ' }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->conducted_by ?? ' ' }}</td>
     </tr>
@@ -1733,7 +1733,7 @@
         <td colspan="2" style="border:1px solid black; border-top:0;">
             <div style="height:100%; width:100%; display:flex; align-items:center; justify-content:center; padding:6px;">
                 @if($signatureUrl)
-                  <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:120px; object-fit:contain;">
+                  <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:150px; object-fit:contain;">
                 @endif
             </div>
         </td>
@@ -1742,8 +1742,8 @@
             DATE
         </td>
 
-        <td 
-          class="h-10">
+        <td
+          class="h-16">
           <div class="h-full w-full flex items-center justify-center text-center" style="font-size: 30px; border-top:0;">
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
@@ -2226,7 +2226,7 @@
 
 
         <!-- THUMB MARK -->
-        <div style="margin-top:10mm;">
+        <div style="margin-top:30mm;">
 
             <div style="
                 width:45mm;
@@ -2344,11 +2344,11 @@
 
         </td>
         <td class="p-0 align-top border-b-0 border-l-0 border-r-0 border-black" colspan="2" style="width:20%;">
-          <table class="border-collapse text-xs border-3 mt-2 border-2 mb-2 mx-auto" style="margin-left: 10px; width:11.55cm; margin-left: 195px;">
+          <table class="border-collapse text-xs border-3 mt-2 border-2 mb-2 mx-auto" style="margin-left: 10px; width:12.1cm; margin-left: 195px;">
           <td class="border-black text-center align-middle italic text-red-600">
-    <div style="height:3.47cm; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;" class="text-base">
+    <div style="height:3.4cm; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;" class="text-base">
         @if($signatureUrl)
-          <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:3.5cm; object-fit:contain;">
+          <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:5cm; object-fit:contain;">
         @else
         @endif
     </div>
@@ -2382,9 +2382,9 @@
         <td class="p-2 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-2">
             <tr>
-  <td class="border-black text-center align-middle italic text-red-600 relative" style="height:6rem;">
+  <td class="border-black text-center align-middle italic text-red-600 relative" style="height:9.375rem;">
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:6rem;">
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:9.375rem;">
     @endif
   </td>
 </tr>
@@ -2515,10 +2515,10 @@
       <img
         src="{{ $signatureUrl }}"
         alt="Signature"
-        style="max-height:140px; object-fit:contain; margin-top:0; margin-bottom:-30px;"
+        style="max-height:150px; object-fit:contain; margin-top:0; margin-bottom:-30px;"
       >
     @endif
-    <span>{{ auth()->user()->name ?? 'Employee' }}</span>
+    <span>{{ trim(($personal->firstname ?? '') . ' ' . ($personal->middlename ?? '') . ' ' . ($personal->surname ?? '')) ?: 'Employee' }}</span>
     <div class="border-b-2 border-black" style="height:20px; width:100%;"></div>
     <div class="mt-2 text-sm">(Signature over Printed Name)</div>
   </div>

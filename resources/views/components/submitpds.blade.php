@@ -66,11 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const formData = new FormData(form);
       const response = await fetch(form.getAttribute('action'), {
         method: form.getAttribute('method') || 'POST',
-        headers: { 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value },
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+          'Accept': 'application/json',
+        },
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Submit failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Submission failed. Please try again.';
+        throw new Error(errorMessage);
+      }
 
       showSuccess();
       // Reload to reflect latest status after submit
@@ -78,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }, 900);
     } catch (err) {
-      alert('Submission failed. Please try again.');
+      alert(err.message || 'Submission failed. Please try again.');
       submitting = false;
       setLoading(false);
     }

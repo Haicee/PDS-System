@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
@@ -64,7 +65,7 @@ class RegisteredUserController extends Controller
             'phone' => ['required', 'digits:11'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'type' => ['required', 'in:Permanent Employee,Contract of Service'],
+            'type' => ['required', 'in:Permanent Employee,Contract of Service,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
             'profile_photo' => ['required', 'image', 'max:3072'],
         ]);
@@ -112,11 +113,25 @@ class RegisteredUserController extends Controller
                 $recipients = $adminUsers->concat($adminsFromUsersTable);
 
                 if ($recipients->isNotEmpty()) {
-                    Notification::send($recipients, new EmployeeRegistered($user));
-                    $this->trimNotificationHistory($recipients);
+                    try {
+                        Notification::send($recipients, new EmployeeRegistered($user));
+                        $this->trimNotificationHistory($recipients);
+                    } catch (\Symfony\Component\Mailer\Exception\TransportException $e) {
+                        Log::warning('Failed to send admin notification email: ' . $e->getMessage());
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to send admin notification email: ' . $e->getMessage());
+                    }
                 }
 
-                event(new Registered($user));
+                try {
+                    event(new Registered($user));
+                } catch (\Symfony\Component\Mailer\Exception\TransportException $e) {
+                    Log::warning('Failed to send email verification: ' . $e->getMessage());
+                    return redirect()->route('verification.notice')->with('status', 'registration-successful-email-failed');
+                } catch (\Exception $e) {
+                    Log::warning('Failed to send email verification: ' . $e->getMessage());
+                    return redirect()->route('verification.notice')->with('status', 'registration-successful-email-failed');
+                }
 
                 Auth::login($user);
 

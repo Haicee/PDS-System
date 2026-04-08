@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminUser;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -37,8 +38,25 @@ class AdminUserController extends Controller
             'status' => ['required', 'in:active,inactive'],
         ]);
 
+        $original = $adminUser->only(['name', 'email', 'role', 'status']);
         $adminUser->fill($data);
         $adminUser->save();
+
+        $changed = [];
+        foreach ($data as $key => $value) {
+            if (($original[$key] ?? null) !== $value) {
+                $changed[] = ucfirst($key);
+            }
+        }
+
+        if (!empty($changed)) {
+            $changedList = implode(', ', $changed);
+            ActivityLogger::log(
+                'update_admin',
+                "Updated the Admin User account of {$adminUser->name}. Changed fields: {$changedList}.",
+                ['id' => $adminUser->id, 'name' => $adminUser->name, 'email' => $adminUser->email]
+            );
+        }
 
         return response()->json([
             'message' => 'Admin updated successfully.',
@@ -62,6 +80,12 @@ class AdminUserController extends Controller
             'status' => 'active',
         ]);
 
+        ActivityLogger::log(
+            'create_admin',
+            "Created a new Admin User account for {$admin->name} ({$admin->email}).",
+            ['id' => $admin->id, 'name' => $admin->name, 'email' => $admin->email]
+        );
+
         return response()->json([
             'message' => 'Admin created successfully.',
             'admin' => $this->normalize($admin),
@@ -70,7 +94,15 @@ class AdminUserController extends Controller
 
     public function destroy(AdminUser $adminUser)
     {
+        $deletedName  = $adminUser->name;
+        $deletedEmail = $adminUser->email;
         $adminUser->delete();
+
+        ActivityLogger::log(
+            'delete_admin',
+            "Deleted the Admin User account of {$deletedName} ({$deletedEmail}).",
+            ['id' => null, 'name' => $deletedName, 'email' => $deletedEmail]
+        );
 
         return response()->json([
             'message' => 'Admin deleted successfully.',
