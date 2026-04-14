@@ -711,6 +711,7 @@ Route::middleware('auth:admin,web')->group(function () {
     Route::post('/pds/save-step/{step}', [PdsStepController::class, 'saveStep'])->name('pds.saveStep');
     Route::post('/pds/autosave', [PdsStepController::class, 'autoSave'])
     ->name('pds.autosave');
+    Route::post('/pds/clear-signature', [PdsStepController::class, 'clearSignature'])->name('pds.clearSignature');
     Route::get('/pds/draft', [PdsStepController::class, 'draft'])->name('pds.draft');
     Route::get('/pds/pdf', [PdsPdfController::class, 'download'])->name('pds.pdf');
 });

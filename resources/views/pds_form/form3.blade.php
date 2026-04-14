@@ -36,7 +36,9 @@
         .autosave-overlay.hidden { display: none; }
     </style>
     <script>
+        let _hydrating3 = false;
         function checkVoluntaryFields() {
+            if (_hydrating3) return;
             // Get all voluntary fields for sequential row logic
             const organizationFields = document.querySelectorAll('textarea[name="voluntary_organization[]"]');
             const voluntaryFromFields = document.querySelectorAll('input[name="voluntary_from[]"]');
@@ -114,6 +116,7 @@
                         voluntaryFromField.style.backgroundColor = 'transparent';
                     } else {
                         voluntaryFromField.classList.remove('visible');
+                        voluntaryFromField.value = '';
                     }
                 }
                 
@@ -123,6 +126,7 @@
                         voluntaryToField.style.backgroundColor = 'transparent';
                     } else {
                         voluntaryToField.classList.remove('visible');
+                        voluntaryToField.value = '';
                     }
                 }
                 
@@ -134,6 +138,7 @@
         }
 
         function checkLearningFields() {
+            if (_hydrating3) return;
             // Get all learning fields for sequential row logic
             const titleFields = document.querySelectorAll('textarea[name="learning_title_of_ld[]"]');
             const learningFromFields = document.querySelectorAll('input[name="learning_from[]"]');
@@ -215,6 +220,7 @@
                         learningFromField.style.backgroundColor = 'transparent';
                     } else {
                         learningFromField.classList.remove('visible');
+                        learningFromField.value = '';
                     }
                 }
                 
@@ -224,6 +230,7 @@
                         learningToField.style.backgroundColor = 'transparent';
                     } else {
                         learningToField.classList.remove('visible');
+                        learningToField.value = '';
                     }
                 }
                 
@@ -235,6 +242,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            _hydrating3 = true;
+
             const form = document.querySelector('#pds-form3');
             if (!form) return;
 
@@ -375,6 +384,7 @@
             };
 
             const refreshRows = () => {
+                if (_hydrating3) return;
                 const disableVoluntary = firstColIsNA(voluntaryFirstRow);
                 const disableLearning = firstColIsNA(learningFirstRow);
                 const disableOther = firstColIsNA(otherInfoFirstRow);
@@ -444,6 +454,7 @@
             
             // Add sequential logic for Other Information table
             const checkOtherInfoFields = () => {
+                if (_hydrating3) return;
                 const skillsFields = document.querySelectorAll('textarea[name="special_skills_hobbies[]"]');
                 const distinctionsFields = document.querySelectorAll('textarea[name="non_academic_distinctions_recognition[]"]');
                 const membershipFields = document.querySelectorAll('textarea[name="membership_in_association_organization[]"]');
@@ -750,8 +761,19 @@
                 if (overrideData?.signature_data && signatureDataInput3 && !signatureDataInput3.value) {
                     signatureDataInput3.value = overrideData.signature_data;
                 }
-                Object.entries(data).forEach(([name, stored]) => {
-                    const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+                Object.entries(data).forEach(([rawName, stored]) => {
+                    let name = rawName;
+                    let elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+                    // Server draft arrays come back without [] (e.g. voluntary_organization), but fields use []
+                    if (!elements.length && Array.isArray(stored) && !name.endsWith('[]')) {
+                        const altName = `${name}[]`;
+                        const altElements = Array.from(form.querySelectorAll(`[name="${altName}"]`));
+                        if (altElements.length) {
+                            name = altName;
+                            elements = altElements;
+                        }
+                    }
 
                     if (name.endsWith('[]') && Array.isArray(stored)) {
                         elements.forEach((el, idx) => {
@@ -901,27 +923,44 @@
             })();
 
             const persist = () => {
+                if (_hydrating3) return;
                 saveCache();
                 autoSaveToServer();
             };
 
+            const finishHydration3 = () => {
+                _hydrating3 = false;
+                refreshRows();
+                checkVoluntaryFields();
+                checkLearningFields();
+                checkOtherInfoFields();
+                saveCache();
+            };
+
             loadCache();
-            // Persist merged cache once so a fast refresh keeps latest values
-            saveCache();
 
             fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.ok ? r.json() : null)
                 .then(json => {
-                    if (!json || !json.data) return;
+                    if (!json || !json.data) { finishHydration3(); return; }
                     loadCache(json.data);
                     updateSignaturePreviewFromInputs3();
-                    // Persist merged cache once so a fast refresh keeps latest values
-                    saveCache();
+                    finishHydration3();
                 })
-                .catch(() => {});
+                .catch(() => { finishHydration3(); });
 
             form.addEventListener('input', () => { persist(); });
             form.addEventListener('change', () => { persist(); });
+
+            // Flush pending data to server on page unload so a quick refresh doesn't lose changes
+            window.addEventListener('beforeunload', () => {
+                if (_hydrating3) return;
+                saveCache();
+                navigator.sendBeacon(
+                    '{{ route('pds.autosave', [], false) }}',
+                    new FormData(form)
+                );
+            });
         });
 
         // Check for master date from form1 and apply it

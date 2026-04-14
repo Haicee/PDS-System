@@ -85,7 +85,7 @@
   <tr>
     <td class="border align-middle text-center">{{ $row->eligibility ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->rating ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->exam_date ?? null) ?: 'NA') : ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->exam_date ?? null) ?: (($row->eligibility ?? '') === 'NA' ? 'NA' : ' ')) : ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->exam_place ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->license_no ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->validity ?? ' ' }}</td>

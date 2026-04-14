@@ -12,12 +12,12 @@ return new class extends Migration
     {
         // Widen all string columns on pds_form5_remarks that can hold long text
         DB::statement('ALTER TABLE pds_form5_remarks
-            MODIFY duration TEXT,
-            MODIFY position_title TEXT,
-            MODIFY office_unit TEXT,
-            MODIFY immediate_supervisor TEXT,
-            MODIFY agency_location TEXT,
-            MODIFY signature_path TEXT');
+            ALTER COLUMN duration TYPE TEXT,
+            ALTER COLUMN position_title TYPE TEXT,
+            ALTER COLUMN office_unit TYPE TEXT,
+            ALTER COLUMN immediate_supervisor TYPE TEXT,
+            ALTER COLUMN agency_location TYPE TEXT,
+            ALTER COLUMN signature_path TYPE TEXT');
     }
 
     /**
@@ -27,11 +27,11 @@ return new class extends Migration
     {
         // Revert back to varchar(255) for the original string columns
         DB::statement('ALTER TABLE pds_form5_remarks
-            MODIFY duration VARCHAR(255),
-            MODIFY position_title VARCHAR(255),
-            MODIFY office_unit VARCHAR(255),
-            MODIFY immediate_supervisor VARCHAR(255),
-            MODIFY agency_location VARCHAR(255),
-            MODIFY signature_path VARCHAR(255)');
+            ALTER COLUMN duration TYPE VARCHAR(255),
+            ALTER COLUMN position_title TYPE VARCHAR(255),
+            ALTER COLUMN office_unit TYPE VARCHAR(255),
+            ALTER COLUMN immediate_supervisor TYPE VARCHAR(255),
+            ALTER COLUMN agency_location TYPE VARCHAR(255),
+            ALTER COLUMN signature_path TYPE VARCHAR(255)');
     }
 };

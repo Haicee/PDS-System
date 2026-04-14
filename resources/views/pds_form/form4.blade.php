@@ -502,7 +502,10 @@
       el.style.height = `${el.scrollHeight}px`;
     }
 
+    let _hydrating4 = false;
     document.addEventListener('DOMContentLoaded', () => {
+      _hydrating4 = true;
+
       const form = document.querySelector('#pds-form4');
       if (!form) return;
 
@@ -763,6 +766,7 @@
       let prevDisableReferences = null;
 
       const refreshRows = () => {
+        if (_hydrating4) return;
         const refFirst = referenceFirstRow[0];
         const disableRefs = refFirst ? isNA(refFirst.value) : false;
 
@@ -873,6 +877,7 @@
       };
 
       const refreshSequential = () => {
+        if (_hydrating4) return;
         let allow = true;
         sequentialOrder.forEach(name => {
           const group = groupMap.get(name);
@@ -1181,35 +1186,46 @@
         };
       })();
       const persist = () => {
+        if (_hydrating4) return;
         saveCache();
         autoSaveToServer();
       };
 
+      const finishHydration4 = () => {
+        _hydrating4 = false;
+        refreshRows();
+        refreshSequential();
+        validateRequired();
+        saveCache();
+      };
+
       loadCache();
       updateSignaturePreview4();
-      // Persist merged cache once so a fast refresh keeps latest values
-      saveCache();
-
-      refreshSequential();
-      validateRequired();
       loadCachedPhoto();
 
       fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
         .then(r => r.ok ? r.json() : null)
         .then(json => {
-          if (!json || !json.data) return;
+          if (!json || !json.data) { finishHydration4(); return; }
           loadCache(json.data);
           updateSignaturePreview4();
-          // Persist merged cache once so a fast refresh keeps latest values
-          saveCache();
-          refreshSequential();
-          validateRequired();
           loadCachedPhoto();
+          finishHydration4();
         })
-        .catch(() => {});
+        .catch(() => { finishHydration4(); });
 
       form.addEventListener('input', persist);
       form.addEventListener('change', persist);
+
+      // Flush pending data to server on page unload so a quick refresh doesn't lose changes
+      window.addEventListener('beforeunload', () => {
+        if (_hydrating4) return;
+        saveCache();
+        navigator.sendBeacon(
+          '{{ route('pds.autosave', [], false) }}',
+          new FormData(form)
+        );
+      });
     });
 
     // Check for master date from form1 and apply it
@@ -1235,6 +1251,23 @@
       }
     }
 
+    function checkAllNo() {
+      const names = ['q34_a','q34_b','q35_a','q35_b','q36','q37','q38_a','q38_b','q39','q40_a','q40_b','q40_c'];
+      names.forEach(name => {
+        const boxes = document.querySelectorAll(`input[type="checkbox"][name="${name}"]`);
+        boxes.forEach(box => {
+          if (box.value === 'NO') {
+            box.checked = true;
+          } else {
+            box.checked = false;
+          }
+        });
+        // Trigger change on the NO box to fire existing handlers
+        const noBox = document.querySelector(`input[type="checkbox"][name="${name}"][value="NO"]`);
+        if (noBox) noBox.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
     // Check for master date when page loads
     syncFromForm1();
 
@@ -1244,6 +1277,10 @@
   
   <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
   <div class="pds-sheet">
+
+  <div class="flex justify-end mb-2">
+    <button type="button" id="noToAllBtn" class="px-4 py-1.5 bg-red-600 text-white text-sm rounded shadow hover:bg-red-700 transition" onclick="checkAllNo()">No to All</button>
+  </div>
 
   <table class="border-black w-full text-sm border-2 border-b-0">
     <tr>

@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         // Allow very long values for duration on form 5 remarks
-        DB::statement('ALTER TABLE pds_form5_remarks MODIFY duration TEXT');
+        DB::statement('ALTER TABLE pds_form5_remarks ALTER COLUMN duration TYPE TEXT');
     }
 
     /**
@@ -20,6 +20,6 @@ return new class extends Migration
     public function down(): void
     {
         // Revert duration back to varchar(255)
-        DB::statement('ALTER TABLE pds_form5_remarks MODIFY duration VARCHAR(255)');
+        DB::statement('ALTER TABLE pds_form5_remarks ALTER COLUMN duration TYPE VARCHAR(255)');
     }
 };

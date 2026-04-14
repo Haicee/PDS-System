@@ -380,6 +380,10 @@ class PdsSubmissionController extends Controller
                 ];
             })->filter($rowHasData);
 
+            // Note: education_1, education_2, ... (dynamic full tables) are kept in pds_drafts only
+            // and rendered separately via $extraEduTables in the view/PDF — not stored in pds_education_records
+            // to avoid level-based duplicate rows in $extraRows.
+
             $allEdu = $edu->concat($extraEdu);
 
             if ($allEdu->isNotEmpty()) {
@@ -602,7 +606,7 @@ class PdsSubmissionController extends Controller
             $officeUnits = $req->input('office_unit', []);
             $immediateSupervisors = $req->input('immediate_supervisor', []);
             $agencyLocations = $req->input('agency_location', []);
-            $accomplishments = $req->input('accomplishments', []);
+            $accomplishmentsIndexed = $req->input('accomplishments_indexed', []);
             $duties = $req->input('duties', []);
 
             // Resolve signature/photo paths once so they are available for each row
@@ -612,20 +616,20 @@ class PdsSubmissionController extends Controller
 
             // Create work experience entries for each row
             $workExperienceData = [];
-            $maxRows = max(count($durations), count($positionTitles), count($officeUnits), 
+            $maxRows = max(count($durations), count($positionTitles), count($officeUnits),
                           count($immediateSupervisors), count($agencyLocations), count($duties));
-            
+
             for ($i = 0; $i < $maxRows; $i++) {
-                $hasData = !empty($durations[$i]) || !empty($positionTitles[$i]) || 
-                          !empty($officeUnits[$i]) || !empty($immediateSupervisors[$i]) || 
+                $hasData = !empty($durations[$i]) || !empty($positionTitles[$i]) ||
+                          !empty($officeUnits[$i]) || !empty($immediateSupervisors[$i]) ||
                           !empty($agencyLocations[$i]) || !empty($duties[$i]);
-                
+
                 if ($hasData) {
-                    // Filter accomplishments for this row (accomplishments are stored as a flat array)
+                    // Get accomplishments for this specific row (indexed format)
                     $rowAccomplishments = [];
-                    if (!empty($accomplishments)) {
-                        // Assuming accomplishments are stored per row, adjust logic if needed
-                        $rowAccomplishments = array_filter($accomplishments, fn($v) => !empty(trim($v)));
+                    if (!empty($accomplishmentsIndexed[$i]) && is_array($accomplishmentsIndexed[$i])) {
+                        $rowAccomplishments = array_filter($accomplishmentsIndexed[$i], fn($v) => !empty(trim($v)));
+                        $rowAccomplishments = array_values($rowAccomplishments); // Re-index after filtering
                     }
 
                     $workExperienceData[] = [

@@ -100,7 +100,54 @@ class PdsPdfController extends Controller
         $mother = $family->where('type', 'mother')->first();
         $children = $family->where('type', 'child')->values();
         $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
-        $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
+
+        // Build extra education tables (education_1, education_2, ...) from draft
+        $extraEduTables = collect();
+        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+        if ($draft && !empty($draft->data)) {
+            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
+            $baseLevels = [
+                'elementary' => 'ELEMENTARY',
+                'secondary' => 'SECONDARY',
+                'vocational' => 'VOCATIONAL / TRADE COURSE',
+                'college' => 'COLLEGE',
+                'graduate_studies' => 'GRADUATE STUDIES',
+            ];
+            $dynKeys = array_keys(array_filter((array) $draftData, function($v, $k) {
+                return preg_match('/^education_\d+$/', $k);
+            }, ARRAY_FILTER_USE_BOTH));
+            sort($dynKeys);
+            foreach ($dynKeys as $dynKey) {
+                $table = $draftData[$dynKey];
+                if (!is_array($table)) continue;
+                $tableRows = collect();
+                foreach ($baseLevels as $key => $label) {
+                    $row = $table[$key] ?? [];
+                    $tableRows->push([
+                        'level' => $label,
+                        'school_name' => $row['school_name'] ?? null,
+                        'degree_course' => $row['basic_education'] ?? null,
+                        'from' => $row['from'] ?? null,
+                        'to' => $row['to'] ?? null,
+                        'highest_level' => $row['highest_level'] ?? null,
+                        'year_graduated' => $row['year_graduated'] ?? null,
+                        'academic_honors' => $row['scholarship_acadhonors'] ?? null,
+                    ]);
+                }
+                $hasAnyData = $tableRows->some(function($r) {
+                    return collect(array_diff_key($r, ['level' => true]))->some(fn($v) => trim((string)($v ?? '')) !== '');
+                });
+                if ($hasAnyData) $extraEduTables->push($tableRows);
+            }
+        }
+        $eligibilities = DB::table('pds_eligibilities')
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->whereNotNull('eligibility')
+                      ->where('eligibility', '!=', '')
+                      ->whereNotIn('eligibility', ['NA', 'N/A', 'NONE']);
+            })
+            ->get();
         // Keep user-entered order (insertion sequence) for work experiences
         $work = DB::table('pds_work_experiences')
             ->where('user_id', $userId)
@@ -114,7 +161,8 @@ class PdsPdfController extends Controller
             ->orderBy('id')
             ->limit(7)
             ->get();
-        $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
+        // Keep user-entered order (insertion sequence) for remarks
+        $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->orderBy('id')->get();
 
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
 $signaturePath = $signatureFiles->signature_file_path ?? null;
@@ -144,6 +192,7 @@ return compact(
     'mother',
     'children',
     'education',
+    'extraEduTables',
     'eligibilities',
     'work',
     'voluntary',

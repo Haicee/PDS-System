@@ -41,7 +41,9 @@
         .autosave-overlay.hidden { display: none; }
     </style>
     <script>
+        let _hydrating = false;
         function checkWorkFields() {
+            if (_hydrating) return;
             // Get all work fields for sequential row logic
             const positionFields = document.querySelectorAll('textarea[name="work_position_title[]"]');
             const workFromFields = document.querySelectorAll('input[name="work_from[]"]');
@@ -123,6 +125,7 @@
                         workFromField.style.backgroundColor = 'transparent';
                     } else {
                         workFromField.classList.remove('visible');
+                        workFromField.value = '';
                     }
                 }
 
@@ -132,6 +135,7 @@
                         workToField.style.backgroundColor = 'transparent';
                     } else {
                         workToField.classList.remove('visible');
+                        workToField.value = '';
                     }
                 }
 
@@ -143,6 +147,7 @@
         }
 
         function checkEligibilityFields() {
+            if (_hydrating) return;
             // Get all eligibility fields for sequential row logic
             const eligibilityFields = document.querySelectorAll('textarea[name="eligibility[]"]');
             const ratingFields = document.querySelectorAll('textarea[name="rating[]"]');
@@ -223,6 +228,7 @@
                         dateField.style.backgroundColor = 'transparent';
                     } else {
                         dateField.classList.remove('visible');
+                        dateField.value = '';
                     }
                 }
 
@@ -234,6 +240,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            _hydrating = true;
+
             const autoSize = (el) => {
                 el.style.height = 'auto';
                 el.style.height = `${el.scrollHeight}px`;
@@ -341,6 +349,7 @@
             let prevDisableWorkRows = null;
 
             const refreshRows = () => {
+                if (_hydrating) return;
                 const eligibilityFirst = eligibilityFirstRow[0];
                 const workFirst = workFirstRow[0];
 
@@ -397,6 +406,18 @@
             eligibilityTableFields.forEach(field => {
                 field.addEventListener('input', checkEligibilityFields);
                 field.addEventListener('change', checkEligibilityFields);
+            });
+
+            // Enforce numeric-only input for license number and validity fields
+            document.querySelectorAll('textarea[name="license_no[]"], textarea[name="validity[]"]').forEach(el => {
+                el.addEventListener('input', () => {
+                    const pos = el.selectionStart;
+                    const cleaned = el.value.replace(/[^0-9]/g, '');
+                    if (el.value !== cleaned) {
+                        el.value = cleaned;
+                        el.selectionStart = el.selectionEnd = Math.max(0, pos - 1);
+                    }
+                });
             });
 
             // Next button inline validation: required fields + first rows (allow NA as filled)
@@ -674,8 +695,19 @@
                 }
 
                 // For fields with [] names, ensure arrays apply in order
-                Object.entries(data).forEach(([name, stored]) => {
-                    const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+                Object.entries(data).forEach(([rawName, stored]) => {
+                    let name = rawName;
+                    let elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+                    // Server draft arrays come back without [] (e.g. eligibility), but fields use []
+                    if (!elements.length && Array.isArray(stored) && !name.endsWith('[]')) {
+                        const altName = `${name}[]`;
+                        const altElements = Array.from(form.querySelectorAll(`[name="${altName}"]`));
+                        if (altElements.length) {
+                            name = altName;
+                            elements = altElements;
+                        }
+                    }
 
                     if (name.endsWith('[]') && Array.isArray(stored)) {
                         elements.forEach((el, idx) => {
@@ -816,29 +848,45 @@
             })();
 
             const persist = () => {
+                if (_hydrating) return;
                 saveCache();
                 autoSaveToServer();
             };
 
+            const finishHydration = () => {
+                _hydrating = false;
+                refreshRows();
+                checkWorkFields();
+                checkEligibilityFields();
+                saveCache();
+            };
+
             loadCache();
             updateSignaturePreviewFromInputs2();
-            // Persist merged cache once so a fast refresh keeps latest values
-            saveCache();
 
             // If served via static view (no $data), fetch draft and hydrate once
             fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.ok ? r.json() : null)
                 .then(json => {
-                    if (!json || !json.data) return;
+                    if (!json || !json.data) { finishHydration(); return; }
                     loadCache(json.data);
                     updateSignaturePreviewFromInputs2();
-                    // Persist merged cache once so a fast refresh keeps latest values
-                    saveCache();
+                    finishHydration();
                 })
-                .catch(() => {});
+                .catch(() => { finishHydration(); });
 
             form.addEventListener('input', persist);
             form.addEventListener('change', persist);
+
+            // Flush pending data to server on page unload so a quick refresh doesn't lose changes
+            window.addEventListener('beforeunload', () => {
+                if (_hydrating) return;
+                saveCache();
+                navigator.sendBeacon(
+                    '{{ route('pds.autosave', [], false) }}',
+                    new FormData(form)
+                );
+            });
         });
 
         // Check for master date from form1 and apply it
@@ -871,8 +919,8 @@
         <col style="width: 10%;">
         <col style="width: 15%;">
         <col style="width: 15%;">
-        <col style="width: 8%;">
-        <col style="width: 8%;">
+        <col style="width: 10%;">
+        <col style="width: 10%;">
       </colgroup>
       
     <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
@@ -925,8 +973,8 @@
           </div>
         </td>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Place' : '' }}" name="place[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'License No.' : '' }}" name="license_no[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Validity' : '' }}" name="validity[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" inputmode="numeric" pattern="[0-9]*" placeholder="{{ $i === 0 ? 'License' : '' }}" name="license_no[]" class="w-full focus:outline-none focus:ring-0 bg-transparent text-center" style="border:none; padding:8px; resize:none; overflow-wrap:break-word; word-break:break-all;"></textarea></td>
+        <td class="border align-top"><textarea rows="1" inputmode="numeric" pattern="[0-9]*" placeholder="{{ $i === 0 ? 'Validity' : '' }}" name="validity[]" class="w-full focus:outline-none focus:ring-0 bg-transparent text-center" style="border:none; padding:8px; resize:none; overflow-wrap:break-word; word-break:break-all;"></textarea></td>
       </tr>
    @endfor
     </table>

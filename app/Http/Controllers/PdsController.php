@@ -41,7 +41,7 @@ class PdsController extends Controller
 
         $education = collect();
         if ($draft && !empty($draft->data)) {
-            $data = $draft->data;
+            $data = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
 
             $baseLevels = [
                 'elementary' => 'ELEMENTARY',
@@ -86,7 +86,39 @@ class PdsController extends Controller
             });
 
             $education = $education->concat($extras)->values();
+
+            // Build extra education tables (education_1, education_2, ...) as separate full tables
+            $extraEduTables = collect();
+            $dynKeys = array_keys(array_filter((array) $data, function($v, $k) {
+                return preg_match('/^education_\d+$/', $k);
+            }, ARRAY_FILTER_USE_BOTH));
+            sort($dynKeys);
+            foreach ($dynKeys as $dynKey) {
+                $table = $data[$dynKey];
+                if (!is_array($table)) continue;
+                $tableRows = collect();
+                foreach ($baseLevels as $key => $label) {
+                    $row = $table[$key] ?? [];
+                    $tableRows->push([
+                        'level' => $label,
+                        'school_name' => $row['school_name'] ?? null,
+                        'degree_course' => $row['basic_education'] ?? null,
+                        'from' => $row['from'] ?? null,
+                        'to' => $row['to'] ?? null,
+                        'highest_level' => $row['highest_level'] ?? null,
+                        'year_graduated' => $row['year_graduated'] ?? null,
+                        'academic_honors' => $row['scholarship_acadhonors'] ?? null,
+                    ]);
+                }
+                // Only include this table if it has at least one non-empty row (excluding the level label)
+                $hasAnyData = $tableRows->some(function($r) {
+                    return collect(array_diff_key($r, ['level' => true]))->some(fn($v) => trim((string)($v ?? '')) !== '');
+                });
+                if ($hasAnyData) $extraEduTables->push($tableRows);
+            }
         }
+
+        if (!isset($extraEduTables)) $extraEduTables = collect();
 
         if ($education->isEmpty()) {
             $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
@@ -106,6 +138,7 @@ class PdsController extends Controller
             'mother',
             'children',
             'education',
+            'extraEduTables',
             'eligibilities',
             'work',
             'voluntary',
@@ -130,7 +163,14 @@ class PdsController extends Controller
         $signaturePath = $signatureFiles->signature_file_path ?? null;
         $photoPath = $signatureFiles->photo_file_path ?? null;
 
-        $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
+        $eligibilities = DB::table('pds_eligibilities')
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->whereNotNull('eligibility')
+                      ->where('eligibility', '!=', '')
+                      ->whereNotIn('eligibility', ['NA', 'N/A', 'NONE']);
+            })
+            ->get();
         // Keep user-entered order (insertion sequence)
         $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->get();
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
@@ -225,7 +265,8 @@ class PdsController extends Controller
         $photoPath = $signatureFiles->photo_file_path ?? null;
 
         // Get work experience data from the new pds_form5_remarks table
-        $workExperiences = PdsForm5Remark::where('user_id', $userId)->get();
+        // Keep user-entered order (insertion sequence)
+        $workExperiences = PdsForm5Remark::where('user_id', $userId)->orderBy('id')->get();
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
         return view('pdsreview.pdsreview5', compact('workExperiences', 'declaration', 'signaturePath', 'photoPath'));

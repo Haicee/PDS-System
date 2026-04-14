@@ -164,6 +164,10 @@ class PdsStepController extends Controller
         $fileKeys = array_keys($request->allFiles());
         $data = $request->except(array_merge(['_token'], $fileKeys));
 
+        // Explicitly remove education_N keys the client flagged as deleted
+        $eduRemoved = $request->input('_edu_removed', []);
+        unset($data['_edu_removed']);
+
         $data = $this->normalizeArrayFields($data);
 
         if ($signaturePath) {
@@ -172,6 +176,12 @@ class PdsStepController extends Controller
 
         $draft = PdsDraft::firstOrCreate(['user_id' => $userId]);
         $existingData = $draft->data ?? [];
+
+        // Delete explicitly removed education_N keys from existing draft
+        foreach ($eduRemoved as $idx) {
+            $key = 'education_' . intval($idx);
+            unset($existingData[$key]);
+        }
 
         $draft->data = $this->replaceArrays($existingData, $data);
         $draft->save();
@@ -211,10 +221,20 @@ class PdsStepController extends Controller
         }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
+        // Get signature path from database only, not from draft data (to respect clearSignature)
+        $signaturePath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        // Remove signature data from the data array if database has no signature
+        // This prevents JavaScript from restoring old signature from draft data
+        if (!$signaturePath) {
+            unset($data['signature_path']);
+            unset($data['signature_data']);
+        }
+
         if (!empty($data)) {
             session(['pds' => $data, 'pds_owner' => $userId]);
         }
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
         $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
         return view('pds_form.form1', compact('data', 'signaturePath', 'highlightedSections'));
@@ -232,7 +252,18 @@ class PdsStepController extends Controller
         }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $signaturePath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        // Remove signature data from the data array if database has no signature
+        if (!$signaturePath) {
+            unset($data['signature_path']);
+            unset($data['signature_data']);
+        }
+
+        if (!empty($data)) {
+            session(['pds' => $data, 'pds_owner' => $userId]);
+        }
+
         $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
         return view('pds_form.form2', compact('data', 'signaturePath', 'highlightedSections'));
@@ -250,7 +281,18 @@ class PdsStepController extends Controller
         }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $signaturePath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        // Remove signature data from the data array if database has no signature
+        if (!$signaturePath) {
+            unset($data['signature_path']);
+            unset($data['signature_data']);
+        }
+
+        if (!empty($data)) {
+            session(['pds' => $data, 'pds_owner' => $userId]);
+        }
+
         $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
         return view('pds_form.form3', compact('data', 'signaturePath', 'highlightedSections'));
@@ -268,7 +310,18 @@ class PdsStepController extends Controller
         }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $signaturePath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        // Remove signature data from the data array if database has no signature
+        if (!$signaturePath) {
+            unset($data['signature_path']);
+            unset($data['signature_data']);
+        }
+
+        if (!empty($data)) {
+            session(['pds' => $data, 'pds_owner' => $userId]);
+        }
+
         $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
         return view('pds_form.form4', compact('data', 'signaturePath', 'highlightedSections'));
@@ -286,7 +339,18 @@ class PdsStepController extends Controller
         }
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        $signaturePath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+
+        // Remove signature data from the data array if database has no signature
+        if (!$signaturePath) {
+            unset($data['signature_path']);
+            unset($data['signature_data']);
+        }
+
+        if (!empty($data)) {
+            session(['pds' => $data, 'pds_owner' => $userId]);
+        }
+
         $highlightedSections = PdsRejection::where('user_id', $userId)->first()?->highlighted_sections ?? [];
 
         return view('pds_form.form5', compact('data', 'signaturePath', 'highlightedSections'));
@@ -322,6 +386,14 @@ class PdsStepController extends Controller
             }
         }
 
+        // Handle dynamically added educational background tables (education_1, education_2, etc.)
+        foreach ($data as $key => $value) {
+            if (preg_match('/^education_\d+$/', $key)) {
+                // Keep as-is since they are already nested arrays
+                continue;
+            }
+        }
+
         if (array_key_exists('remarks', $data)) {
             $data['remarks'] = Arr::wrap($data['remarks']);
         }
@@ -334,6 +406,21 @@ class PdsStepController extends Controller
      */
     private function replaceArrays(array $existing, array $incoming): array
     {
+        // Remove education_N keys only when incoming explicitly sends that key with all-empty values.
+        // If a key is simply absent from incoming, it means the table wasn't in the DOM at save time
+        // (e.g. page-load autosave fires before the 500ms restore recreates the table), so preserve it.
+        foreach ($incoming as $key => $value) {
+            if (preg_match('/^education_\d+$/', $key) && is_array($value)) {
+                $allEmpty = true;
+                array_walk_recursive($value, function($v) use (&$allEmpty) {
+                    if (trim((string)($v ?? '')) !== '') $allEmpty = false;
+                });
+                if ($allEmpty) {
+                    unset($existing[$key]);
+                }
+            }
+        }
+
         foreach ($incoming as $key => $value) {
             if (is_array($value)) {
                 $existing[$key] = $value;
@@ -444,5 +531,38 @@ class PdsStepController extends Controller
         }
 
         return $existingPath;
+    }
+
+    public function clearSignature(Request $request)
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Delete the signature file from storage
+        $existingPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        if ($existingPath && Storage::disk('public')->exists($existingPath)) {
+            Storage::disk('public')->delete($existingPath);
+        }
+
+        // Remove from signature files table
+        DB::table('pds_signature_files')->where('user_id', $userId)->delete();
+
+        // Remove from draft data
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        if ($draft) {
+            $draftData = $draft->data ?? [];
+            unset($draftData['signature_path']);
+            unset($draftData['signature_data']);
+            $draft->data = $draftData;
+            $draft->save();
+        }
+
+        // Clear session cache
+        session()->forget('pds');
+        session()->forget('pds_owner');
+
+        return response()->json(['status' => 'ok']);
     }
 }

@@ -1,6 +1,23 @@
 <x-app-layout>
- <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">    
+ <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
 <div id="autosaveOverlay" class="autosave-overlay hidden">Saving…</div>
+
+<!-- Custom Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex justify-center items-center">
+  <div class="relative p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3 text-center">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Confirm Removal</h3>
+      <div class="mt-2 px-7 py-3">
+        <p class="text-sm text-gray-500" id="confirmModalMessage">Are you sure you want to remove this educational background table?</p>
+      </div>
+      <div class="items-center px-4 py-3 flex justify-center gap-4">
+        <button id="confirmModalOk" type="button" onclick="event.preventDefault(); window.confirmModalOkClick(); return false;" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-24 shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">OK</button>
+        <button id="confirmModalCancel" type="button" onclick="window.confirmModalCancelClick()" class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-24 shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', [1], false) }}" enctype="multipart/form-data">
     @csrf
     <style>
@@ -66,14 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.storageKey = window.storageKey || ('pds_form_step1_' + ({{ auth()->id() ?? 0 }}));
     const storageKey = window.storageKey;
     const triggerPersist = () => {
-        if (typeof window.persist === 'function') {
+        if (typeof window.persistInstant === 'function') {
+            window.persistInstant();
+        } else if (typeof window.persist === 'function') {
             window.persist();
         } else if (typeof window.saveCache === 'function') {
             window.saveCache();
         }
     };
+    window.triggerPersist = triggerPersist;
 
     const flat = {};
+    window.flat = flat;
 
     const walk = (obj, prefix = '') => {
         if (obj === null || obj === undefined) return;
@@ -462,7 +483,382 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Counter for additional educational background tables
+    let eduTableCounter = 0;
+
+    // Function to add a new educational background table
+    window.addEducationalBackgroundTable = function() {
+        eduTableCounter++;
+        const originalTable = document.querySelector('table[data-section="educational_background"]');
+        if (!originalTable) return;
+
+        // Temporarily clear original textarea values before cloning so the clone starts empty
+        const originalTextareas = originalTable.querySelectorAll('textarea');
+        const savedValues = [];
+        originalTextareas.forEach(ta => {
+            savedValues.push(ta.value);
+            ta.value = '';
+        });
+
+        const newTable = originalTable.cloneNode(true);
+
+        // Restore original textarea values immediately after clone
+        originalTextareas.forEach((ta, i) => { ta.value = savedValues[i]; });
+
+        newTable.setAttribute('data-section', `educational_background_${eduTableCounter}`);
+        newTable.setAttribute('data-edu-table-index', eduTableCounter);
+
+        // Update the title in the new table
+        const titleTd = newTable.querySelector('td[colspan="8"]');
+        if (titleTd) {
+            const titleSpan = titleTd.querySelector('span');
+            if (titleSpan) {
+                titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
+            }
+            // Remove the add button from the new table
+            const addButton = titleTd.querySelector('button');
+            if (addButton) {
+                addButton.remove();
+            }
+
+            // Add a remove button to the new table
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.textContent = '×';
+            removeButton.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+            removeButton.style.border = 'none';
+            removeButton.style.background = 'transparent';
+            removeButton.style.cursor = 'pointer';
+            removeButton.style.padding = '0';
+            removeButton.style.lineHeight = '1';
+            removeButton.onclick = () => removeEducationalBackgroundTable(newTable, eduTableCounter);
+            titleTd.querySelector('div').appendChild(removeButton);
+        }
+
+        // Update all field names to be unique (values are already empty from the pre-clone clear)
+        const textareas = newTable.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+            const originalName = textarea.getAttribute('name');
+            if (originalName && originalName.startsWith('education[')) {
+                const newName = originalName.replace('education[', `education_${eduTableCounter}[`);
+                textarea.setAttribute('name', newName);
+            }
+        });
+
+        // Insert the new table before the signature-date-section
+        const signatureSection = document.getElementById('signature-date-section');
+        if (signatureSection) {
+            signatureSection.parentNode.insertBefore(newTable, signatureSection);
+        } else {
+            originalTable.parentNode.insertBefore(newTable, originalTable.nextSibling);
+        }
+
+        // Guarantee all new table fields are empty after DOM insertion
+        newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => { f.value = ''; });
+
+        // Purge any stale education_N keys for this index from localStorage and in-memory flat
+        try {
+            const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            const prefix = `education_${eduTableCounter}[`;
+            Object.keys(cached).forEach(k => { if (k.startsWith(prefix)) delete cached[k]; });
+            localStorage.setItem(storageKey, JSON.stringify(cached));
+        } catch(e) {}
+        // Also clear from in-memory flat so server data doesn't re-populate via loadCache
+        const flatPrefix = `education_${eduTableCounter}[`;
+        Object.keys(flat).forEach(k => { if (k.startsWith(flatPrefix)) delete flat[k]; });
+
+        // Re-attach event listeners for the new fields
+        attachEducationEventListeners(newTable);
+
+        // Clear this index from the _removed list (user is re-adding it)
+        try {
+            const removedKey = storageKey + '_removed';
+            let removed = JSON.parse(localStorage.getItem(removedKey) || '[]');
+            removed = removed.filter(i => i !== eduTableCounter);
+            localStorage.setItem(removedKey, JSON.stringify(removed));
+        } catch(e) {}
+
+        // Trigger cache save — persists empty education_N keys so loadCache won't backfill from server
+        triggerPersist();
+
+        // Scroll to the new table
+        newTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // Function to remove an educational background table
+    window.removeEducationalBackgroundTable = function(table, index) {
+        const modal = document.getElementById('confirmModal');
+        const modalMessage = document.getElementById('confirmModalMessage');
+
+        modalMessage.textContent = 'Are you sure you want to remove this educational background table?';
+        modal.classList.remove('hidden');
+
+        // Store the table and index in data attributes for event delegation
+        modal.dataset.tableIndex = index;
+        modal.dataset.pendingRemoval = 'true';
+    };
+
+
+    // Restore dynamically added educational background tables from session data
+    const restoreDynamicEducationTables = () => {
+        let localData = {};
+        try { localData = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch(e) {}
+
+        // Determine indices from BOTH localStorage AND flat (server draft).
+        // localStorage alone covers same-session adds; flat alone covers new-session after rejection.
+        const flatEducationKeys = Object.keys(flat).filter(key => key.match(/^education_\d+\[/));
+        const localEducationKeys = Object.keys(localData).filter(key => key.match(/^education_\d+\[/));
+
+        const tableIndices = new Set();
+        [...flatEducationKeys, ...localEducationKeys].forEach(key => {
+            const match = key.match(/^education_(\d+)\[/);
+            if (match) tableIndices.add(parseInt(match[1], 10));
+        });
+
+        if (tableIndices.size === 0) return;
+
+        // merged is used for populating field values (localStorage preferred over server)
+        const merged = Object.assign({}, flat, localData);
+
+        // Only restore indices that have at least one non-empty value in merged data.
+        const indicesWithData = new Set();
+        tableIndices.forEach(idx => {
+            const prefix = `education_${idx}[`;
+            const hasValue = Object.entries(merged).some(([k, v]) => k.startsWith(prefix) && v !== '' && v !== null && v !== undefined);
+            if (hasValue) indicesWithData.add(idx);
+        });
+
+        // Read removed indices — user explicitly deleted these, never restore even if flat has them
+        let removedIndices = new Set();
+        try {
+            const raw = localStorage.getItem(storageKey + '_removed');
+            if (raw) JSON.parse(raw).forEach(i => removedIndices.add(i));
+        } catch(e) {}
+
+        // Seed flat-only indices into localStorage so future saves preserve them
+        // BUT skip indices the user has explicitly removed
+        flatEducationKeys.forEach(key => {
+            const m = key.match(/^education_(\d+)\[/);
+            if (m && removedIndices.has(parseInt(m[1], 10))) return;
+            if (!(key in localData)) {
+                localData[key] = flat[key];
+            }
+        });
+        try { localStorage.setItem(storageKey, JSON.stringify(localData)); } catch(e) {}
+
+        // Exclude removed indices from restoration
+        removedIndices.forEach(i => indicesWithData.delete(i));
+
+        const sortedIndices = Array.from(indicesWithData).sort((a, b) => a - b);
+        sortedIndices.forEach(index => {
+            // Skip if the table already exists in the DOM (avoid duplicates on re-call)
+            if (document.querySelector(`table[data-edu-table-index="${index}"]`)) return;
+
+            eduTableCounter = Math.max(eduTableCounter, index);
+            const originalTable = document.querySelector('table[data-section="educational_background"]');
+            if (!originalTable) return;
+
+            // Temporarily clear original textarea values so the clone starts empty
+            const origTAs = originalTable.querySelectorAll('textarea');
+            const savedVals = [];
+            origTAs.forEach(ta => { savedVals.push(ta.value); ta.value = ''; });
+
+            const newTable = originalTable.cloneNode(true);
+
+            // Restore original textarea values immediately
+            origTAs.forEach((ta, i) => { ta.value = savedVals[i]; });
+
+            newTable.setAttribute('data-section', `educational_background_${index}`);
+            newTable.setAttribute('data-edu-table-index', index);
+
+            // Update the title in the new table
+            const titleTd = newTable.querySelector('td[colspan="8"]');
+            if (titleTd) {
+                const titleSpan = titleTd.querySelector('span');
+                if (titleSpan) {
+                    titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
+                }
+                // Remove the add button from the new table
+                const addButton = titleTd.querySelector('button');
+                if (addButton) {
+                    addButton.remove();
+                }
+
+                // Add a remove button to the new table
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.textContent = '×';
+                removeButton.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+                removeButton.style.border = 'none';
+                removeButton.style.background = 'transparent';
+                removeButton.style.cursor = 'pointer';
+                removeButton.style.padding = '0';
+                removeButton.style.lineHeight = '1';
+                removeButton.onclick = () => removeEducationalBackgroundTable(newTable, index);
+                titleTd.querySelector('div').appendChild(removeButton);
+            }
+
+            // Update all field names to be unique
+            const textareas = newTable.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                const originalName = textarea.getAttribute('name');
+                if (originalName && originalName.startsWith('education[')) {
+                    const newName = originalName.replace('education[', `education_${index}[`);
+                    textarea.setAttribute('name', newName);
+                }
+            });
+
+            // Insert the new table before the signature-date-section
+            const signatureSection = document.getElementById('signature-date-section');
+            if (signatureSection) {
+                signatureSection.parentNode.insertBefore(newTable, signatureSection);
+            } else {
+                originalTable.parentNode.insertBefore(newTable, originalTable.nextSibling);
+            }
+
+            // Populate field values from localStorage (preferred) or session flat
+            newTable.querySelectorAll('textarea').forEach(textarea => {
+                const name = textarea.getAttribute('name');
+                if (name && merged[name] !== undefined) {
+                    setField(textarea, merged[name]);
+                }
+            });
+
+            // Re-attach event listeners for the new fields
+            attachEducationEventListeners(newTable);
+        });
+    };
+
+    // Expose restore function so the second script block can call it after loadCache
+    window.restoreDynamicEducationTables = restoreDynamicEducationTables;
+
+    // Call restore function after initial field population
+    setTimeout(restoreDynamicEducationTables, 500);
+
+    // Function to attach event listeners to education fields in a table
+    function attachEducationEventListeners(table) {
+        const isNA = (val) => {
+            const v = (val || '').trim().toUpperCase();
+            return v === 'NA' || v === 'N/A' || v === 'NONE';
+        };
+
+        // Handle school_name fields for NA logic
+        const schoolFields = table.querySelectorAll('textarea[name*="[school_name]"]');
+        schoolFields.forEach(schoolField => {
+            const rowSelectors = ['[basic_education]', '[from]', '[to]', '[highest_level]', '[year_graduated]', '[scholarship_acadhonors]'];
+
+            const refreshRow = () => {
+                const isRowNA = isNA(schoolField.value);
+                const rowPrefix = schoolField.name.replace(/\[school_name\]$/, '');
+                rowSelectors.forEach(sel => {
+                    const targetName = `${rowPrefix}${sel}`;
+                    const targets = table.querySelectorAll(`textarea[name="${targetName}"], input[name="${targetName}"]`);
+                    targets.forEach(target => {
+                        target.disabled = isRowNA;
+                        target.readOnly = isRowNA;
+                        target.classList.toggle('bg-gray-200', isRowNA);
+                        target.classList.toggle('text-gray-500', isRowNA);
+                        target.classList.toggle('cursor-not-allowed', isRowNA);
+                        target.classList.toggle('pointer-events-none', isRowNA);
+                    });
+                });
+            };
+
+            schoolField.addEventListener('input', refreshRow);
+            schoolField.addEventListener('change', refreshRow);
+            refreshRow();
+        });
+
+        // Handle textarea auto-resize
+        table.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        });
+
+        // Handle uppercase conversion (except email)
+        table.querySelectorAll('textarea:not([name*="email"])').forEach(el => {
+            el.addEventListener('input', () => {
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                const upper = el.value.toUpperCase();
+                if (el.value !== upper) {
+                    el.value = upper;
+                    el.setSelectionRange(start, end);
+                }
+            });
+        });
+    }
+
 });
+</script>
+
+<script>
+// Global functions for modal buttons (called via inline onclick)
+window.confirmModalOkClick = function() {
+    console.log('confirmModalOkClick called');
+    const modal = document.getElementById('confirmModal');
+    console.log('Modal before:', modal.classList.contains('hidden'));
+    const index = modal.dataset.tableIndex ? parseInt(modal.dataset.tableIndex, 10) : null;
+    console.log('Index:', index);
+    const table = index ? document.querySelector(`table[data-edu-table-index="${index}"]`) : null;
+    console.log('Table found:', !!table);
+
+    if (table) {
+        // Access the flat object from the window scope
+        const flat = window.flat || {};
+        // Clear the data from the flat object
+        const keysToRemove = Object.keys(flat).filter(key => key.startsWith(`education_${index}[`));
+        keysToRemove.forEach(key => {
+            delete flat[key];
+        });
+
+        // Remove the table from DOM
+        table.remove();
+
+        // Purge this index's keys from localStorage and record it as explicitly removed
+        try {
+            const storageKey = window.storageKey;
+            const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            const prefix = `education_${index}[`;
+            Object.keys(cached).forEach(k => { if (k.startsWith(prefix)) delete cached[k]; });
+            localStorage.setItem(storageKey, JSON.stringify(cached));
+            // Track removed index so restore never brings it back even if server draft still has it
+            const removedKey = storageKey + '_removed';
+            let removed = [];
+            try { removed = JSON.parse(localStorage.getItem(removedKey) || '[]'); } catch(e) {}
+            if (!removed.includes(index)) removed.push(index);
+            localStorage.setItem(removedKey, JSON.stringify(removed));
+        } catch(e) {}
+
+        // Trigger cache save to clear the data (wrap in try-catch to prevent errors from interfering)
+        try {
+            if (typeof window.triggerPersist === 'function') {
+                window.triggerPersist();
+            } else if (typeof window.persistInstant === 'function') {
+                window.persistInstant();
+            } else if (typeof window.persist === 'function') {
+                window.persist();
+            }
+        } catch (e) {
+            console.error('Error during persist:', e);
+        }
+    }
+
+    // Hide modal and reset state
+    modal.classList.add('hidden');
+    console.log('Modal after:', modal.classList.contains('hidden'));
+    delete modal.dataset.tableIndex;
+    delete modal.dataset.pendingRemoval;
+};
+
+window.confirmModalCancelClick = function() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.add('hidden');
+    delete modal.dataset.tableIndex;
+    delete modal.dataset.pendingRemoval;
+};
 </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
   <!-- HEADER -->
@@ -1242,10 +1638,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </table>
 
 
-<<<<<<< HEAD
-   <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
-=======
->>>>>>> dc9d6034f6ba41402addb6c20f822c4de336e6f4
+   
    <table data-section="family_background" class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
   <style>
     /* Show education add buttons only on hover */
@@ -1286,10 +1679,6 @@ document.addEventListener('DOMContentLoaded', () => {
       border-bottom-color: #059669;
     }
   </style>
-<<<<<<< HEAD
-=======
-   <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
->>>>>>> dc9d6034f6ba41402addb6c20f822c4de336e6f4
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -2058,8 +2447,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   <tr>
     <td colspan="8"
-        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black">
-      III. EDUCATIONAL BACKGROUND
+        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black relative">
+      <div class="flex justify-between items-center">
+        <span>III. EDUCATIONAL BACKGROUND</span>
+        <button type="button" onclick="addEducationalBackgroundTable()" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">
+          + Add
+        </button>
+      </div>
     </td>
   </tr>
 
@@ -2604,6 +2998,22 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       </td>
   </tr>
+</table>
+
+<!-- Signature and Date Section - Always at the bottom -->
+<div id="signature-date-section" class="w-full border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+  <table class="w-full border border-collapse table-fixed">
+    <!-- EXACT COLUMN GRID (8 columns) -->
+    <colgroup>
+      <col style="width:27%"> <!-- LEVEL -->
+      <col style="width:30%"> <!-- SCHOOL -->
+      <col style="width:33%"> <!-- COURSE -->
+      <col style="width:10%"> <!-- FROM -->
+      <col style="width:10%"> <!-- TO -->
+      <col style="width:17%"> <!-- HIGHEST -->
+      <col style="width:15%"> <!-- YEAR -->
+      <col style="width:17.5%"> <!-- HONORS -->
+    </colgroup>
 
   <tr>
     <td class="border h-2 text-center text-xl font-bold italic align-middle">
@@ -2625,11 +3035,20 @@ document.addEventListener('DOMContentLoaded', () => {
             id="signaturePreviewImg"
             src="{{ !empty($signaturePath) ? Storage::url($signaturePath) : '' }}"
             alt="Signature preview"
-            class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
+            class="absolute inset-0 w-full h-full object-contain hidden"
           >
           <div id="signaturePlaceholder" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
             Upload signature here
           </div>
+          <button
+            type="button"
+            id="removeSignatureBtn"
+            onclick="removeSignature(event)"
+            class="hidden absolute top-1 right-1 w-5 h-5 text-gray-500 hover:text-red-500 text-lg font-bold z-10"
+            title="Remove signature"
+          >
+            ×
+          </button>
         </label>
 
         <input type="hidden" name="signature_path" id="signature_path" value="{{ $signaturePath ?? '' }}">
@@ -2654,6 +3073,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ></input>
       </td>
 </table>
+</div>
 
 <table class="bg-transparent">
     <div class="flex justify-end mr-2 font-['Arial_Narrow','sans-serif']">
@@ -2846,7 +3266,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dataUrl = signatureDataInput?.value;
     const pathVal = signaturePathInput?.value || initialSignaturePath;
     const url = dataUrl || buildSignatureUrl(pathVal);
-    if (url) {
+
+    // Only show signature if URL is valid and not empty
+    if (url && url.trim() !== '' && url !== 'null' && url !== 'undefined') {
       signaturePreviewImg.src = url;
       signaturePreviewImg.classList.remove('hidden');
       signaturePlaceholder.classList.add('hidden');
@@ -2856,7 +3278,34 @@ document.addEventListener('DOMContentLoaded', () => {
       signaturePlaceholder.classList.remove('hidden');
       signatureBox?.classList.remove('signature-has-image');
     }
+
+    // Update remove button visibility based on image visibility
+    const removeBtn = document.getElementById('removeSignatureBtn');
+    if (removeBtn) {
+      if (!signaturePreviewImg.classList.contains('hidden')) {
+        removeBtn.classList.remove('hidden');
+      } else {
+        removeBtn.classList.add('hidden');
+      }
+    }
   };
+
+  // Ensure remove button is hidden on initial load if no signature
+  const initialRemoveBtnCheck = () => {
+    const removeBtn = document.getElementById('removeSignatureBtn');
+    const sigImg = document.getElementById('signaturePreviewImg');
+    if (removeBtn && sigImg) {
+      // Hide button if image is hidden or has no valid src
+      const isHidden = sigImg.classList.contains('hidden');
+      const hasNoSrc = !sigImg.src || sigImg.src.trim() === '' || sigImg.src === window.location.href;
+      if (isHidden || hasNoSrc) {
+        removeBtn.classList.add('hidden');
+      }
+    }
+  };
+
+  // Run initial check immediately
+  initialRemoveBtnCheck();
 
   // LOAD CACHE (localStorage + optional override from draft)
   const loadCache = (overrideData = null) => {
@@ -2904,8 +3353,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    Object.entries(data).forEach(([name, stored]) => {
-      const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+    Object.entries(data).forEach(([rawName, stored]) => {
+      let name = rawName;
+      let elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+      // Server draft arrays come back without [] (e.g. children_familybg), but fields use []
+      if (!elements.length && Array.isArray(stored) && !name.endsWith('[]')) {
+        const altName = `${name}[]`;
+        const altElements = Array.from(form.querySelectorAll(`[name="${altName}"]`));
+        if (altElements.length) {
+          name = altName;
+          elements = altElements;
+        }
+      }
 
       if (name.endsWith('[]') && Array.isArray(stored)) {
         elements.forEach((el, idx) => {
@@ -2948,7 +3408,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // SAVE CACHE locally (preserve [] groups as arrays)
   const saveCache = () => {
-    const data = {};
+    // Start from existing localStorage so keys for tables not yet in the DOM are preserved
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch(e) { data = {}; }
 
     Array.from(form.elements).forEach(el => {
       if (!el.name || el.disabled) return;
@@ -3027,10 +3489,49 @@ document.addEventListener('DOMContentLoaded', () => {
         signaturePreviewImg.src = output;
         signaturePreviewImg.classList.remove('hidden');
         signaturePlaceholder.classList.add('hidden');
+        signatureBox?.classList.add('signature-has-image');
+        document.getElementById('removeSignatureBtn')?.classList.remove('hidden');
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+  };
+
+  // --- Remove signature function ---
+  window.removeSignature = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (signatureDataInput) signatureDataInput.value = '';
+    if (signaturePathInput) signaturePathInput.value = '';
+    if (signaturePreviewImg) {
+      signaturePreviewImg.src = '';
+      signaturePreviewImg.classList.add('hidden');
+    }
+    if (signaturePlaceholder) signaturePlaceholder.classList.remove('hidden');
+    if (signatureBox) signatureBox.classList.remove('signature-has-image');
+    if (signatureFileInput) signatureFileInput.value = '';
+    document.getElementById('removeSignatureBtn')?.classList.add('hidden');
+
+    // Clear signature data from localStorage
+    try {
+      const cacheData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      delete cacheData.signature_data;
+      delete cacheData.signature_path;
+      localStorage.setItem(storageKey, JSON.stringify(cacheData));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+
+    // Clear signature from server
+    fetch('{{ route("pds.clearSignature") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+      },
+      body: JSON.stringify({})
+    }).catch(err => console.error('Failed to clear signature from server:', err));
   };
 
   // AUTOSAVE to server (throttled with retry + overlay until OK)
@@ -3053,6 +3554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     };
+    window.appendSingleSelectGroups = appendSingleSelectGroups;
 
     // When no dynamic education extra rows exist, explicitly send empty arrays
     const appendEmptyEducationExtras = (formData) => {
@@ -3072,6 +3574,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     };
+    window.appendEmptyEducationExtras = appendEmptyEducationExtras;
+
+    // Append explicitly removed education_N indices so server deletes them from draft
+    const appendRemovedEducationIndices = (formData) => {
+      try {
+        const removedKey = window.storageKey + '_removed';
+        const removed = JSON.parse(localStorage.getItem(removedKey) || '[]');
+        removed.forEach(idx => formData.append('_edu_removed[]', idx));
+      } catch(e) {}
+    };
+    window.appendRemovedEducationIndices = appendRemovedEducationIndices;
 
     const send = () => {
       if (!navigator.onLine) {
@@ -3085,6 +3598,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const formData = new FormData(form);
       appendSingleSelectGroups(formData);
       appendEmptyEducationExtras(formData);
+      appendRemovedEducationIndices(formData);
       console.log('Auto-saving to server...');
       fetch('{{ route('pds.autosave', [], false) }}', {
         method: 'POST',
@@ -3156,8 +3670,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Instant persist - bypasses throttling for critical operations
+  const persistInstant = () => {
+    console.log('Instant persist function called');
+    saveCache();
+    if (hasUserInput) {
+      // Bypass throttling and send immediately
+      const formData = new FormData(form);
+      if (typeof window.appendSingleSelectGroups === 'function') {
+        window.appendSingleSelectGroups(formData);
+      }
+      if (typeof window.appendEmptyEducationExtras === 'function') {
+        window.appendEmptyEducationExtras(formData);
+      }
+      if (typeof window.appendRemovedEducationIndices === 'function') {
+        window.appendRemovedEducationIndices(formData);
+      }
+
+      fetch('{{ route("pds.autosave") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Instant save successful:', data);
+      })
+      .catch(error => {
+        console.error('Instant save error:', error);
+      });
+    }
+  };
+  window.persistInstant = persistInstant;
+
   // Expose persist so add/remove buttons can trigger it
   window.persist = persist;
+  window.persistInstant = persistInstant;
 
   // Hydrate: server/session defaults, then local cache overrides
   const initialPayload = { ...(draftData || {}), ...(sessionData || {}) };
@@ -3212,6 +3762,20 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Form input event triggered on:', e.target.name, e.target.type);
     hasUserInput = true;
     persist();
+  });
+
+  // Flush pending data to server on page unload so a quick refresh doesn't lose changes
+  window.addEventListener('beforeunload', () => {
+    if (!hasUserInput) return;
+    saveCache();
+    const formData = new FormData(form);
+    if (typeof window.appendSingleSelectGroups === 'function') window.appendSingleSelectGroups(formData);
+    if (typeof window.appendEmptyEducationExtras === 'function') window.appendEmptyEducationExtras(formData);
+    if (typeof window.appendRemovedEducationIndices === 'function') window.appendRemovedEducationIndices(formData);
+    navigator.sendBeacon(
+      '{{ route('pds.autosave', [], false) }}',
+      formData
+    );
   });
 
   // Sync all date fields across forms using localStorage - form1 is the master
