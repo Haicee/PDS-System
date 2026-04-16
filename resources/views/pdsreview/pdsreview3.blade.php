@@ -211,7 +211,7 @@
     <td class="border align-middle text-center">{{ $row->organization ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->from) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
     <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->to) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
-    <td class="border align-middle text-center">{{ $row->hours ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ isset($row->hours) && $row->hours !== '' ? $row->hours . ' Hours' : ' ' }}</td>
     <td class="border align-middle text-center">{{ $row->position ?? ' ' }}</td>
   </tr>
 @endfor
@@ -273,13 +273,52 @@
     <td class="border align-middle text-center">{{ $trow->title ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow ? (format_pds_date($trow->from) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
     <td class="border align-middle text-center">{{ $trow ? (format_pds_date($trow->to) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
-    <td class="border align-middle text-center">{{ $trow->hours ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ isset($trow->hours) && $trow->hours !== '' ? $trow->hours . ' Hours' : ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow->conducted_by ?? ' ' }}</td>
   </tr>
 @endfor
 
     </table>
+
+@foreach($extraTrainingTables ?? [] as $draftKey => $extraTable)
+<table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
+  <colgroup>
+    <col style="width: 45.5%;">
+    <col style="width: 8%;">
+    <col style="width: 7.5%;">
+    <col style="width: 8%;">
+    <col style="width: 12%;">
+    <col style="width: 19%;">
+  </colgroup>
+  <tr>
+    <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold" colspan="6">
+      VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+    </th>
+  </tr>
+  <tr class="border">
+    <th rowspan="2" class="bg-[#e7e7e7] text-center">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS <p>(Write in full)</p></th>
+    <th colspan="2" class="border bg-[#e7e7e7]">INCLUSIVE DATES OF ATTENDANCE<p>(dd/mm/yyyy)</p></th>
+    <th rowspan="2" class="border bg-[#e7e7e7]">NUMBER OF HOURS</th>
+    <th rowspan="2" class="border bg-[#e7e7e7]">Type of L&D <p>(Managerial/ Supervisory/ Technical / etc)</p></th>
+    <th rowspan="2" class="border bg-[#e7e7e7]">CONDUCTED/ SPONSORED BY (Write in full)</th>
+  </tr>
+  <tr>
+    <th class="border text-center font-light bg-[#e7e7e7]">FROM</th>
+    <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
+  </tr>
+  @foreach($extraTable as $trow)
+    <tr>
+      <td class="border align-middle text-center">{{ $trow->title ?? ' ' }}</td>
+      <td class="border align-middle text-center">{{ format_pds_date($trow->from) ?: ' ' }}</td>
+      <td class="border align-middle text-center">{{ format_pds_date($trow->to) ?: ' ' }}</td>
+      <td class="border align-middle text-center">{{ isset($trow->hours) && $trow->hours !== '' ? $trow->hours . ' Hours' : ' ' }}</td>
+      <td class="border align-middle text-center">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td class="border align-middle text-center">{{ $trow->conducted_by ?? ' ' }}</td>
+    </tr>
+  @endforeach
+</table>
+@endforeach
 
     <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
 

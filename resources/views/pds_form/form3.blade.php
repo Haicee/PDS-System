@@ -1,5 +1,21 @@
 <x-app-layout>
 <div id="autosaveOverlay3" class="autosave-overlay hidden">Saving…</div>
+
+<!-- Confirmation Modal for removing training tables -->
+<div id="learningConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex justify-center items-center">
+  <div class="relative p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3 text-center">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Confirm Removal</h3>
+      <div class="mt-2 px-7 py-3">
+        <p class="text-sm text-gray-500" id="learningConfirmModalMessage">Are you sure you want to remove this training table?</p>
+      </div>
+      <div class="items-center px-4 py-3 flex justify-center gap-4">
+        <button id="learningConfirmModalOk" type="button" onclick="event.preventDefault(); window.learningConfirmModalOkClick(); return false;" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-24 shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">OK</button>
+        <button id="learningConfirmModalCancel" type="button" onclick="window.learningConfirmModalCancelClick()" class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-24 shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 <form id="pds-form3" method="POST" action="{{ route('pds.saveStep', [3], false) }}" enctype="multipart/form-data">
 @csrf
     <style>
@@ -30,7 +46,7 @@
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
         textarea:focus { outline: none; box-shadow: none; }
-        textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
+        textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow-y: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
         input[type="checkbox"] { width: 12px; height: 12px; }
         .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
         .autosave-overlay.hidden { display: none; }
@@ -84,11 +100,8 @@
                     field.classList.toggle('bg-gray-200', !enabled);
                     field.classList.toggle('text-gray-500', !enabled);
                     field.classList.toggle('cursor-not-allowed', !enabled);
-                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
-                        field.value = '';
-                        if (field.type === 'date') {
-                            field.classList.remove('visible');
-                        }
+                    if (!enabled && field.type === 'date') {
+                        field.classList.remove('visible');
                     }
                 });
             };
@@ -110,13 +123,16 @@
                 }
                 
                 // Show/hide date fields based on organization value and row enabled state
+                const volRowAllBlank = !hasOrganization &&
+                    (hoursFields[index] ? hoursFields[index].value.trim() === '' : true) &&
+                    (positionFields[index] ? positionFields[index].value.trim() === '' : true);
                 if (voluntaryFromField && !voluntaryFromField.disabled) {
                     if (hasOrganization && !isNAValue) {
                         voluntaryFromField.classList.add('visible');
                         voluntaryFromField.style.backgroundColor = 'transparent';
                     } else {
                         voluntaryFromField.classList.remove('visible');
-                        voluntaryFromField.value = '';
+                        if (volRowAllBlank) voluntaryFromField.value = '';
                     }
                 }
                 
@@ -126,7 +142,7 @@
                         voluntaryToField.style.backgroundColor = 'transparent';
                     } else {
                         voluntaryToField.classList.remove('visible');
-                        voluntaryToField.value = '';
+                        if (volRowAllBlank) voluntaryToField.value = '';
                     }
                 }
                 
@@ -188,11 +204,8 @@
                     field.classList.toggle('bg-gray-200', !enabled);
                     field.classList.toggle('text-gray-500', !enabled);
                     field.classList.toggle('cursor-not-allowed', !enabled);
-                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
-                        field.value = '';
-                        if (field.type === 'date') {
-                            field.classList.remove('visible');
-                        }
+                    if (!enabled && field.type === 'date') {
+                        field.classList.remove('visible');
                     }
                 });
             };
@@ -214,13 +227,17 @@
                 }
                 
                 // Show/hide date fields based on title value and row enabled state
+                const ldRowAllBlank = !hasTitle &&
+                    (hoursFields[index] ? hoursFields[index].value.trim() === '' : true) &&
+                    (typeFields[index] ? typeFields[index].value.trim() === '' : true) &&
+                    (conductedFields[index] ? conductedFields[index].value.trim() === '' : true);
                 if (learningFromField && !learningFromField.disabled) {
                     if (hasTitle && !isNAValue) {
                         learningFromField.classList.add('visible');
                         learningFromField.style.backgroundColor = 'transparent';
                     } else {
                         learningFromField.classList.remove('visible');
-                        learningFromField.value = '';
+                        if (ldRowAllBlank) learningFromField.value = '';
                     }
                 }
                 
@@ -230,7 +247,7 @@
                         learningToField.style.backgroundColor = 'transparent';
                     } else {
                         learningToField.classList.remove('visible');
-                        learningToField.value = '';
+                        if (ldRowAllBlank) learningToField.value = '';
                     }
                 }
                 
@@ -239,6 +256,11 @@
                     allowNextRow = isRowComplete(index);
                 }
             });
+        }
+
+        function autoResizeTextarea(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -290,6 +312,9 @@
                 }
             });
 
+            // Auto-resize all textareas on init
+            document.querySelectorAll('textarea').forEach(el => autoResizeTextarea(el));
+
             // Uppercase enforcement
             document.querySelectorAll('textarea').forEach(el => {
                 el.addEventListener('input', () => {
@@ -302,6 +327,20 @@
                     }
                 });
             });
+
+            // Decimal-only enforcement for hours fields (digits + one dot)
+            document.addEventListener('keydown', (e) => {
+                if (!e.target.classList.contains('hours-decimal')) return;
+                const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+                if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+                if (e.key === '.' && !e.target.value.includes('.')) return;
+                if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+            }, true);
+            document.addEventListener('input', (e) => {
+                if (!e.target.classList.contains('hours-decimal')) return;
+                const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/^(\d*\.?\d*).*$/, '$1');
+                if (e.target.value !== cleaned) e.target.value = cleaned;
+            }, true);
 
             // NA handling helpers
             const isNA = (val) => {
@@ -494,9 +533,6 @@
                         field.classList.toggle('bg-gray-200', !enabled);
                         field.classList.toggle('text-gray-500', !enabled);
                         field.classList.toggle('cursor-not-allowed', !enabled);
-                        if (!enabled && field.tagName === 'TEXTAREA') {
-                            field.value = '';
-                        }
                     });
                 };
                 
@@ -550,6 +586,7 @@
                 document.querySelectorAll('[name^="voluntary_"]').forEach(el => el.setCustomValidity(''));
                 document.querySelectorAll('[name^="learning_"]').forEach(el => el.setCustomValidity(''));
                 document.querySelectorAll('[name^="special_skills_hobbies"], [name^="non_academic_distinctions_recognition"], [name^="membership_in_association_organization"]').forEach(el => el.setCustomValidity(''));
+                document.querySelectorAll('table[data-learning-table-index] textarea, table[data-learning-table-index] input').forEach(el => el.setCustomValidity(''));
             };
 
             const scrollToField = (el) => {
@@ -601,6 +638,37 @@
                 return invalidField;
             };
 
+            const dynLearningCols = ['title_of_ld', 'from', 'to', 'hours', 'type_of_ld', 'conducted_sponsored_by'];
+            const dynLearningOptional = new Set(['from', 'to']);
+
+            const enforceAddedLearningRows = () => {
+                let firstInvalid = null;
+                document.querySelectorAll('table[data-learning-table-index]').forEach(tbl => {
+                    const idx = tbl.getAttribute('data-learning-table-index');
+                    const columns = dynLearningCols.map(col =>
+                        Array.from(tbl.querySelectorAll(`[name="learning_${idx}[${col}][]"]`))
+                    );
+                    const maxRows = Math.max(...columns.map(c => c.length));
+                    for (let row = 0; row < maxRows; row++) {
+                        const active = columns.map(c => c[row]).filter(f => f && !f.disabled && !f.readOnly);
+                        if (!active.length) continue;
+                        const firstCol = active.find(f => f.name === `learning_${idx}[title_of_ld][]`);
+                        if (firstCol && isNA(firstCol.value)) continue;
+                        const hasData = active.some(f => !dynLearningOptional.has(dynLearningCols[columns.findIndex(c => c[row] === f)]) && (f.value || '').trim() !== '');
+                        if (!hasData) continue;
+                        for (const f of active) {
+                            const col = dynLearningCols[columns.findIndex(c => c[row] === f)];
+                            if (dynLearningOptional.has(col)) continue;
+                            if ((f.value || '').trim() === '' && !isNA(f.value)) {
+                                f.setCustomValidity('Complete all fields in this row or clear the entries.');
+                                if (!firstInvalid) firstInvalid = f;
+                            }
+                        }
+                    }
+                });
+                return firstInvalid;
+            };
+
             const validateRequired = () => {
                 const hasMissingRequired = requiredFields.some(el => !el.disabled && !el.readOnly && !isFilled(el));
 
@@ -612,8 +680,9 @@
                 const incompleteVoluntary = enforceRowCompleteness(voluntaryRowNames);
                 const incompleteLearning = enforceRowCompleteness(learningRowNames);
                 const incompleteOther = enforceRowCompleteness(otherInfoRowNames);
+                const incompleteAddedLearning = enforceAddedLearningRows();
 
-                return hasMissingRequired || firstRowsIncomplete || incompleteVoluntary || incompleteLearning || incompleteOther;
+                return hasMissingRequired || firstRowsIncomplete || incompleteVoluntary || incompleteLearning || incompleteOther || !!incompleteAddedLearning;
             };
 
             const focusFirstMissing = () => {
@@ -644,7 +713,7 @@
                     }
                 }
 
-                const firstInvalid = enforceRowCompleteness(voluntaryRowNames) || enforceRowCompleteness(learningRowNames) || enforceRowCompleteness(otherInfoRowNames);
+                const firstInvalid = enforceRowCompleteness(voluntaryRowNames) || enforceRowCompleteness(learningRowNames) || enforceRowCompleteness(otherInfoRowNames) || enforceAddedLearningRows();
                 if (firstInvalid) {
                     firstInvalid.reportValidity();
                     firstInvalid.focus();
@@ -658,6 +727,11 @@
 
             document.addEventListener('input', () => { refreshRows(); clearValidity(); }, true);
             document.addEventListener('change', () => { refreshRows(); clearValidity(); }, true);
+
+            // Auto-resize textareas on any input
+            document.addEventListener('input', (e) => {
+                if (e.target.tagName === 'TEXTAREA') autoResizeTextarea(e.target);
+            }, true);
 
             if (nextBtn) {
                 nextBtn.addEventListener('click', (e) => {
@@ -935,6 +1009,7 @@
                 checkLearningFields();
                 checkOtherInfoFields();
                 saveCache();
+                document.querySelectorAll('textarea').forEach(el => autoResizeTextarea(el));
             };
 
             loadCache();
@@ -961,6 +1036,10 @@
                     new FormData(form)
                 );
             });
+
+            // Expose storageKey and triggerPersist globally so modal confirm handler can use them
+            window.storageKey3 = storageKey;
+            window.triggerPersist3 = persist;
         });
 
         // Check for master date from form1 and apply it
@@ -1038,8 +1117,8 @@
 
    @for ($i = 0; $i < 7; $i++)
       <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Organization' : '' }}" name="voluntary_organization[]"></textarea></td>
-      <td class="border h-10">
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Organization' : '' }}" name="voluntary_organization[]"></textarea></td>
+      <td class="border min-h-10">
         <div class="h-full w-full">
           <input
             type="date"
@@ -1051,7 +1130,7 @@
             placeholder="{{ $i === 0 ? 'From' : '' }}"/>
         </div>
       </td>
-      <td class="border h-10">
+      <td class="border min-h-10">
         <div class="h-full w-full">
           <input
             type="date"
@@ -1063,8 +1142,13 @@
             placeholder="{{ $i === 0 ? 'To' : '' }}"/>
         </div>
       </td>
-      <td class="border h-10"><input type="number" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="voluntary_hours[]" class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0;" min="0"/></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position/Nature of Work' : '' }}" name="voluntary_position_nature_of_work[]"></textarea></td>
+      <td class="border min-h-10">
+        <div class="flex items-center justify-center h-full gap-1">
+          <input type="text" inputmode="decimal" placeholder="{{ $i === 0 ? '0' : '' }}" name="voluntary_hours[]" class="text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center hours-decimal" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0; width:calc(100% - 36px); min-width:0;"/>
+          <span style="font-size:11px; white-space:nowrap;">Hrs</span>
+        </div>
+      </td>
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position/Nature of Work' : '' }}" name="voluntary_position_nature_of_work[]"></textarea></td>
       </tr>
    @endfor
 
@@ -1082,7 +1166,10 @@
       </colgroup>
 
       <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
-      VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+      <div class="flex justify-between items-center">
+        <span>VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED</span>
+        <button type="button" onclick="addLearningTable()" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">+ Add Trainings</button>
+      </div>
      </th>
 
      <tr class="border">
@@ -1115,8 +1202,8 @@
 
     @for ($i = 0; $i < 27; $i++)
      <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Title of L&D / Training' : '' }}" name="learning_title_of_ld[]"></textarea></td>
-      <td class="border h-10">
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Title of L&D / Training' : '' }}" name="learning_title_of_ld[]"></textarea></td>
+      <td class="border min-h-10">
         <div class="h-full w-full">
           <input
             type="date"
@@ -1128,7 +1215,7 @@
             placeholder="{{ $i === 0 ? 'From' : '' }}"/>
         </div>
       </td>
-      <td class="border h-10">
+      <td class="border min-h-10">
         <div class="h-full w-full">
           <input
             type="date"
@@ -1140,9 +1227,14 @@
             placeholder="{{ $i === 0 ? 'To' : '' }}"/>
         </div>
       </td>
-      <td class="border h-10"><input type="number" placeholder="{{ $i === 0 ? 'Hours' : '' }}" name="learning_hours[]" class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0;" min="0"/></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Type of L&D' : '' }}" name="learning_type_of_ld[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Conducted/Sponsored By' : '' }}" name="learning_conducted_sponsored_by[]"></textarea></td>
+      <td class="border min-h-10">
+        <div class="flex items-center justify-center h-full gap-1">
+          <input type="text" inputmode="decimal" placeholder="{{ $i === 0 ? '0' : '' }}" name="learning_hours[]" class="text-lg resize-none focus:outline-none focus:ring-0 bg-transparent text-center hours-decimal" style="font-size: 14px; padding:4px; border:none; box-sizing:border-box; margin:0; width:calc(100% - 36px); min-width:0;"/>
+          <span style="font-size:11px; white-space:nowrap;">Hrs</span>
+        </div>
+      </td>
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Type of L&D' : '' }}" name="learning_type_of_ld[]"></textarea></td>
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Conducted/Sponsored By' : '' }}" name="learning_conducted_sponsored_by[]"></textarea></td>
      </tr>
     @endfor
 
@@ -1177,9 +1269,9 @@
 
     @for ($i = 0; $i < 7; $i++)
       <tr>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Special Skills and Hobbies' : '' }}" name="special_skills_hobbies[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Non-Academic Distinctions/Recognition' : '' }}" name="non_academic_distinctions_recognition[]"></textarea></td>
-      <td class="border h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Membership in Association/Organization' : '' }}" name="membership_in_association_organization[]"></textarea></td> 
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Special Skills and Hobbies' : '' }}" name="special_skills_hobbies[]"></textarea></td>
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Non-Academic Distinctions/Recognition' : '' }}" name="non_academic_distinctions_recognition[]"></textarea></td>
+      <td class="border min-h-10"><textarea rows="1" placeholder="{{ $i === 0 ? 'Membership in Association/Organization' : '' }}" name="membership_in_association_organization[]"></textarea></td> 
       </tr>
     @endfor
 
@@ -1372,6 +1464,431 @@ document.addEventListener('DOMContentLoaded', () => {
             el.style.borderRadius = '2px';
         }
     });
+});
+</script>
+
+<script>
+// ─── Dynamic Learning/Training Tables ────────────────────────────────────────
+let learningTableCounter = 0;
+
+// Attach sequential-row + date-visibility logic to a learning table
+function attachDynamicLearningEventListeners(table) {
+    const isNA = (val) => {
+        const v = (val || '').trim().toUpperCase();
+        return v === 'NA' || v === 'N/A' || v === 'NONE';
+    };
+
+    const titleFields   = Array.from(table.querySelectorAll('textarea[name$="[title_of_ld][]"]'));
+    const fromFields    = Array.from(table.querySelectorAll('input[name$="[from][]"]'));
+    const toFields      = Array.from(table.querySelectorAll('input[name$="[to][]"]'));
+    const hoursFields   = Array.from(table.querySelectorAll('input[name$="[hours][]"]'));
+    const typeFields    = Array.from(table.querySelectorAll('textarea[name$="[type_of_ld][]"]'));
+    const conductedFields = Array.from(table.querySelectorAll('textarea[name$="[conducted_sponsored_by][]"]'));
+
+    const isRowComplete = (i) => {
+        const t = titleFields[i]?.value?.trim() || '';
+        if (t === '') return false;
+        if (isNA(t)) return true;
+        const f = fromFields[i]?.value?.trim() || '';
+        const to = toFields[i]?.value?.trim() || '';
+        const h = hoursFields[i]?.value?.trim() || '';
+        const ty = typeFields[i]?.value?.trim() || '';
+        const c = conductedFields[i]?.value?.trim() || '';
+        return (f !== '' || isNA(f)) && (to !== '' || isNA(to)) &&
+               (h !== '' || isNA(h)) && (ty !== '' || isNA(ty)) && (c !== '' || isNA(c));
+    };
+
+    const setRowEnabled = (i, enabled, preserveValues) => {
+        [titleFields[i], fromFields[i], toFields[i], hoursFields[i], typeFields[i], conductedFields[i]].forEach(f => {
+            if (!f) return;
+            f.disabled = !enabled;
+            f.classList.toggle('bg-gray-200', !enabled);
+            f.classList.toggle('text-gray-500', !enabled);
+            f.classList.toggle('cursor-not-allowed', !enabled);
+            if (!enabled) {
+                if (!preserveValues) f.value = '';
+                if (f.type === 'date') f.classList.remove('visible');
+            }
+        });
+    };
+
+    const refreshTable = (force) => {
+        if (!force && _hydrating3) return;
+        let allow = true;
+        titleFields.forEach((titleField, i) => {
+            if (i === 0) { 
+                setRowEnabled(0, true, force); 
+            } else { 
+                if (force) {
+                    setRowEnabled(i, titleField.value.trim() !== '', force);
+                } else {
+                    setRowEnabled(i, allow, force);
+                }
+            }
+            const hasTitle = titleField.value.trim() !== '';
+            const naVal    = isNA(titleField.value);
+            const dynRowAllBlank = !hasTitle &&
+                (hoursFields[i] ? hoursFields[i].value.trim() === '' : true) &&
+                (typeFields[i] ? typeFields[i].value.trim() === '' : true) &&
+                (conductedFields[i] ? conductedFields[i].value.trim() === '' : true);
+            if (fromFields[i] && !fromFields[i].disabled) {
+                if (hasTitle && !naVal) { fromFields[i].classList.add('visible'); fromFields[i].style.backgroundColor = 'transparent'; }
+                else { fromFields[i].classList.remove('visible'); if (!force && dynRowAllBlank) fromFields[i].value = ''; }
+            }
+            if (toFields[i] && !toFields[i].disabled) {
+                if (hasTitle && !naVal) { toFields[i].classList.add('visible'); toFields[i].style.backgroundColor = 'transparent'; }
+                else { toFields[i].classList.remove('visible'); if (!force && dynRowAllBlank) toFields[i].value = ''; }
+            }
+            if (allow) allow = isRowComplete(i);
+        });
+    };
+
+    // Uppercase for textareas
+    table.querySelectorAll('textarea').forEach(el => {
+        el.addEventListener('input', () => {
+            const s = el.selectionStart, e = el.selectionEnd;
+            const up = el.value.toUpperCase();
+            if (el.value !== up) { el.value = up; el.setSelectionRange(s, e); }
+        });
+    });
+
+    const allFields = [...titleFields, ...fromFields, ...toFields, ...hoursFields, ...typeFields, ...conductedFields];
+    allFields.forEach(f => {
+        if (!f) return;
+        f.addEventListener('input',  () => { refreshTable(); if (typeof window.triggerPersist3 === 'function') window.triggerPersist3(); });
+        f.addEventListener('change', () => { refreshTable(); if (typeof window.triggerPersist3 === 'function') window.triggerPersist3(); });
+    });
+
+    // Expose forceRefresh so restore can call it after populating values
+    table._forceRefresh = () => refreshTable(true);
+
+    refreshTable(true);
+}
+
+// Add a new training table (cloned from original, 5 data rows, unique field names)
+window.addLearningTable = function() {
+    learningTableCounter++;
+    const idx = learningTableCounter;
+    const originalTable = document.querySelector('table[data-section="learning_development"]');
+    if (!originalTable) return;
+
+    // Temporarily blank original values so clone starts empty
+    const origFields = originalTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])');
+    const savedVals = [];
+    origFields.forEach(f => { savedVals.push(f.value); f.value = ''; });
+
+    const newTable = originalTable.cloneNode(true);
+
+    origFields.forEach((f, i) => { f.value = savedVals[i]; });
+
+    newTable.setAttribute('data-section', `learning_development_${idx}`);
+    newTable.setAttribute('data-learning-table-index', idx);
+
+    // Update header: replace title span content, remove add button, add × remove button
+    const headerTh = newTable.querySelector('th[colspan="6"]');
+    if (headerTh) {
+        const span = headerTh.querySelector('span');
+        if (span) span.textContent = 'VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED';
+        const addBtn = headerTh.querySelector('button');
+        if (addBtn) addBtn.remove();
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '×';
+        removeBtn.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+        removeBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;padding:0;line-height:1;';
+        removeBtn.onclick = () => removeLearningTable(newTable, idx);
+        headerTh.querySelector('div').appendChild(removeBtn);
+    }
+
+    // Rename fields: learning_title_of_ld[] → learning_N[title_of_ld][]
+    const fieldMap = {
+        'learning_title_of_ld[]':          `learning_${idx}[title_of_ld][]`,
+        'learning_from[]':                  `learning_${idx}[from][]`,
+        'learning_to[]':                    `learning_${idx}[to][]`,
+        'learning_hours[]':                 `learning_${idx}[hours][]`,
+        'learning_type_of_ld[]':            `learning_${idx}[type_of_ld][]`,
+        'learning_conducted_sponsored_by[]':`learning_${idx}[conducted_sponsored_by][]`,
+    };
+    newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
+        const orig = f.getAttribute('name');
+        if (orig && fieldMap[orig]) f.setAttribute('name', fieldMap[orig]);
+        f.removeAttribute('required');
+        f.value = '';
+    });
+
+    // Keep only 5 data rows (header rows = those containing <th>)
+    let dataRowCount = 0;
+    newTable.querySelectorAll('tr').forEach(row => {
+        if (!row.querySelector('th')) {
+            dataRowCount++;
+            if (dataRowCount > 5) row.remove();
+        }
+    });
+
+    // Ensure date inputs are hidden (clone may have inherited visible state from original)
+    newTable.querySelectorAll('input[type="date"]').forEach(d => {
+        d.classList.remove('visible');
+        d.style.removeProperty('display');
+        d.style.display = 'none';
+    });
+
+    // Clear stale localStorage keys for this index
+    try {
+        const sk = window.storageKey3;
+        if (sk) {
+            const cached = JSON.parse(localStorage.getItem(sk) || '{}');
+            const prefix = `learning_${idx}[`;
+            Object.keys(cached).forEach(k => { if (k.startsWith(prefix)) delete cached[k]; });
+            localStorage.setItem(sk, JSON.stringify(cached));
+        }
+    } catch(e) {}
+
+    // Clear from removed list (user is re-adding)
+    try {
+        const sk = window.storageKey3;
+        if (sk) {
+            const rk = sk + '_learning_removed';
+            let removed = JSON.parse(localStorage.getItem(rk) || '[]');
+            removed = removed.filter(i => i !== idx);
+            localStorage.setItem(rk, JSON.stringify(removed));
+        }
+    } catch(e) {}
+
+    // Insert before other_information table
+    const otherTable = document.querySelector('table[data-section="other_information"]');
+    if (otherTable) { otherTable.parentNode.insertBefore(newTable, otherTable); }
+    else            { originalTable.parentNode.insertBefore(newTable, originalTable.nextSibling); }
+
+    attachDynamicLearningEventListeners(newTable);
+
+    // Ensure all date inputs are hidden on a fresh table (all rows empty)
+    newTable.querySelectorAll('input[type="date"]').forEach(d => {
+        d.classList.remove('visible');
+        d.style.display = 'none';
+    });
+
+    if (typeof window.triggerPersist3 === 'function') window.triggerPersist3();
+
+    newTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// Show modal to confirm removal
+window.removeLearningTable = function(table, index) {
+    const modal = document.getElementById('learningConfirmModal');
+    const msg   = document.getElementById('learningConfirmModalMessage');
+    msg.textContent = 'Are you sure you want to remove this training table?';
+    modal.classList.remove('hidden');
+    modal.dataset.tableIndex    = index;
+    modal.dataset.pendingRemoval = 'true';
+};
+
+// Modal OK: remove table, purge cache, record as removed
+window.learningConfirmModalOkClick = function() {
+    const modal = document.getElementById('learningConfirmModal');
+    const index = modal.dataset.tableIndex ? parseInt(modal.dataset.tableIndex, 10) : null;
+    if (index !== null) {
+        const table = document.querySelector(`table[data-learning-table-index="${index}"]`);
+        if (table) table.remove();
+
+        try {
+            const sk = window.storageKey3;
+            if (sk) {
+                const cached = JSON.parse(localStorage.getItem(sk) || '{}');
+                const prefix = `learning_${index}[`;
+                Object.keys(cached).forEach(k => { if (k.startsWith(prefix)) delete cached[k]; });
+                localStorage.setItem(sk, JSON.stringify(cached));
+
+                const rk = sk + '_learning_removed';
+                let removed = JSON.parse(localStorage.getItem(rk) || '[]');
+                if (!removed.includes(index)) removed.push(index);
+                localStorage.setItem(rk, JSON.stringify(removed));
+            }
+        } catch(e) {}
+
+        // Send current form data PLUS explicit empty arrays for the removed learning_N keys.
+        // replaceArrays() will see all-empty values for learning_N and delete it from the draft.
+        try {
+            const form = document.querySelector('form');
+            const fd = form ? new FormData(form) : new FormData();
+            const emptyFields = ['title_of_ld', 'from', 'to', 'hours', 'type_of_ld', 'conducted_sponsored_by'];
+            emptyFields.forEach(field => {
+                fd.append(`learning_${index}[${field}][]`, '');
+            });
+            fetch('{{ route('pds.autosave', [], false) }}', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                credentials: 'same-origin',
+                body: fd
+            }).catch(() => {});
+        } catch(e) {}
+    }
+    modal.classList.add('hidden');
+    delete modal.dataset.tableIndex;
+    delete modal.dataset.pendingRemoval;
+};
+
+window.learningConfirmModalCancelClick = function() {
+    const modal = document.getElementById('learningConfirmModal');
+    modal.classList.add('hidden');
+    delete modal.dataset.tableIndex;
+    delete modal.dataset.pendingRemoval;
+};
+
+// Restore dynamically added learning tables on page load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        const sk = window.storageKey3 || ('pds_form_step3_' + {{ auth()->id() ?? 0 }});
+        if (!sk) return;
+
+        let localData = {};
+        try { localData = JSON.parse(localStorage.getItem(sk) || '{}'); } catch(e) {}
+
+        // Collect indices from localStorage AND server flat data
+        const serverFlat = {};
+        try {
+            // Re-walk the draftData from the page (same as the inline script above)
+            const dd = @json($data ?? []);
+            const walk = (obj, prefix) => {
+                if (obj === null || obj === undefined) return;
+                if (typeof obj !== 'object') { if (prefix) serverFlat[prefix] = obj; return; }
+                if (Array.isArray(obj)) { obj.forEach((v,i) => walk(v, prefix ? `${prefix}[${i}]` : `${i}`)); }
+                else { Object.entries(obj).forEach(([k,v]) => walk(v, prefix ? `${prefix}[${k}]` : k)); }
+            };
+            walk(dd, '');
+        } catch(e) {}
+
+        const flatLearningKeys  = Object.keys(serverFlat).filter(k => k.match(/^learning_\d+\[/));
+        const localLearningKeys = Object.keys(localData).filter(k => k.match(/^learning_\d+\[/));
+
+        const tableIndices = new Set();
+        [...flatLearningKeys, ...localLearningKeys].forEach(key => {
+            const m = key.match(/^learning_(\d+)\[/);
+            if (m) tableIndices.add(parseInt(m[1], 10));
+        });
+
+        if (tableIndices.size === 0) return;
+
+        const merged = Object.assign({}, serverFlat, localData);
+
+        // Only restore indices that have at least one non-empty value
+        const indicesWithData = new Set();
+        tableIndices.forEach(idx => {
+            const prefix = `learning_${idx}[`;
+            const hasValue = Object.entries(merged).some(([k,v]) => k.startsWith(prefix) && v !== '' && v !== null && v !== undefined);
+            if (hasValue) indicesWithData.add(idx);
+        });
+
+        // Read explicitly removed indices
+        let removedIndices = new Set();
+        try {
+            const raw = localStorage.getItem(sk + '_learning_removed');
+            if (raw) JSON.parse(raw).forEach(i => removedIndices.add(i));
+        } catch(e) {}
+
+        // Seed flat-only keys into localStorage (skip removed)
+        flatLearningKeys.forEach(key => {
+            const m = key.match(/^learning_(\d+)\[/);
+            if (m && removedIndices.has(parseInt(m[1], 10))) return;
+            if (!(key in localData)) localData[key] = serverFlat[key];
+        });
+        try { localStorage.setItem(sk, JSON.stringify(localData)); } catch(e) {}
+
+        removedIndices.forEach(i => indicesWithData.delete(i));
+
+        const originalTable = document.querySelector('table[data-section="learning_development"]');
+        if (!originalTable) return;
+
+        Array.from(indicesWithData).sort((a,b) => a-b).forEach(index => {
+            if (document.querySelector(`table[data-learning-table-index="${index}"]`)) return;
+            learningTableCounter = Math.max(learningTableCounter, index);
+
+            const origFields = originalTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])');
+            const savedVals = [];
+            origFields.forEach(f => { savedVals.push(f.value); f.value = ''; });
+
+            const newTable = originalTable.cloneNode(true);
+
+            origFields.forEach((f, i) => { f.value = savedVals[i]; });
+
+            newTable.setAttribute('data-section', `learning_development_${index}`);
+            newTable.setAttribute('data-learning-table-index', index);
+
+            const headerTh = newTable.querySelector('th[colspan="6"]');
+            if (headerTh) {
+                const span = headerTh.querySelector('span');
+                if (span) span.textContent = 'VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED';
+                const addBtn = headerTh.querySelector('button');
+                if (addBtn) addBtn.remove();
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.textContent = '×';
+                removeBtn.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+                removeBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;padding:0;line-height:1;';
+                removeBtn.onclick = () => removeLearningTable(newTable, index);
+                headerTh.querySelector('div').appendChild(removeBtn);
+            }
+
+            const fieldMap = {
+                'learning_title_of_ld[]':          `learning_${index}[title_of_ld][]`,
+                'learning_from[]':                  `learning_${index}[from][]`,
+                'learning_to[]':                    `learning_${index}[to][]`,
+                'learning_hours[]':                 `learning_${index}[hours][]`,
+                'learning_type_of_ld[]':            `learning_${index}[type_of_ld][]`,
+                'learning_conducted_sponsored_by[]':`learning_${index}[conducted_sponsored_by][]`,
+            };
+
+            // Rename fields and populate from merged data
+            newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
+                const orig = f.getAttribute('name');
+                if (orig && fieldMap[orig]) f.setAttribute('name', fieldMap[orig]);
+                f.removeAttribute('required');
+            });
+
+            // Populate values
+            newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
+                const name = f.getAttribute('name');
+                if (name && merged[name] !== undefined) f.value = merged[name];
+            });
+
+            // Keep only 5 data rows
+            let dataRowCount = 0;
+            newTable.querySelectorAll('tr').forEach(row => {
+                if (!row.querySelector('th')) {
+                    dataRowCount++;
+                    if (dataRowCount > 5) row.remove();
+                }
+            });
+
+            // Reset date inputs to hidden before attaching listeners
+            newTable.querySelectorAll('input[type="date"]').forEach(d => {
+                d.classList.remove('visible');
+                d.style.removeProperty('display');
+                d.style.display = 'none';
+            });
+
+            const otherTable = document.querySelector('table[data-section="other_information"]');
+            if (otherTable) { otherTable.parentNode.insertBefore(newTable, otherTable); }
+            else            { originalTable.parentNode.insertBefore(newTable, originalTable.nextSibling); }
+
+            // Attach listeners first (registers forceRefresh), then force-refresh to show dates for populated values
+            attachDynamicLearningEventListeners(newTable);
+            if (typeof newTable._forceRefresh === 'function') newTable._forceRefresh();
+
+            // Fail-safe: hide date inputs for rows that have no title value
+            newTable.querySelectorAll('tr').forEach(row => {
+                const titleEl = row.querySelector('textarea[name$="[title_of_ld][]"]');
+                if (!titleEl) return;
+                if ((titleEl.value || '').trim() === '') {
+                    row.querySelectorAll('input[type="date"]').forEach(d => {
+                        d.classList.remove('visible');
+                        d.style.display = 'none';
+                    });
+                }
+            });
+        });
+    }, 300);
 });
 </script>
 </x-app-layout>

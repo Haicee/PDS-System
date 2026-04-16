@@ -71,6 +71,7 @@
         input, textarea, select { scroll-margin-top: 240px; }
         .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
         .autosave-overlay.hidden { display: none; }
+        textarea.edu-row-error { background-color: #fee2e2 !important; outline: 2px solid #ef4444 !important; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
    <script>
@@ -479,6 +480,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 focusFirstMissing();
+                return;
+            }
+
+            // Validate added educational background tables for incomplete rows
+            const rowCols = ['school_name', 'basic_education', 'from', 'to', 'highest_level', 'year_graduated', 'scholarship_acadhonors'];
+            const isNaVal = (v) => { const u = (v||'').trim().toUpperCase(); return u === 'NA' || u === 'N/A' || u === 'NONE'; };
+            const addedEduTables = document.querySelectorAll('table[data-edu-table-index]');
+            let incompleteField = null;
+
+            // Clear previous row-error highlights
+            document.querySelectorAll('textarea.edu-row-error').forEach(el => {
+                el.classList.remove('edu-row-error');
+            });
+
+            for (const tbl of addedEduTables) {
+                const idx = tbl.getAttribute('data-edu-table-index');
+                const prefix = `education_${idx}`;
+                const rows = ['elementary', 'secondary', 'vocational', 'college', 'graduate_studies'];
+
+                for (const row of rows) {
+                    const fields = {};
+                    let hasAnyValue = false;
+                    let missingCols = [];
+
+                    rowCols.forEach(col => {
+                        const el = tbl.querySelector(`textarea[name="${prefix}[${row}][${col}]"]`);
+                        const val = (el ? el.value : '').trim();
+                        fields[col] = { el, val };
+                        if (val !== '' && !isNaVal(val)) hasAnyValue = true;
+                    });
+
+                    if (!hasAnyValue) continue;
+
+                    rowCols.forEach(col => {
+                        const { el, val } = fields[col];
+                        if (el && val === '') {
+                            el.classList.add('edu-row-error');
+                            missingCols.push(col);
+                            if (!incompleteField) incompleteField = el;
+                        }
+                    });
+                }
+            }
+
+            if (incompleteField) {
+                e.preventDefault();
+                e.stopPropagation();
+                incompleteField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                incompleteField.focus();
+                alert('Some educational background rows are incomplete. Please finish filling in all columns for each row you have started, or clear the row entirely.');
             }
         });
     }
@@ -543,6 +594,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newName = originalName.replace('education[', `education_${eduTableCounter}[`);
                 textarea.setAttribute('name', newName);
             }
+            // Remove required attribute from dynamically added fields
+            textarea.removeAttribute('required');
         });
 
         // Insert the new table before the signature-date-section
@@ -706,6 +759,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const newName = originalName.replace('education[', `education_${index}[`);
                     textarea.setAttribute('name', newName);
                 }
+                // Remove required attribute from dynamically added fields
+                textarea.removeAttribute('required');
             });
 
             // Insert the new table before the signature-date-section
@@ -789,6 +844,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+
+        // Handle numeric-only fields (from, to, year_graduated)
+        table.querySelectorAll('textarea[data-numeric="true"]').forEach(el => {
+            el.addEventListener('input', () => {
+                const pos = el.selectionStart;
+                const cleaned = el.value.replace(/[^0-9]/g, '');
+                if (el.value !== cleaned) {
+                    el.value = cleaned;
+                    el.setSelectionRange(Math.min(pos, cleaned.length), Math.min(pos, cleaned.length));
+                }
+            });
+            el.addEventListener('keydown', (e) => {
+                const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter','Home','End'];
+                if (!allowed.includes(e.key) && !/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                }
+            });
+        });
+    }
+
+    // Apply event listeners to the original (static) educational background table
+    const originalEduTable = document.querySelector('table[data-section="educational_background"]');
+    if (originalEduTable) {
+        attachEducationEventListeners(originalEduTable);
     }
 
 });
@@ -2516,6 +2595,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[elementary][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2530,6 +2610,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[elementary][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2558,6 +2639,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[elementary][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2621,6 +2703,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[secondary][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2635,6 +2718,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[secondary][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2663,6 +2747,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[secondary][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2725,6 +2810,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[vocational][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2739,6 +2825,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[vocational][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2767,6 +2854,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[vocational][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2829,6 +2917,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[college][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2843,6 +2932,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[college][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2871,6 +2961,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[college][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2933,6 +3024,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[graduate_studies][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2947,6 +3039,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[graduate_studies][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2975,6 +3068,7 @@ window.confirmModalCancelClick = function() {
          <textarea
       name="education[graduate_studies][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -3367,6 +3461,13 @@ window.confirmModalCancelClick = function() {
         }
       }
 
+      // Single-select checkbox groups: always use value-matching, never positional
+      if (singleSelectCheckboxNames && singleSelectCheckboxNames.has(name)) {
+        if (stored === null || stored === '' || stored === undefined) return;
+        elements.forEach(el => { el.checked = String(stored) === String(el.value); });
+        return;
+      }
+
       if (name.endsWith('[]') && Array.isArray(stored)) {
         elements.forEach((el, idx) => {
           const val = stored[idx] ?? '';
@@ -3386,6 +3487,10 @@ window.confirmModalCancelClick = function() {
 
       elements.forEach(el => {
         if (el.type === 'checkbox') {
+          if (singleSelectCheckboxNames && singleSelectCheckboxNames.has(el.name) && (stored === null || stored === '' || stored === undefined)) {
+            // No local selection saved — leave unchecked so hydrateSingleSelect (server data) stays
+            return;
+          }
           if (Array.isArray(stored)) {
             el.checked = stored.includes(el.value);
           } else {
@@ -3430,8 +3535,8 @@ window.confirmModalCancelClick = function() {
         if (singleSelectCheckboxNames.has(el.name)) {
           if (el.checked) {
             data[el.name] = rawValue;
-          } else if (!data[el.name]) {
-            data[el.name] = '';
+          } else if (data[el.name] === undefined) {
+            data[el.name] = null;
           }
         } else {
           if (!data[el.name]) data[el.name] = isArrayField ? [] : [];

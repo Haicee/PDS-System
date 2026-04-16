@@ -1394,16 +1394,22 @@
     <th class="border text-center font-light">TO</th>
   </tr>
   @foreach($extraTable as $row)
-  <tr class="min-h-[20]" style="width:20%;">
-    <td class="border text-center align-middle h-20">{{ $row['level'] }}</td>
-    <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['school_name'] }}</div></td>
-    <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['degree_course'] }}</div></td>
-    <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($row['from']) }}</div></td>
-    <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($row['to']) }}</div></td>
-    <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['highest_level'] }}</div></td>
-    <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['year_graduated'] }}</div></td>
-    <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['academic_honors'] }}</div></td>
-  </tr>
+    @php
+      // Check if row has any actual data (excluding the level label)
+      $rowHasData = !empty($row['school_name']) || !empty($row['degree_course']) || !empty($row['basic_education']) || !empty($row['from']) || !empty($row['to']) || !empty($row['highest_level']) || !empty($row['year_graduated']) || !empty($row['academic_honors']) || !empty($row['scholarship_acadhonors']);
+    @endphp
+    @if($rowHasData)
+    <tr class="min-h-[20]" style="width:20%;">
+      <td class="border text-center align-middle h-20">{{ $row['level'] }}</td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['school_name'] }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['degree_course'] ?: $row['basic_education'] }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($row['from']) }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($row['to']) }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['highest_level'] }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['year_graduated'] }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['academic_honors'] ?: $row['scholarship_acadhonors'] }}</div></td>
+    </tr>
+    @endif
   @endforeach
 </table>
 @endforeach

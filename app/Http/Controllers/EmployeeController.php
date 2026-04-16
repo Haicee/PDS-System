@@ -74,7 +74,7 @@ class EmployeeController extends Controller
             ]);
         }
 
-        return back();
+        return redirect()->route('pds.form1');
     }
 
     public function dismissApproval(Request $request)
