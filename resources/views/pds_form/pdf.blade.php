@@ -261,16 +261,16 @@
               font-size: 18px;
               line-height: 1.15;
           }
-          body.pdf-mode table td,
-          body.pdf-mode table  {
+          body.pdf-mode table:not(.declarations-table) td,
+          body.pdf-mode table:not(.declarations-table)  {
               padding: 5px;
               font-size: 18px !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
               font-weight: 400 !important;
               line-height: 1.15 !important;
           }
-          body.pdf-mode table td *,
-          body.pdf-mode table *:not(.date-large-text):not(.remarks-content):not(.pds-title) {
+          body.pdf-mode table:not(.declarations-table) td *,
+          body.pdf-mode table:not(.declarations-table) *:not(.date-large-text):not(.remarks-content):not(.pds-title) {
               font-size: 18px !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
               font-weight: 400 !important;
@@ -304,6 +304,8 @@
 
           /* Large date font override */
           body.pdf-mode table .date-large-text,
+          body.pdf-mode table td .date-large-text,
+          body.pdf-mode table td div.date-large-text,
           body.pdf-mode .date-large-text {
               font-size: 40px !important;
               line-height: 1 !important;
@@ -1377,7 +1379,7 @@
 <div style="display:flex; flex-direction:column; height:100vh; box-sizing:border-box;">
 @endif
 @foreach($extraEduTables ?? [] as $extraTable)
-<table class="w-full border-collapse table-fixed text-base" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; border-top:0; page-break-inside:avoid;">
+<table class="w-full border-collapse table-fixed text-base" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; page-break-inside:avoid;">
   <colgroup>
     <col style="width:27%">
     <col style="width:30%">
@@ -1389,12 +1391,12 @@
     <col style="width:17.5%">
   </colgroup>
   <tr>
-    <td colspan="8" class="font-bold italic text-3xl px-2" style="background-color:#8a8a8a; color:#fff; border:4px solid black; border-top:0;">
+    <td colspan="8" class="font-bold italic text-3xl px-2" style="background-color:#8a8a8a; color:#fff; border:4px solid black;">
       III. EDUCATIONAL BACKGROUND
     </td>
   </tr>
   <tr>
-    <th class="border" rowspan="2" style="font-weight:normal; border-top:0;"><div><span style="margin-right:70px;">26.</span> <span>LEVEL</span></div></th>
+    <th class="border" rowspan="2" style="font-weight:normal; border-top:0;"><div style="text-align: left;"><span style="margin-right:70px;">26.</span> <span>LEVEL</span></div></th>
     <th class="border" rowspan="2" style="font-weight:normal; border-top:0;">NAME OF SCHOOL<br>(Write in Full)</th>
     <th class="border" rowspan="2" style="font-weight:normal; border-top:0;">BASIC EDUCATION / DEGREE / COURSE<br>(Write in full)</th>
     <th class="border text-center" colspan="2" style="font-weight:normal; border-top:0;">PERIOD OF ATTENDANCE</th>
@@ -1406,17 +1408,23 @@
     <th class="border text-center" style="font-weight:normal; border-top:0;">FROM</th>
     <th class="border text-center" style="font-weight:normal; border-top:0;">TO</th>
   </tr>
-  @foreach($extraTable as $rowIdx => $row)
+  @php
+    // Filter out empty rows - only keep rows with actual data
+    $filteredRows = collect($extraTable)->filter(function($row) {
+      return !empty($row['school_name']) || !empty($row['degree_course']) || !empty($row['basic_education']) || !empty($row['from']) || !empty($row['to']) || !empty($row['highest_level']) || !empty($row['year_graduated']) || !empty($row['academic_honors']) || !empty($row['scholarship_acadhonors']);
+    })->values();
+  @endphp
+  @foreach($filteredRows as $rowIdx => $row)
   @php $firstDataRow = ($rowIdx === 0); @endphp
   <tr style="width:20%;">
     <td class="border text-center align-middle h-20" @if($firstDataRow) style="border-top:0;" @endif>{{ $row['level'] }}</td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['school_name'] }}</div></td>
-    <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['degree_course'] }}</div></td>
+    <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['degree_course'] ?: $row['basic_education'] }}</div></td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ format_pds_date($row['from']) }}</div></td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ format_pds_date($row['to']) }}</div></td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['highest_level'] }}</div></td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['year_graduated'] }}</div></td>
-    <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['academic_honors'] }}</div></td>
+    <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['academic_honors'] ?: $row['scholarship_acadhonors'] }}</div></td>
   </tr>
   @endforeach
 </table>
@@ -1456,7 +1464,7 @@
 @include('pdsreview.partials.date-format-helper')
     <td colspan="3"
           class="border h-24" style="border-top:0;">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text">
+          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text" style="font-size:40px !important;">
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
       </td>
@@ -1616,7 +1624,7 @@
 @include('pdsreview.partials.date-format-helper')
          <td colspan="3"
           class="border h-24">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text">
+          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text" style="font-size:40px !important;">
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
       </td>
@@ -1628,7 +1636,8 @@
 </div>
 </div>
 
-<div style="page-break-before: always;"></div>
+@php $isUnder20 = (($training ?? ($learning ?? collect()))->count() < 20); @endphp
+<div style="page-break-before:always; display:flex; flex-direction:column; {{ $isUnder20 ? 'min-height:100vh' : 'height:100vh' }}; box-sizing:border-box; width:100%;">
   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid; border-bottom:0;">
 
   <colgroup>
@@ -1681,8 +1690,19 @@
   </tr>
 
   @php
-    $volRows = ($voluntaryWorks ?? ($voluntary ?? collect()))->values(); // keep user-entered order
-    $maxRows = max(15, $volRows->count());
+    $volRows = ($voluntaryWorks ?? ($voluntary ?? collect()))->values()
+        ->filter(fn($r) => !empty(trim($r->organization ?? ''))
+            || !empty(trim($r->position ?? ''))
+            || !empty(trim($r->from ?? ''))
+            || !empty(trim($r->to ?? ''))
+            || !empty(trim($r->hours ?? '')))
+        ->values(); // skip fully blank voluntary rows
+    $actualVol = $volRows->count();
+    // Show exactly what exists; only pad with 7 blanks when no data at all
+    // isSmall is set later in training section but we need it here — recompute
+    $_totalTr = ($training ?? ($learning ?? collect()))->count();
+    $_isSmall = $_totalTr <= 10;
+    $maxRows = $actualVol > 0 ? ($actualVol + ($_isSmall ? 5 : 0)) : 7;
     // Scale down the table if we have more than 15 rows so it fits on a single page
     $volScale = $maxRows > 15 ? round(15 / $maxRows, 4) : 1;
   @endphp
@@ -1698,7 +1718,7 @@
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->organization ?? ' ' }}</td>
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->from) ?: ($i === 0 ? 'NA' : ' ') }}</td>
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($row?->to) ?: ($i === 0 ? 'NA' : ' ') }}</td>
-        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->hours ?? ($i === 0 ? 'NA' : ' ') }}</td>
+        <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ isset($row->hours) && $row->hours !== '' && $row->hours !== null ? $row->hours . ' Hours' : ($i === 0 ? 'NA' : ' ') }}</td>
         <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $row->position ?? ' ' }}</td>
       </tr>
     @endfor
@@ -1709,7 +1729,7 @@
 
     
 
-   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; page-break-inside: avoid; break-inside: avoid; border-bottom:0;">
+   <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;">
 
   <colgroup>
     <col style="width:40%;">
@@ -1767,9 +1787,39 @@
   </tr>
 
   @php
-    $trainingRows = ($training ?? ($learning ?? collect()))->values(); // keep user-entered order
-    $trainingRows = $trainingRows->take(26); // cap to 21 rows max in PDF
-    $maxTraining = max(26, $trainingRows->count());
+    $allTrainingRows = ($training ?? ($learning ?? collect()))->values();
+    $totalTraining = $allTrainingRows->count();
+    // Split logic: 27 (full) → slice 10 into 2 overflow tables of 5
+    //              >20 and <27 → slice last 5 into 1 overflow table so signature fits
+    //              ≤20 → show all in main table
+    $isFull = $totalTraining >= 27;
+    $isOver20 = !$isFull && $totalTraining > 20;
+    if ($isFull) {
+        $mainCap = 17;
+    } elseif ($isOver20) {
+        $mainCap = $totalTraining - 5; // keep all but last 5
+    } else {
+        $mainCap = $totalTraining;
+    }
+    $trainingRows = $allTrainingRows->take($mainCap);
+    // Overflow tables
+    $overflowTraining1 = $isFull ? $allTrainingRows->slice(17, 5)->values() : ($isOver20 ? $allTrainingRows->slice($mainCap)->values() : collect());
+    $overflowTraining2 = $isFull ? $allTrainingRows->slice(22, 5)->values() : collect();
+    $actualTraining = $trainingRows->count();
+    $isSmall = ($actualTraining <= 10 && !$isFull && !$isOver20);
+    $isUnder20 = ($totalTraining < 20 && !$isFull);
+    // Padding rules: ≤10 rows → pad to 27 blank rows (fills page for signature anchoring); >10 → no blanks
+    $maxTraining = $isSmall ? 27 : $actualTraining;
+    // Build PDF extra training: overflow groups first, then draft extra tables
+    // When ≤10 rows: disable all extra tables so everything stays in one page-3 block
+    $pdfExtraTrainingTables = collect();
+    if (!$isSmall) {
+        if ($overflowTraining1->isNotEmpty()) $pdfExtraTrainingTables->push($overflowTraining1);
+        if ($overflowTraining2->isNotEmpty()) $pdfExtraTrainingTables->push($overflowTraining2);
+        foreach (($extraTrainingTables ?? collect()) as $et) {
+            $pdfExtraTrainingTables->push($et);
+        }
+    }
   @endphp
 
   @for ($i = 0; $i < $maxTraining; $i++)
@@ -1781,22 +1831,22 @@
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->title ?? ' ' }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->from) ?: ($i === 0 ? 'NA' : ' ') }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ format_pds_date($trow?->to) ?: ($i === 0 ? 'NA' : ' ') }}</td>
-      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->hours ?? ($i === 0 ? 'NA' : ' ') }}</td>
+      <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ isset($trow->hours) && $trow->hours !== '' && $trow->hours !== null ? $trow->hours . ' Hours' : ($i === 0 ? 'NA' : ' ') }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->type_of_ld ?? ' ' }}</td>
       <td style="border:1px solid black; text-align:center; {{ $bottom }}">{{ $trow->conducted_by ?? ' ' }}</td>
     </tr>
   @endfor
 
-</table>
-{{-- VIII. OTHER INFORMATION --}}
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;" border="1">
 
+</table>
+
+{{-- VIII. OTHER INFORMATION (flows naturally after main training, no page break) --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black;" border="1">
     <colgroup>
         <col style="width:5.13%;">
         <col style="width:6.5%;">
         <col style="width:4.30%;">
     </colgroup>
-
     <tr>
         <th colspan="3"
             style="background:#8a8a8a; color:#fff;
@@ -1808,21 +1858,21 @@
             VIII. OTHER INFORMATION
         </th>
     </tr>
-
     <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
         <th style="border:1px solid black;">SPECIAL SKILLS and HOBBIES</th>
         <th style="border:1px solid black;">NON-ACADEMIC DISTINCTIONS / RECOGNITION <br> <span>(Write in full)</span></th>
         <th style="border:1px solid black;">MEMBERSHIP IN ASSOCIATION / ORGANIZATION <br> <span>(Write in full)</span></th>
     </tr>
-
     @php
         $otherCollection = $other ?? ($otherInfo ?? collect());
-        $skills = $otherCollection->where('category', 'skills')->pluck('description')->values();
-        $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->values();
-        $assoc = $otherCollection->where('category', 'association')->pluck('description')->values();
-        $maxOther = max(8, $skills->count(), $recognition->count(), $assoc->count());
+        $skills = $otherCollection->where('category', 'skills')->pluck('description')->filter(fn($v) => trim($v) !== '')->values();
+        $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->filter(fn($v) => trim($v) !== '')->values();
+        $assoc = $otherCollection->where('category', 'association')->pluck('description')->filter(fn($v) => trim($v) !== '')->values();
+        $maxActualOther = max($skills->count(), $recognition->count(), $assoc->count());
+        // Show exactly what exists; only pad with 5 blanks when no data at all
+        // When ≤10 training rows: add 6 extra blank rows to fill space
+        $maxOther = $maxActualOther > 0 ? ($maxActualOther + ($_isSmall ? 3 : 0)) : 5;
     @endphp
-
     @for ($i = 0; $i < $maxOther; $i++)
     <tr>
         <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $skills[$i] ?? ' ' }}</td>
@@ -1830,66 +1880,93 @@
         <td style="border:1px solid black; text-align:center; vertical-align:top;">{{ $assoc[$i] ?? ' ' }}</td>
     </tr>
     @endfor
-
 </table>
 
-{{-- SIGNATURE & DATE --}}
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif';" border="1">
-
-    <colgroup>
-        <col style="width:32.2%;">
-        <col style="width:15.7%;">
-        <col style="width:14.72%;">
-        <col style="width:10.4%;">
-    </colgroup>
-
+@php $chunkedExtraTables = $pdfExtraTrainingTables->chunk(3); @endphp
+@foreach($chunkedExtraTables as $chunkIndex => $chunk)
+@if($chunkIndex === 0 && $pdfExtraTrainingTables->isNotEmpty())
+</div>{{-- close page-3 height:100vh block --}}
+@endif
+<div style="display:flex; flex-direction:column; height:100vh; box-sizing:border-box; width:100%;">
+{{-- Extra training tables: chunk {{ $chunkIndex + 1 }} (max 3 per page) --}}
+@foreach($chunk as $extraTable)
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black;" border="1">
+  <colgroup>
+    <col style="width:44%;">
+    <col style="width:8%;">
+    <col style="width:8%;">
+    <col style="width:12%;">
+    <col style="width:12%;">
+    <col style="width:16%;">
+  </colgroup>
+  <tr>
+    <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; text-align:left; padding:6px; border:4px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+    </th>
+  </tr>
+  <tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS</th>
+    <th colspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">INCLUSIVE DATES OF ATTENDANCE</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">NUMBER OF HOURS</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">CONDUCTED/SPONSORED BY</th>
+  </tr>
+  <tr>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
+  </tr>
+  @foreach($extraTable as $trow)
     <tr>
-        <td class="border h-12 text-center text-xl font-bold italic align-middle">
-            SIGNATURE
-        </td>
-
-        <td class="border" colspan="2" style="height: 80px;">
-            <div style="height:80px; width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                @if($signatureUrl)
-                  <img src="{{ $signatureUrl }}" alt="Signature" style="max-height:70px; max-width:100%; object-fit:contain;">
-                @endif
-            </div>
-        </td>
-
-        <td class="border text-center text-xl font-bold align-middle" colspan="2">
-            DATE
-        </td>
-@include('pdsreview.partials.date-format-helper')
-        <td colspan="3"
-          class="border h-24">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text">
-            {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
-          </div>
-      </td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->from) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->to) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ isset($trow->hours) && $trow->hours !== '' && $trow->hours !== null ? $trow->hours . ' Hours' : ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
     </tr>
+  @endforeach
 </table>
-    <div class="text-base w-full keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
-    CS FORM 212 (Revised 2025), Page 3 of 5
+@endforeach
+{{-- last chunk: signature anchored to bottom (extra tables case) --}}
+@if(isset($loop) && $loop->last)
+<div style="margin-top:auto;">
+@include('pds_form.partials.signature_block')
+</div>{{-- close margin-top:auto --}}
+@endif
+</div>{{-- close this chunk height:100vh block --}}
+@endforeach
+@if($pdfExtraTrainingTables->isEmpty())
+{{-- No extra tables: signature renders here inside page-3 block --}}
+@if($isUnder20)
+{{-- <20 rows: signature flows naturally after tables (no margin-top:auto) --}}
+@include('pds_form.partials.signature_block')
+@else
+{{-- ≥20 rows: signature anchored to bottom --}}
+<div style="margin-top:auto;">
+@include('pds_form.partials.signature_block')
 </div>
+@endif
+</div>{{-- close page-3 flex block (no extra tables) --}}
+@endif
 <div style="page-break-before: always;"></div>
   <div class="w-full font-serif text-sm">
   <div class="pds-sheet w-full" style="max-width:100%;">
 
-   <table class="section-table declarations-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0; font-size:12px;">
+   <table class="section-table declarations-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0; font-size:20px !important;">
     <!-- ======================= 34 ======================= -->
 <tr>
   <td style="border:1px solid black; width:66%; vertical-align:top; padding:10px;">
     34. Are you related by consanguinity or affinity to the appointing or recommending authority, or to the
     chief of bureau or office or to the person who has immediate supervision over you in the Office,
     Bureau or Department where you will be appointed?
-    <div style="margin-left:40px; margin-top:45px;">a. within the third degree?</div>
-    <div style="margin-left:40px; margin-top:20px;">b. within the fourth degree (for Local Government Unit – Career Employees)?</div>
+    <div style="margin-left:40px;">a. within the third degree?</div>
+    <div style="margin-left:40px; margin-top:5px;">b. within the fourth degree (for Local Government Unit – Career Employees)?</div>
   </td>
 
   <td style="border:1px solid black; width:34%; vertical-align:top; padding:10px;">
 
     <!-- 34A -->
-    <div style="display:flex; align-items:center; gap:10px; margin-top:72px;">
+    <div style="display:flex; align-items:center;  gap:10px; margin-top:40px;">
       <label style="display:flex; align-items:center; gap:2px; margin:0;">
         <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-bottom:6px;" disabled @checked(($declaration->q34_a ?? '') === 'YES')>
         YES
@@ -2163,6 +2240,7 @@
 </tr>
 
 
+
 <!-- ======================= 39 ======================= -->
 <tr>
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
@@ -2206,15 +2284,15 @@
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
     40. Pursuant to RA 8371, RA 7277 (as amended), and RA 11861:
 
-    <div style="margin-left:30px; margin-top:15px;">a. Are you a member of any indigenous group?</div>
-    <div style="margin-left:30px; margin-top:40px;">b. Are you a person with disability?</div>
-    <div style="margin-left:30px; margin-top:40px;">c. Are you a solo parent?</div>
+    <div style="margin-left:30px; margin-top:8px;">a. Are you a member of any indigenous group?</div>
+    <div style="margin-left:30px; margin-top:20px;">b. Are you a person with disability?</div>
+    <div style="margin-left:30px; margin-top:20px;">c. Are you a solo parent?</div>
   </td>
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
 
     <!-- 40A -->
-    <table style="width:auto; border-collapse:collapse; margin-top:35px;">
+    <table style="width:auto; border-collapse:collapse; margin-top:10px;">
   <tr>
     <td style="padding:0;">
       <input type="checkbox"
@@ -2312,8 +2390,8 @@
         <div style="margin-bottom:3mm;">
 
             <div style="
-                width:35mm;
-                height:45mm;
+                width:40mm;
+                height:50mm;
                 border:2px solid black;
                 margin:0 auto;
                 position:relative;
@@ -2347,8 +2425,8 @@
         <div style="margin-top:30mm;">
 
             <div style="
-                width:45mm;
-                height:45mm;
+                width:65mm;
+                height:55mm;
                 border:2px solid black;
                 margin:0 auto;
                 position:relative;
@@ -2529,7 +2607,8 @@
   /* Override pdf-mode !important for the declarations section */
   body.pdf-mode table.declarations-table,
   body.pdf-mode table.declarations-table td,
-  body.pdf-mode table.declarations-table * { font-size: 12px !important; }
+  body.pdf-mode table.declarations-table * { font-size: 18px !important; }
+  body.pdf-mode table.declarations-table td { padding: 4px 8px !important; }
   .remarks-table tr, .remarks-table td { page-break-inside: auto; }
   .remarks-content { page-break-inside: auto; page-break-after: auto; }
   body { margin: 0; padding: 0; }
@@ -2658,7 +2737,7 @@
   </div>
   <div class="w-full flex justify-end" style="margin-top:16px; padding-right:8px;">
     <div class="text-center relative" style="width:460px; margin-left:auto;">
-      <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text">
+      <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text" style="font-size:40px !important;">
         {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
       </div>
       <div class="border-b-2 border-black w-full" style="margin-top:4px;"></div>

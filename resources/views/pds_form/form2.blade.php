@@ -93,11 +93,8 @@
                     field.classList.toggle('bg-gray-200', !enabled);
                     field.classList.toggle('text-gray-500', !enabled);
                     field.classList.toggle('cursor-not-allowed', !enabled);
-                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
-                        field.value = '';
-                        if (field.type === 'date') {
-                            field.classList.remove('visible');
-                        }
+                    if (!enabled && field.type === 'date') {
+                        field.classList.remove('visible');
                     }
                 });
             };
@@ -119,13 +116,17 @@
                 }
 
                 // Show/hide date fields based on position value and row enabled state
+                const workRowAllBlank = !hasPosition &&
+                    (departmentFields[index] ? departmentFields[index].value.trim() === '' : true) &&
+                    (statusFields[index] ? statusFields[index].value.trim() === '' : true) &&
+                    (govtServiceFields[index] ? govtServiceFields[index].value.trim() === '' : true);
                 if (workFromField && !workFromField.disabled) {
                     if (hasPosition && !isNAValue) {
                         workFromField.classList.add('visible');
                         workFromField.style.backgroundColor = 'transparent';
                     } else {
                         workFromField.classList.remove('visible');
-                        workFromField.value = '';
+                        if (workRowAllBlank) workFromField.value = '';
                     }
                 }
 
@@ -135,7 +136,7 @@
                         workToField.style.backgroundColor = 'transparent';
                     } else {
                         workToField.classList.remove('visible');
-                        workToField.value = '';
+                        if (workRowAllBlank) workToField.value = '';
                     }
                 }
 
@@ -197,11 +198,8 @@
                     field.classList.toggle('bg-gray-200', !enabled);
                     field.classList.toggle('text-gray-500', !enabled);
                     field.classList.toggle('cursor-not-allowed', !enabled);
-                    if (!enabled && (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT')) {
-                        field.value = '';
-                        if (field.type === 'date') {
-                            field.classList.remove('visible');
-                        }
+                    if (!enabled && field.type === 'date') {
+                        field.classList.remove('visible');
                     }
                 });
             };
@@ -222,13 +220,18 @@
                 }
 
                 // Show/hide date fields based on eligibility value and row enabled state
+                const eligRowAllBlank = !hasEligibility &&
+                    (ratingFields[index] ? ratingFields[index].value.trim() === '' : true) &&
+                    (placeFields[index] ? placeFields[index].value.trim() === '' : true) &&
+                    (licenseFields[index] ? licenseFields[index].value.trim() === '' : true) &&
+                    (validityFields[index] ? validityFields[index].value.trim() === '' : true);
                 if (dateField && !dateField.disabled) {
                     if (hasEligibility && !isNAValue) {
                         dateField.classList.add('visible');
                         dateField.style.backgroundColor = 'transparent';
                     } else {
                         dateField.classList.remove('visible');
-                        dateField.value = '';
+                        if (eligRowAllBlank) dateField.value = '';
                     }
                 }
 

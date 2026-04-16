@@ -198,10 +198,70 @@ class PdsController extends Controller
             ->where('user_id', $userId)
             ->get();
 
+        // Load draft early — needed for both training fallback and extra training rows
+        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+
         $training = DB::table('pds_training_programs')
             ->where('user_id', $userId)
             ->get();
-        
+
+        // Use draft data when draft has more rows than DB (handles unsaved/newly added rows)
+        if ($draft && !empty($draft->data)) {
+            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
+            $titles    = $draftData['learning_title_of_ld'] ?? [];
+            $fromDates = $draftData['learning_from'] ?? [];
+            $toDates   = $draftData['learning_to'] ?? [];
+            $hours     = $draftData['learning_hours'] ?? [];
+            $types     = $draftData['learning_type_of_ld'] ?? [];
+            $conducted = $draftData['learning_conducted_sponsored_by'] ?? [];
+            $rows = collect();
+            foreach ($titles as $i => $title) {
+                $hasData = !empty($title) || !empty($fromDates[$i]) || !empty($toDates[$i])
+                    || !empty($hours[$i]) || !empty($types[$i]) || !empty($conducted[$i]);
+                if ($hasData) {
+                    $rows->push((object)[
+                        'title'       => $title,
+                        'from'        => $fromDates[$i] ?? null,
+                        'to'          => $toDates[$i] ?? null,
+                        'hours'       => $hours[$i] ?? null,
+                        'type_of_ld'  => $types[$i] ?? null,
+                        'conducted_by'=> $conducted[$i] ?? null,
+                    ]);
+                }
+            }
+            if ($rows->count() > $training->count()) $training = $rows;
+        }
+
+        // Build extra training tables from dynamic learning_N keys in draft
+        // Each entry is a collection of rows (only rows with data) for one table
+        $extraTrainingTables = collect();
+        if ($draft && !empty($draft->data)) {
+            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
+            $dynKeys = array_keys(array_filter((array) $draftData, function($v, $k) {
+                return preg_match('/^learning_\d+$/', $k);
+            }, ARRAY_FILTER_USE_BOTH));
+            sort($dynKeys);
+            foreach ($dynKeys as $dynKey) {
+                $table = $draftData[$dynKey];
+                if (!is_array($table)) continue;
+                $tableRows = collect();
+                $rowCount = count($table['title_of_ld'] ?? []);
+                for ($i = 0; $i < $rowCount; $i++) {
+                    $rowData = (object)[
+                        'title'        => $table['title_of_ld'][$i] ?? null,
+                        'from'         => $table['from'][$i] ?? null,
+                        'to'           => $table['to'][$i] ?? null,
+                        'hours'        => $table['hours'][$i] ?? null,
+                        'type_of_ld'   => $table['type_of_ld'][$i] ?? null,
+                        'conducted_by' => $table['conducted_sponsored_by'][$i] ?? null,
+                    ];
+                    $hasData = collect((array) $rowData)->some(fn($v) => trim((string)($v ?? '')) !== '');
+                    if ($hasData) $tableRows->push($rowData);
+                }
+                if ($tableRows->isNotEmpty()) $extraTrainingTables->put($dynKey, $tableRows);
+            }
+        }
+
         $other = DB::table('pds_other_info')
             ->where('user_id', $userId)
             ->get();
@@ -209,7 +269,7 @@ class PdsController extends Controller
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
 
-        return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'other', 'declaration', 'signaturePath', 'photoPath'));
+        return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'extraTrainingTables', 'other', 'declaration', 'signaturePath', 'photoPath'));
     }
 
     public function review4()
@@ -274,18 +334,9 @@ class PdsController extends Controller
 
     private function redirectIfRejected(int $userId)
     {
-        $hasRejection = PdsRejection::where('user_id', $userId)->exists();
-        if ($hasRejection) {
-            // If admin rejected, send employee back to editable PDS forms to resubmit
-            return redirect()->route('pds.form1');
-        }
-
-        // If approved, keep view-only behavior; otherwise allow view
-        $submission = PdsSubmission::where('user_id', $userId)->first();
-        if ($submission && $submission->status === 'Approved') {
-            return null;
-        }
-
+        // Review pages are always accessible — rejected users should still be able
+        // to see their submitted data. The redirect to the edit form is handled
+        // by redirectIfLocked() in PdsStepController when they access the forms.
         return null;
     }
 }
