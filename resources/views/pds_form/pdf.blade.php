@@ -2720,10 +2720,7 @@
 </tbody>
 </table>
 
-<!-- SIGNATURE / DATE / Page 5 of 5 — normal flow, pushed to bottom via calculated spacer -->
-@if($remarksTablePaddingBottom > 0)
-<div style="height:{{ $remarksTablePaddingBottom }}px;"></div>
-@endif
+<div style="margin-top:60px;">
 <div class="page5-sig-footer" style="font-family:'Arial Narrow','Arial',sans-serif;">
   <div class="w-full flex justify-end">
     <div class="text-center" style="width:460px; margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:8px;">
@@ -2748,7 +2745,9 @@
     CS FORM 212 (Revised 2025), Page 5 of 5
   </div>
 </div>
-</div>
+</div>{{-- close page5-sig-footer --}}
+</div>{{-- close margin-top spacer --}}
+</div>{{-- close page-wrap --}}
 @if(!empty($pdfMode))
 </body>
 </html>

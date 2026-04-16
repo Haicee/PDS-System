@@ -181,7 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.createElement('input');
     input.type = 'text';
     input.name = 'accomplishments[]';
-    input.className = 'border border-gray-300 bg-transparent text-sm p-1 focus:outline-none flex-grow';
+    input.className = 'border border-gray-300 bg-transparent text-sm p-2 focus:outline-none flex-grow';
+    input.style.minHeight = '36px';
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
     removeButton.className = 'remove-accomplishment text-red-500 hover:text-red-700 font-semibold';
@@ -634,6 +635,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const getRemarks = () => Array.from(form.querySelectorAll('textarea[name="remarks[]"]'));
 
+  const workExpRequiredNames = ['duration[]','position_title[]','office_unit[]','immediate_supervisor[]','agency_location[]'];
+
   const validateRequired = () => {
     const hasEmptyRemarks = getRemarks().some(t => !isFilled(t));
 
@@ -643,7 +646,28 @@ document.addEventListener('DOMContentLoaded', () => {
       return !isFilled(el);
     });
 
-    const hasMissing = hasEmptyRemarks || hasMissingRequired;
+    // Validate each work experience row: required fields must be filled
+    let hasEmptyWorkExp = false;
+    const tbody = document.getElementById('remarks-rows');
+    if (tbody) {
+      const rows = Array.from(tbody.querySelectorAll('tr')).slice(1); // skip instructions row
+      rows.forEach(tr => {
+        workExpRequiredNames.forEach(fieldName => {
+          const input = tr.querySelector(`input[name="${fieldName}"], textarea[name="${fieldName}"]`);
+          if (!input) return;
+          if (!isFilled(input)) {
+            hasEmptyWorkExp = true;
+            input.style.borderColor = '#ef4444';
+            input.style.outline = '1px solid #ef4444';
+          } else {
+            input.style.borderColor = '';
+            input.style.outline = '';
+          }
+        });
+      });
+    }
+
+    const hasMissing = hasEmptyRemarks || hasMissingRequired || hasEmptyWorkExp;
 
     if (submitBtn) {
       submitBtn.disabled = hasMissing;
@@ -848,30 +872,30 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="p-3 text-sm">
     <ul class="list-none space-y-2">
         <li>
-            <p class="font-semibold inline">Duration:</p>
+            <p class="font-semibold inline">Duration: <span class="text-red-500">*</span></p>
             <input type="text" name="duration[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 100px);">
         </li>
         <li>
-            <p class="font-semibold inline">Position:</p>
+            <p class="font-semibold inline">Position: <span class="text-red-500">*</span></p>
             <input type="text" name="position_title[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 100px);">
         </li>
         <li>
-            <p class="font-semibold inline">Name of Office/Unit:</p>
+            <p class="font-semibold inline">Name of Office/Unit: <span class="text-red-500">*</span></p>
             <input type="text" name="office_unit[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 180px);">
         </li>
         <li>
-            <p class="font-semibold inline">Immediate Supervisor:</p>
+            <p class="font-semibold inline">Immediate Supervisor: <span class="text-red-500">*</span></p>
             <input type="text" name="immediate_supervisor[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 180px);">
         </li>
         <li>
-            <p class="font-semibold inline">Name of Agency/Organization and Location:</p>
+            <p class="font-semibold inline">Name of Agency/Organization and Location: <span class="text-red-500">*</span></p>
             <input type="text" name="agency_location[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2 mt-1" style="width: calc(100% - 280px);">
         </li>
         <li class="mt-3">
             <p class="font-semibold">List of Accomplishments and Contributions (if any)</p>
             <div class="ml-6 mt-2 space-y-1" id="accomplishments-container">
-                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full">
-                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full">
+                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-2 focus:outline-none w-full" style="min-height:36px;">
+                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-2 focus:outline-none w-full" style="min-height:36px;">
             </div>
             <div class="ml-6 mt-2 flex justify-end">
                 <button type="button" id="add-accomplishment" class="text-blue-500 hover:text-blue-700 font-semibold">+ Add Accomplishment</button>
@@ -1007,6 +1031,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       tbody.appendChild(clone);
+      validateRequired();
       // Attach reactive to new inputs
       const newInputs = clone.querySelectorAll('input[type="text"], textarea');
       Array.from(newInputs).forEach(el => {
@@ -1044,6 +1069,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.persist) window.persist();
         // Update counter to remove the deleted row's fields
         if (window.updateRemarksCounter) window.updateRemarksCounter();
+        validateRequired();
       }
     }
   });
