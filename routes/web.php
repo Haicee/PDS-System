@@ -626,6 +626,28 @@ XML);
     }
 }
 
+if (! function_exists('manageUserEmployees')) {
+    function manageUserEmployees(): array
+    {
+        return User::select('name', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned')
+            ->where('is_archive', false)
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $employee) {
+                return [
+                    'name' => $employee->name ?? '',
+                    'department' => $employee->unit ?? '',
+                    'email' => $employee->email ?? '',
+                    'phone' => $employee->phone ?? '',
+                    'type' => $employee->type ?? '',
+                    'status' => $employee->status ?? '',
+                    'location' => $employee->location_assigned ?? '',
+                ];
+            })
+            ->toArray();
+    }
+}
+
 //Manage User Export Route
 Route::get('/manage-user/export', function () {
     if (! class_exists(ZipArchive::class)) {
