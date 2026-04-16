@@ -68,108 +68,27 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 if (! function_exists('pdsSubmissions')) {
     function pdsSubmissions(): array
     {
-        return [
-            [
-                'key' => 'pds-1',
-                'name' => 'Leslie Alexander',
-                'avatar' => 'https://i.pravatar.cc/96?img=47',
-                'department' => 'HR',
-                'email' => 'leslie.alexander@example.com',
-                'submitted_at' => 'Jan 24, 2026 • 2:10 PM',
-                'status' => 'Approved',
-                'type' => 'Permanent',
-            ],
-            [
-                'key' => 'pds-2',
-                'name' => 'Michael Scott',
-                'avatar' => 'https://i.pravatar.cc/96?img=12',
-                'department' => 'Management',
-                'email' => 'michael.scott@example.com',
-                'submitted_at' => 'Jan 23, 2026 • 9:45 AM',
-                'status' => 'Pending',
-                'type' => 'Permanent',
-            ],
-            [
-                'key' => 'pds-3',
-                'name' => 'Pam Beesly',
-                'avatar' => 'https://i.pravatar.cc/96?img=32',
-                'department' => 'Administration',
-                'email' => 'pam.beesly@example.com',
-                'submitted_at' => 'Jan 22, 2026 • 11:30 AM',
-                'status' => 'Approved',
-                'type' => 'Job On Call',
-            ],
-            [
-                'key' => 'pds-4',
-                'name' => 'Jim Halpert',
-                'avatar' => 'https://i.pravatar.cc/96?img=65',
-                'department' => 'Sales',
-                'email' => 'jim.halpert@example.com',
-                'submitted_at' => 'Jan 21, 2026 • 4:05 PM',
-                'status' => 'Rejected',
-                'type' => 'Job On Call',
-            ],
-            [
-                'key' => 'pds-5',
-                'name' => 'Dwight Schrute',
-                'avatar' => 'https://i.pravatar.cc/96?img=5',
-                'department' => 'Sales',
-                'email' => 'dwight.schrute@example.com',
-                'submitted_at' => 'Jan 20, 2026 • 1:15 PM',
-                'status' => 'Approved',
-                'type' => 'Permanent',
-            ],
-            [
-                'key' => 'pds-6',
-                'name' => 'Angela Martin',
-                'avatar' => 'https://i.pravatar.cc/96?img=17',
-                'department' => 'Accounting',
-                'email' => 'angela.martin@example.com',
-                'submitted_at' => 'Jan 19, 2026 • 10:00 AM',
-                'status' => 'Pending',
-                'type' => 'Permanent',
-            ],
-            [
-                'key' => 'pds-7',
-                'name' => 'Kevin Malone',
-                'avatar' => 'https://i.pravatar.cc/96?img=39',
-                'department' => 'Accounting',
-                'email' => 'kevin.malone@example.com',
-                'submitted_at' => 'Jan 18, 2026 • 3:40 PM',
-                'status' => 'Approved',
-                'type' => 'Job On Call',
-            ],
-            [
-                'key' => 'pds-8',
-                'name' => 'Oscar Martinez',
-                'avatar' => 'https://i.pravatar.cc/96?img=9',
-                'department' => 'Accounting',
-                'email' => 'oscar.martinez@example.com',
-                'submitted_at' => 'Jan 17, 2026 • 8:55 AM',
-                'status' => 'Approved',
-                'type' => 'Permanent',
-            ],
-            [
-                'key' => 'pds-9',
-                'name' => 'Kelly Kapoor',
-                'avatar' => 'https://i.pravatar.cc/96?img=41',
-                'department' => 'Customer Service',
-                'email' => 'kelly.kapoor@example.com',
-                'submitted_at' => 'Jan 16, 2026 • 12:20 PM',
-                'status' => 'Rejected',
-                'type' => 'Job On Call',
-            ],
-            [
-                'key' => 'pds-10',
-                'name' => 'Ryan Howard',
-                'avatar' => 'https://i.pravatar.cc/96?img=23',
-                'department' => 'Marketing',
-                'email' => 'ryan.howard@example.com',
-                'submitted_at' => 'Jan 15, 2026 • 5:10 PM',
-                'status' => 'Pending',
-                'type' => 'Permanent',
-            ],
-        ];
+        return PdsSubmission::with('user')
+            ->orderByDesc('submitted')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function (PdsSubmission $submission) {
+                $user = $submission->user;
+
+                $submittedAt = $submission->submitted
+                    ? $submission->submitted->format('M d, Y • g:i A')
+                    : ($submission->created_at?->format('M d, Y • g:i A') ?? '');
+
+                return [
+                    'name' => $submission->name ?? $user?->name ?? '',
+                    'department' => $submission->unit ?? $user?->unit ?? '',
+                    'email' => $submission->email ?? $user?->email ?? '',
+                    'submitted_at' => $submittedAt,
+                    'type' => $submission->type ?? $user?->type ?? '',
+                    'status' => $submission->status ?? 'Pending',
+                ];
+            })
+            ->toArray();
     }
 }
 
@@ -406,8 +325,8 @@ Route::get('/pds-form/export', function () {
     }
 
     $submissions = pdsSubmissions();
-    $columns = ['Name', 'Department', 'Email', 'Submitted', 'Type', 'Status'];
-    $colWidths = [28, 18, 30, 22, 14, 12];
+    $columns = ['Employee', 'Division/Section/Unit/Office', 'Email', 'Submitted', 'Employee Status', 'Status'];
+    $colWidths = [34, 38, 40, 30, 24, 18];
 
     $xlsx = buildPdsSubmissionsXlsx($columns, $submissions, $colWidths);
 
@@ -415,7 +334,7 @@ Route::get('/pds-form/export', function () {
         'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition' => 'attachment; filename="BFAR_PDS_Submissions_' . date('Y-m-d') . '.xlsx"',
     ]);
-})->middleware(['auth', 'verified'])->name('pds.export');
+})->middleware(['auth:admin', 'verified'])->name('pds.export');
 
 //Download individual PDS (DOCX placeholder)
 Route::get('/pds-form/{key}/download', function (string $key) {
@@ -435,7 +354,7 @@ Route::get('/pds-form/{key}/download', function (string $key) {
         'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition' => 'attachment; filename="PDS_' . $safeName . '_' . date('Y-m-d') . '.docx"',
     ]);
-})->middleware(['auth', 'verified'])->name('pds.download');
+})->middleware(['auth:admin', 'verified'])->name('pds.download');
 
 
 
@@ -595,18 +514,14 @@ XML);
         foreach ($rows as $row) {
             $rowIndex++;
             $cells = '';
-            $values = [
-                $row['name'],
-                $row['department'],
-                $row['email'],
-                $row['phone'],
-                $row['type'],
-                $row['status'],
-                $row['location'],
-            ];
-            foreach ($values as $colIndex => $value) {
-                $cells .= '<c r="' . chr(65 + $colIndex) . $rowIndex . '" t="inlineStr" s="0"><is><t>' . htmlspecialchars($value, ENT_XML1) . '</t></is></c>';
+            $values = array_values($row);
+            $totalColumns = count($columns);
+
+            for ($colIndex = 0; $colIndex < $totalColumns; $colIndex++) {
+                $value = $values[$colIndex] ?? '';
+                $cells .= '<c r="' . chr(65 + $colIndex) . $rowIndex . '" t="inlineStr" s="0"><is><t>' . htmlspecialchars((string) $value, ENT_XML1) . '</t></is></c>';
             }
+
             $sheetRows[] = '<row r="' . $rowIndex . '">' . $cells . '</row>';
         }
 
@@ -623,6 +538,28 @@ XML);
         $content = file_get_contents($tmp);
         @unlink($tmp);
         return $content;
+    }
+}
+
+if (! function_exists('manageUserEmployees')) {
+    function manageUserEmployees(): array
+    {
+        return User::select('name', 'unit', 'email', 'phone', 'type', 'status', 'location_assigned')
+            ->where('is_archive', false)
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $employee) {
+                return [
+                    'name' => $employee->name ?? '',
+                    'department' => $employee->unit ?? '',
+                    'email' => $employee->email ?? '',
+                    'phone' => $employee->phone ?? '',
+                    'type' => $employee->type ?? '',
+                    'status' => $employee->status ?? '',
+                    'location' => $employee->location_assigned ?? '',
+                ];
+            })
+            ->toArray();
     }
 }
 

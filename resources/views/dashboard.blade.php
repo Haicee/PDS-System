@@ -106,19 +106,21 @@
                 </div>
 
 
-                <div class="overflow-x-auto">
-                    <table class="w-full divide-y divide-slate-100">
-                        <thead class="bg-slate-50 text-left text-xs sm:text-sm font-semibold uppercase text-slate-500">
-                            <tr>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Employee</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Division/Section/Unit/Office</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Email</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Phone</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Place of Assignment</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3">Date Submitted</th>
-                                <th class="px-4 sm:px-6 py-2.5 sm:py-3 text-center">Actions</th>
-                            </tr>
-                        </thead>
+                <div class="max-h-[500px] overflow-hidden">
+                    <div class="overflow-x-auto h-full">
+                        <div class="max-h-full min-h-full overflow-y-auto">
+                            <table class="w-full divide-y divide-slate-100">
+                                <thead class="sticky top-0 z-10 bg-slate-50 text-left text-xs sm:text-sm font-semibold uppercase text-slate-500 shadow-sm">
+                                    <tr>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Employee</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Division/Section/Unit/Office</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Email</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Phone</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Place of Assignment</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3">Date Submitted</th>
+                                        <th class="px-4 sm:px-6 py-2.5 sm:py-3 text-center">Actions</th>
+                                    </tr>
+                                </thead>
                         <tbody class="divide-y divide-slate-100 bg-white text-xs sm:text-sm text-slate-700">
                             @forelse ($stats['recentSubmissions'] as $submission)
                                 <tr class="hover:bg-slate-50">
@@ -155,6 +157,8 @@
                             @endforelse
                         </tbody>
                     </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -173,7 +177,7 @@
                         <div class="min-w-full">
                             <div class="overflow-x-auto">
                                 <table class="w-full divide-y divide-slate-100">
-                                    <thead class="bg-slate-50 text-left text-xs sm:text-sm font-semibold uppercase text-slate-500">
+                                    <thead class="sticky top-0 z-10 bg-slate-50 text-left text-xs sm:text-sm font-semibold uppercase text-slate-500 shadow-sm">
                                         <tr>
                                             <th class="px-4 sm:px-6 py-2.5 sm:py-3">Admin</th>
                                             <th class="px-4 sm:px-6 py-2.5 sm:py-3">Role</th>
