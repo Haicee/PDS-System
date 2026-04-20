@@ -22,6 +22,28 @@
   @vite('resources/css/app.css')
 @endif
 <style>
+        /* ── Browser-preview override: neutralise PDF-only layout when viewed on screen ── */
+        @media screen {
+            div[style*="height:100vh"],
+            div[style*="height: 100vh"],
+            div[style*="min-height:100vh"],
+            div[style*="min-height: 100vh"] {
+                height: auto !important;
+                min-height: 0 !important;
+            }
+            div[style*="page-break-before"] {
+                page-break-before: auto !important;
+            }
+            /* Collapse top border between consecutive tables on screen (page breaks hide this in PDF) */
+            table + table,
+            div[style*="flex-direction:column"] > table:first-child,
+            div[style*="flex-direction: column"] > table:first-child,
+            div[style*="page-break-before"] + table,
+            div[style*="page-break-before"] > table:first-child {
+                border-top: 0 !important;
+                margin-top: 0 !important;
+            }
+        }
         /* Print-friendly, spreadsheet-like grid tuned to fit on one A4 page */
         body { font-family: 'Arial', sans-serif; font-size: 18px; margin: 0; padding: 0; max-width: 100%; width: 100%; }
         html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; min-height: 100%; }
@@ -954,7 +976,7 @@
         @php $childIndex++; @endphp
     </tr>
 </table>
-<table class="w-full border-4 border-black border-collapse table-fixed text-base border-t-0" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; border-top:0;">
+<table class="w-full border-4 border-black border-collapse table-fixed text-base border-t-0 {{ ($extraEduTables ?? collect())->isNotEmpty() ? 'edu-main-last' : '' }}" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; border-top:0;">
 
   @php
       $normalizeLevel = function($level) {
@@ -1376,10 +1398,11 @@
     </table>
   </div>
 </div>
+<style>@media screen{.edu-main-last{border-bottom:0!important;}}</style>
 <div style="display:flex; flex-direction:column; height:100vh; box-sizing:border-box;">
 @endif
 @foreach($extraEduTables ?? [] as $extraTable)
-<table class="w-full border-collapse table-fixed text-base" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; page-break-inside:avoid;">
+<table class="w-full border-collapse table-fixed text-base" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; {{ $loop->first ? '' : 'border-top:0;' }} page-break-inside:avoid;">
   <colgroup>
     <col style="width:27%">
     <col style="width:30%">
@@ -1391,7 +1414,7 @@
     <col style="width:17.5%">
   </colgroup>
   <tr>
-    <td colspan="8" class="font-bold italic text-3xl px-2" style="background-color:#8a8a8a; color:#fff; border:4px solid black;">
+    <td colspan="8" class="font-bold italic text-3xl px-2" style="background-color:#8a8a8a; color:#fff; border:4px solid black; border-top:0;">
       III. EDUCATIONAL BACKGROUND
     </td>
   </tr>
@@ -1732,12 +1755,12 @@
    <table class="section-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;">
 
   <colgroup>
-    <col style="width:40%;">
-    <col style="width:12%;">
-    <col style="width:12%;">
-    <col style="width:12%;">
-    <col style="width:12%;">
-    <col style="width:12%;">
+    <col style="width:30%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:18%;">
+    <col style="width:22%;">
   </colgroup>
 
   <tr>
@@ -1770,7 +1793,7 @@
 
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
          -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
-      Type of L&D
+      Type of L&D <br><span style="font-weight:normal;">(Managerial/ Supervisory/ Technical / etc)</span>
     </th>
 
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black;
@@ -1810,12 +1833,11 @@
     $isUnder20 = ($totalTraining < 20 && !$isFull);
     // Padding rules: ≤10 rows → pad to 27 blank rows (fills page for signature anchoring); >10 → no blanks
     $maxTraining = $isSmall ? 27 : $actualTraining;
-    // Build PDF extra training: overflow groups first, then draft extra tables
-    // When ≤10 rows: disable all extra tables so everything stays in one page-3 block
+    // overflowTraining1 renders inline below the main table (same page as Other Info).
+    // overflowTraining2 renders in its own explicit page-break block after Other Info.
+    // User extra tables go into pdfExtraTrainingTables (chunk 0 stays on overflowTraining2 page).
     $pdfExtraTrainingTables = collect();
     if (!$isSmall) {
-        if ($overflowTraining1->isNotEmpty()) $pdfExtraTrainingTables->push($overflowTraining1);
-        if ($overflowTraining2->isNotEmpty()) $pdfExtraTrainingTables->push($overflowTraining2);
         foreach (($extraTrainingTables ?? collect()) as $et) {
             $pdfExtraTrainingTables->push($et);
         }
@@ -1840,8 +1862,48 @@
 
 </table>
 
+@if(!$isSmall && $overflowTraining1->isNotEmpty())
+{{-- Slice 1: render inline below main L&D table, same page --}}
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; border-top:0;" border="1">
+  <colgroup>
+    <col style="width:30%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:18%;">
+    <col style="width:22%;">
+  </colgroup>
+  <tr>
+    <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; text-align:left; padding:6px; border:4px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+    </th>
+  </tr>
+  <tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS</th>
+    <th colspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">INCLUSIVE DATES OF ATTENDANCE</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">NUMBER OF HOURS</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D <br><span style="font-weight:normal;">(Managerial/ Supervisory/ Technical / etc)</span></th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">CONDUCTED/SPONSORED BY</th>
+  </tr>
+  <tr>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
+  </tr>
+  @foreach($overflowTraining1 as $trow)
+    <tr>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->from) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->to) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ isset($trow->hours) && $trow->hours !== '' && $trow->hours !== null ? $trow->hours . ' Hours' : ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
+    </tr>
+  @endforeach
+</table>
+@endif
+
 {{-- VIII. OTHER INFORMATION (flows naturally after main training, no page break) --}}
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black;" border="1">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; border-top:0;" border="1">
     <colgroup>
         <col style="width:5.13%;">
         <col style="width:6.5%;">
@@ -1853,6 +1915,7 @@
                    font-style:italic; font-size:18px;
                    text-align:left; padding:6px;
                    border:4px solid black;
+                   border-top:0;
                    -webkit-print-color-adjust:exact;
                    print-color-adjust:exact; font-size:23px;">
             VIII. OTHER INFORMATION
@@ -1882,22 +1945,43 @@
     @endfor
 </table>
 
-@php $chunkedExtraTables = $pdfExtraTrainingTables->chunk(3); @endphp
-@foreach($chunkedExtraTables as $chunkIndex => $chunk)
-@if($chunkIndex === 0 && $pdfExtraTrainingTables->isNotEmpty())
-</div>{{-- close page-3 height:100vh block --}}
+@php
+    // overflowTraining1 renders inline on the same page, consuming 1 slot.
+    // So first chunk of user extras = 6 - (1 if overflow1 present) = 5 or 6.
+    $firstChunkSize = (!$isSmall && $overflowTraining1->isNotEmpty()) ? 5 : 6;
+    $firstChunk = $pdfExtraTrainingTables->take($firstChunkSize);
+    $remainingExtras = $pdfExtraTrainingTables->slice($firstChunkSize)->values();
+    $remainingChunks = $remainingExtras->chunk(6);
+    $chunkedExtraTables = collect([$firstChunk])->merge($remainingChunks)->filter(fn($c) => $c->isNotEmpty())->values();
+    $hasOverflow2 = !$isSmall && $overflowTraining2->isNotEmpty();
+    $hasUserExtras = $pdfExtraTrainingTables->isNotEmpty();
+@endphp
+
+@if(!$hasOverflow2 && !$hasUserExtras)
+{{-- No overflow2, no user extras: signature inside page-3 block --}}
+@if($isUnder20)
+{{-- <20 rows: content fits naturally, signature flows directly after Other Info --}}
+@include('pds_form.partials.signature_block')
+@else
+{{-- ≥20 rows: page is full, anchor signature to bottom --}}
+<div style="margin-top:auto;">
+@include('pds_form.partials.signature_block')
+</div>
 @endif
-<div style="display:flex; flex-direction:column; height:100vh; box-sizing:border-box; width:100%;">
-{{-- Extra training tables: chunk {{ $chunkIndex + 1 }} (max 3 per page) --}}
-@foreach($chunk as $extraTable)
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black;" border="1">
+</div>{{-- close page-3 flex block --}}
+
+@elseif($hasOverflow2 && !$hasUserExtras)
+{{-- Has overflow2 only: close page-3, open new page for overflow2+signature --}}
+</div>{{-- close page-3 flex block --}}
+<div style="page-break-before:always; display:flex; flex-direction:column; height:100vh; box-sizing:border-box; width:100%;">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; border-top:0;" border="1">
   <colgroup>
-    <col style="width:44%;">
-    <col style="width:8%;">
-    <col style="width:8%;">
-    <col style="width:12%;">
-    <col style="width:12%;">
-    <col style="width:16%;">
+    <col style="width:30%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:18%;">
+    <col style="width:22%;">
   </colgroup>
   <tr>
     <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; text-align:left; padding:6px; border:4px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
@@ -1908,7 +1992,97 @@
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS</th>
     <th colspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">INCLUSIVE DATES OF ATTENDANCE</th>
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">NUMBER OF HOURS</th>
-    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D <br><span style="font-weight:normal;">(Managerial/ Supervisory/ Technical / etc)</span></th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">CONDUCTED/SPONSORED BY</th>
+  </tr>
+  <tr>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
+  </tr>
+@foreach($overflowTraining2 as $trow)
+    <tr>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->from) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->to) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ isset($trow->hours) && $trow->hours !== '' && $trow->hours !== null ? $trow->hours . ' Hours' : ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
+    </tr>
+@endforeach
+</table>
+<div style="margin-top:auto;">
+@include('pds_form.partials.signature_block')
+</div>
+</div>{{-- close overflow2 flex block --}}
+
+@else
+{{-- Has user extra tables (with or without overflow2): close page-3 first --}}
+</div>{{-- close page-3 flex block --}}
+@if($hasOverflow2)
+{{-- overflow2 on its own page first --}}
+<div style="page-break-before:always; display:flex; flex-direction:column; height:100vh; box-sizing:border-box; width:100%;">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; border-top:0;" border="1">
+  <colgroup>
+    <col style="width:30%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:18%;">
+    <col style="width:22%;">
+  </colgroup>
+  <tr>
+    <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; text-align:left; padding:6px; border:4px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+    </th>
+  </tr>
+  <tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS</th>
+    <th colspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">INCLUSIVE DATES OF ATTENDANCE</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">NUMBER OF HOURS</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D <br><span style="font-weight:normal;">(Managerial/ Supervisory/ Technical / etc)</span></th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">CONDUCTED/SPONSORED BY</th>
+  </tr>
+  <tr>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
+  </tr>
+  @foreach($overflowTraining2 as $trow)
+    <tr>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->from) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->to) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ isset($trow->hours) && $trow->hours !== '' && $trow->hours !== null ? $trow->hours . ' Hours' : ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
+    </tr>
+  @endforeach
+</table>
+{{-- user extra tables follow on same overflow2 page (chunk 0 stays inline) --}}
+@foreach($chunkedExtraTables as $chunkIndex => $chunk)
+@if($chunkIndex > 0)
+</div>{{-- close previous flex block --}}
+<div style="page-break-before:always; display:flex; flex-direction:column; height:100vh; box-sizing:border-box; width:100%;">
+@endif
+@foreach($chunk as $extraTable)
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; border-top:0;" border="1">
+  <colgroup>
+    <col style="width:30%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:18%;">
+    <col style="width:22%;">
+  </colgroup>
+  <tr>
+    <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; text-align:left; padding:6px; border:4px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+    </th>
+  </tr>
+  <tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS</th>
+    <th colspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">INCLUSIVE DATES OF ATTENDANCE</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">NUMBER OF HOURS</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D <br><span style="font-weight:normal;">(Managerial/ Supervisory/ Technical / etc)</span></th>
     <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">CONDUCTED/SPONSORED BY</th>
   </tr>
   <tr>
@@ -1927,26 +2101,59 @@
   @endforeach
 </table>
 @endforeach
-{{-- last chunk: signature anchored to bottom (extra tables case) --}}
-@if(isset($loop) && $loop->last)
-<div style="margin-top:auto;">
-@include('pds_form.partials.signature_block')
-</div>{{-- close margin-top:auto --}}
-@endif
-</div>{{-- close this chunk height:100vh block --}}
 @endforeach
-@if($pdfExtraTrainingTables->isEmpty())
-{{-- No extra tables: signature renders here inside page-3 block --}}
-@if($isUnder20)
-{{-- <20 rows: signature flows naturally after tables (no margin-top:auto) --}}
-@include('pds_form.partials.signature_block')
 @else
-{{-- ≥20 rows: signature anchored to bottom --}}
+{{-- No overflow2: user extras only, chunk 0 on same page as Other Info, chunks 1+ new pages --}}
+@foreach($chunkedExtraTables as $chunkIndex => $chunk)
+@if($chunkIndex > 0)
+</div>{{-- close previous flex block --}}
+<div style="page-break-before:always; display:flex; flex-direction:column; height:100vh; box-sizing:border-box; width:100%;">
+@endif
+@foreach($chunk as $extraTable)
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; border-top:0;" border="1">
+  <colgroup>
+    <col style="width:30%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:18%;">
+    <col style="width:22%;">
+  </colgroup>
+  <tr>
+    <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; text-align:left; padding:6px; border:4px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+      VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+    </th>
+  </tr>
+  <tr>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS</th>
+    <th colspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">INCLUSIVE DATES OF ATTENDANCE</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">NUMBER OF HOURS</th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D <br><span style="font-weight:normal;">(Managerial/ Supervisory/ Technical / etc)</span></th>
+    <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">CONDUCTED/SPONSORED BY</th>
+  </tr>
+  <tr>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
+    <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
+  </tr>
+  @foreach($extraTable as $trow)
+    <tr>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->from) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->to) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ isset($trow->hours) && $trow->hours !== '' && $trow->hours !== null ? $trow->hours . ' Hours' : ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
+    </tr>
+  @endforeach
+</table>
+@endforeach
+@endforeach
+@endif
+{{-- Signature anchored to bottom of last flex block --}}
 <div style="margin-top:auto;">
 @include('pds_form.partials.signature_block')
 </div>
-@endif
-</div>{{-- close page-3 flex block (no extra tables) --}}
+</div>{{-- close last flex block --}}
 @endif
 <div style="page-break-before: always;"></div>
   <div class="w-full font-serif text-sm">

@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.createElement('input');
     input.type = 'text';
     input.name = 'accomplishments[]';
-    input.className = 'border border-gray-300 bg-transparent text-sm p-2 focus:outline-none flex-grow';
+    input.className = 'border border-gray-300 bg-transparent text-sm p-2 focus:outline-none flex-grow min-w-0';
     input.style.minHeight = '36px';
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
@@ -764,6 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.persist = persist;
   window.createAccomplishmentInput = createAccomplishmentInput;
   window.updateRemarksCounter = updateRemarksCounter;
+  window.validateRequired = validateRequired;
 
   // Initial hooks
   getRemarks().forEach(attachReactive);
@@ -872,30 +873,36 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="p-3 text-sm">
     <ul class="list-none space-y-2">
         <li>
-            <p class="font-semibold inline">Duration: <span class="text-red-500">*</span></p>
-            <input type="text" name="duration[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 100px);">
+            <p class="font-semibold">Duration: <span class="text-red-500">*</span></p>
+            <input type="text" name="duration[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full mt-1" style="word-break:break-word;">
         </li>
         <li>
-            <p class="font-semibold inline">Position: <span class="text-red-500">*</span></p>
-            <input type="text" name="position_title[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 100px);">
+            <p class="font-semibold">Position: <span class="text-red-500">*</span></p>
+            <input type="text" name="position_title[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full mt-1" style="word-break:break-word;">
         </li>
         <li>
-            <p class="font-semibold inline">Name of Office/Unit: <span class="text-red-500">*</span></p>
-            <input type="text" name="office_unit[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 180px);">
+            <p class="font-semibold">Name of Office/Unit: <span class="text-red-500">*</span></p>
+            <input type="text" name="office_unit[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full mt-1" style="word-break:break-word;">
         </li>
         <li>
-            <p class="font-semibold inline">Immediate Supervisor: <span class="text-red-500">*</span></p>
-            <input type="text" name="immediate_supervisor[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2" style="width: calc(100% - 180px);">
+            <p class="font-semibold">Immediate Supervisor: <span class="text-red-500">*</span></p>
+            <input type="text" name="immediate_supervisor[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full mt-1" style="word-break:break-word;">
         </li>
         <li>
-            <p class="font-semibold inline">Name of Agency/Organization and Location: <span class="text-red-500">*</span></p>
-            <input type="text" name="agency_location[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none ml-2 mt-1" style="width: calc(100% - 280px);">
+            <p class="font-semibold">Name of Agency/Organization and Location: <span class="text-red-500">*</span></p>
+            <input type="text" name="agency_location[]" class="border border-gray-300 bg-transparent text-sm p-1 focus:outline-none w-full mt-1" style="word-break:break-word;">
         </li>
         <li class="mt-3">
             <p class="font-semibold">List of Accomplishments and Contributions (if any)</p>
             <div class="ml-6 mt-2 space-y-1" id="accomplishments-container">
-                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-2 focus:outline-none w-full" style="min-height:36px;">
-                <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-2 focus:outline-none w-full" style="min-height:36px;">
+                <div class="flex items-center space-x-2">
+                    <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-2 focus:outline-none flex-grow min-w-0" style="min-height:36px;">
+                    <button type="button" class="remove-accomplishment text-red-500 hover:text-red-700 font-semibold">×</button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="text" name="accomplishments[]" class="border border-gray-300 bg-transparent text-sm p-2 focus:outline-none flex-grow min-w-0" style="min-height:36px;">
+                    <button type="button" class="remove-accomplishment text-red-500 hover:text-red-700 font-semibold">×</button>
+                </div>
             </div>
             <div class="ml-6 mt-2 flex justify-end">
                 <button type="button" id="add-accomplishment" class="text-blue-500 hover:text-blue-700 font-semibold">+ Add Accomplishment</button>
@@ -1031,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       tbody.appendChild(clone);
-      validateRequired();
+      if (window.validateRequired) window.validateRequired();
       // Attach reactive to new inputs
       const newInputs = clone.querySelectorAll('input[type="text"], textarea');
       Array.from(newInputs).forEach(el => {
@@ -1069,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.persist) window.persist();
         // Update counter to remove the deleted row's fields
         if (window.updateRemarksCounter) window.updateRemarksCounter();
-        validateRequired();
+        if (window.validateRequired) window.validateRequired();
       }
     }
   });

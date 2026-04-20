@@ -10,18 +10,27 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // If an employee (web guard) hits /dashboard, redirect to employee dashboard
         if (auth('web')->check()) {
             return redirect()->route('employee.dashboard');
         }
 
-        $permanentCount = User::where('type', 'Permanent Employee')->count();
-        $contractCount = User::where('type', 'Contract of Service')->count();
-        $jobOrderCount = User::where('type', 'Job Order')->count();
+        $typeCounts = User::selectRaw("type, COUNT(*) as total")
+            ->whereIn('type', ['Permanent Employee', 'Contract of Service', 'Job Order'])
+            ->groupBy('type')
+            ->pluck('total', 'type');
 
-        $pendingCount = PdsSubmission::where('status', 'Pending')->count();
-        $approvedCount = PdsSubmission::where('status', 'Approved')->count();
-        $rejectedCount = PdsSubmission::where('status', 'Rejected')->count();
+        $permanentCount = $typeCounts['Permanent Employee'] ?? 0;
+        $contractCount  = $typeCounts['Contract of Service'] ?? 0;
+        $jobOrderCount  = $typeCounts['Job Order'] ?? 0;
+
+        $statusCounts  = PdsSubmission::selectRaw("status, COUNT(*) as total")
+            ->whereIn('status', ['Pending', 'Approved', 'Rejected'])
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $pendingCount  = $statusCounts['Pending']  ?? 0;
+        $approvedCount = $statusCounts['Approved'] ?? 0;
+        $rejectedCount = $statusCounts['Rejected'] ?? 0;
 
         $recentSubmissions = PdsSubmission::with(['user.profile'])
             ->orderBy('submitted', 'desc')

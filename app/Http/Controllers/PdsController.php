@@ -9,116 +9,38 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\PdsRejection;
 use App\Models\PdsSubmission;
 use App\Models\PdsForm5Remark;
+use App\Services\PdsDraftDataService;
 
 class PdsController extends Controller
 {
+    public function __construct(private PdsDraftDataService $draftDataService) {}
+
     public function view()
     {
-        $userId = Auth::id();
-        if (!$userId) {
-            abort(403, 'Unauthorized');
-        }
+        $userId = $this->requireUserId();
 
-        if ($redirect = $this->redirectIfRejected($userId)) {
-            return $redirect;
-        }
-
-        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
-        $signaturePath = $signatureFiles->signature_file_path ?? null;
-        $photoPath = $signatureFiles->photo_file_path ?? null;
+        [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
         $personal = DB::table('pds_personal_infos')->where('user_id', $userId)->first();
         $address = DB::table('pds_addresses')->where('user_id', $userId)->first();
         $contact = DB::table('pds_contact_infos')->where('user_id', $userId)->first();
         $idInfo = DB::table('pds_id_infos')->where('user_id', $userId)->first();
 
-        $spouse = DB::table('pds_family_members')->where('user_id', $userId)->where('type', 'spouse')->first();
-        $father = DB::table('pds_family_members')->where('user_id', $userId)->where('type', 'father')->first();
-        $mother = DB::table('pds_family_members')->where('user_id', $userId)->where('type', 'mother')->first();
-        $children = DB::table('pds_family_members')->where('user_id', $userId)->where('type', 'child')->get();
+        $family   = DB::table('pds_family_members')->where('user_id', $userId)->get();
+        $spouse   = $family->where('type', 'spouse')->first();
+        $father   = $family->where('type', 'father')->first();
+        $mother   = $family->where('type', 'mother')->first();
+        $children = $family->where('type', 'child')->values();
 
         $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
 
         $education = collect();
+        $extraEduTables = collect();
         if ($draft && !empty($draft->data)) {
             $data = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-
-            $baseLevels = [
-                'elementary' => 'ELEMENTARY',
-                'secondary' => 'SECONDARY',
-                'vocational' => 'VOCATIONAL / TRADE COURSE',
-                'college' => 'COLLEGE',
-                'graduate_studies' => 'GRADUATE STUDIES',
-            ];
-
-            foreach ($baseLevels as $key => $label) {
-                if (!empty($data['education'][$key])) {
-                    $row = $data['education'][$key];
-                    $education->push([
-                        'level' => $label,
-                        'school_name' => $row['school_name'] ?? null,
-                        'degree_course' => $row['basic_education'] ?? null,
-                        'from' => $row['from'] ?? null,
-                        'to' => $row['to'] ?? null,
-                        'highest_level' => $row['highest_level'] ?? null,
-                        'year_graduated' => $row['year_graduated'] ?? null,
-                        'academic_honors' => $row['scholarship_acadhonors'] ?? null,
-                    ]);
-                }
-            }
-
-            $extras = collect($data['education_extra_level'] ?? [])->map(function ($level, $i) use ($data) {
-                return [
-                    'level' => $level ?? null,
-                    'school_name' => $data['education_extra_school_name'][$i] ?? null,
-                    'degree_course' => $data['education_extra_basic_education'][$i] ?? null,
-                    'from' => $data['education_extra_from'][$i] ?? null,
-                    'to' => $data['education_extra_to'][$i] ?? null,
-                    'highest_level' => $data['education_extra_highest_level'][$i] ?? null,
-                    'year_graduated' => $data['education_extra_year_graduated'][$i] ?? null,
-                    'academic_honors' => $data['education_extra_scholarship_acadhonors'][$i] ?? null,
-                ];
-            })->filter(function ($row) {
-                return collect($row)->some(function ($val) {
-                    $v = trim((string) ($val ?? ''));
-                    return $v !== '' && !in_array(strtoupper($v), ['NA', 'N/A', 'NONE'], true);
-                });
-            });
-
-            $education = $education->concat($extras)->values();
-
-            // Build extra education tables (education_1, education_2, ...) as separate full tables
-            $extraEduTables = collect();
-            $dynKeys = array_keys(array_filter((array) $data, function($v, $k) {
-                return preg_match('/^education_\d+$/', $k);
-            }, ARRAY_FILTER_USE_BOTH));
-            sort($dynKeys);
-            foreach ($dynKeys as $dynKey) {
-                $table = $data[$dynKey];
-                if (!is_array($table)) continue;
-                $tableRows = collect();
-                foreach ($baseLevels as $key => $label) {
-                    $row = $table[$key] ?? [];
-                    $tableRows->push([
-                        'level' => $label,
-                        'school_name' => $row['school_name'] ?? null,
-                        'degree_course' => $row['basic_education'] ?? null,
-                        'from' => $row['from'] ?? null,
-                        'to' => $row['to'] ?? null,
-                        'highest_level' => $row['highest_level'] ?? null,
-                        'year_graduated' => $row['year_graduated'] ?? null,
-                        'academic_honors' => $row['scholarship_acadhonors'] ?? null,
-                    ]);
-                }
-                // Only include this table if it has at least one non-empty row (excluding the level label)
-                $hasAnyData = $tableRows->some(function($r) {
-                    return collect(array_diff_key($r, ['level' => true]))->some(fn($v) => trim((string)($v ?? '')) !== '');
-                });
-                if ($hasAnyData) $extraEduTables->push($tableRows);
-            }
+            $education = $this->draftDataService->parseBaseEducation($data);
+            $extraEduTables = $this->draftDataService->buildExtraEduTables($data);
         }
-
-        if (!isset($extraEduTables)) $extraEduTables = collect();
 
         if ($education->isEmpty()) {
             $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
@@ -150,18 +72,9 @@ class PdsController extends Controller
 
     public function review2()
     {
-        $userId = Auth::id();
-        if (!$userId) {
-            abort(403, 'Unauthorized');
-        }
+        $userId = $this->requireUserId();
 
-        if ($redirect = $this->redirectIfRejected($userId)) {
-            return $redirect;
-        }
-
-        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
-        $signaturePath = $signatureFiles->signature_file_path ?? null;
-        $photoPath = $signatureFiles->photo_file_path ?? null;
+        [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
         $eligibilities = DB::table('pds_eligibilities')
             ->where('user_id', $userId)
@@ -171,7 +84,6 @@ class PdsController extends Controller
                       ->whereNotIn('eligibility', ['NA', 'N/A', 'NONE']);
             })
             ->get();
-        // Keep user-entered order (insertion sequence)
         $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->get();
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
@@ -180,86 +92,28 @@ class PdsController extends Controller
 
     public function review3()
     {
-        $userId = Auth::id();
-        if (!$userId) {
-            abort(403, 'Unauthorized');
-        }
+        $userId = $this->requireUserId();
 
-        if ($redirect = $this->redirectIfRejected($userId)) {
-            return $redirect;
-        }
+        [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
-        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
-        $signaturePath = $signatureFiles->signature_file_path ?? null;
-        $photoPath = $signatureFiles->photo_file_path ?? null;
-
-        // Keep user-entered order (insertion sequence) for voluntary work and training
         $voluntaryWorks = DB::table('pds_voluntary_work')
             ->where('user_id', $userId)
             ->get();
 
-        // Load draft early — needed for both training fallback and extra training rows
         $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
 
         $training = DB::table('pds_training_programs')
             ->where('user_id', $userId)
             ->get();
 
-        // Use draft data when draft has more rows than DB (handles unsaved/newly added rows)
-        if ($draft && !empty($draft->data)) {
-            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $titles    = $draftData['learning_title_of_ld'] ?? [];
-            $fromDates = $draftData['learning_from'] ?? [];
-            $toDates   = $draftData['learning_to'] ?? [];
-            $hours     = $draftData['learning_hours'] ?? [];
-            $types     = $draftData['learning_type_of_ld'] ?? [];
-            $conducted = $draftData['learning_conducted_sponsored_by'] ?? [];
-            $rows = collect();
-            foreach ($titles as $i => $title) {
-                $hasData = !empty($title) || !empty($fromDates[$i]) || !empty($toDates[$i])
-                    || !empty($hours[$i]) || !empty($types[$i]) || !empty($conducted[$i]);
-                if ($hasData) {
-                    $rows->push((object)[
-                        'title'       => $title,
-                        'from'        => $fromDates[$i] ?? null,
-                        'to'          => $toDates[$i] ?? null,
-                        'hours'       => $hours[$i] ?? null,
-                        'type_of_ld'  => $types[$i] ?? null,
-                        'conducted_by'=> $conducted[$i] ?? null,
-                    ]);
-                }
-            }
-            if ($rows->count() > $training->count()) $training = $rows;
-        }
-
-        // Build extra training tables from dynamic learning_N keys in draft
-        // Each entry is a collection of rows (only rows with data) for one table
         $extraTrainingTables = collect();
         if ($draft && !empty($draft->data)) {
             $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $dynKeys = array_keys(array_filter((array) $draftData, function($v, $k) {
-                return preg_match('/^learning_\d+$/', $k);
-            }, ARRAY_FILTER_USE_BOTH));
-            sort($dynKeys);
-            foreach ($dynKeys as $dynKey) {
-                $table = $draftData[$dynKey];
-                if (!is_array($table)) continue;
-                $tableRows = collect();
-                $rowCount = count($table['title_of_ld'] ?? []);
-                for ($i = 0; $i < $rowCount; $i++) {
-                    $rowData = (object)[
-                        'title'        => $table['title_of_ld'][$i] ?? null,
-                        'from'         => $table['from'][$i] ?? null,
-                        'to'           => $table['to'][$i] ?? null,
-                        'hours'        => $table['hours'][$i] ?? null,
-                        'type_of_ld'   => $table['type_of_ld'][$i] ?? null,
-                        'conducted_by' => $table['conducted_sponsored_by'][$i] ?? null,
-                    ];
-                    $hasData = collect((array) $rowData)->some(fn($v) => trim((string)($v ?? '')) !== '');
-                    if ($hasData) $tableRows->push($rowData);
-                }
-                if ($tableRows->isNotEmpty()) $extraTrainingTables->put($dynKey, $tableRows);
+            $draftRows = $this->draftDataService->parseTrainingFromDraft($draftData);
+            if ($draftRows->count() > $training->count()) {
+                $training = $draftRows;
             }
+            $extraTrainingTables = $this->draftDataService->buildExtraTrainingTables($draftData);
         }
 
         $other = DB::table('pds_other_info')
@@ -268,38 +122,25 @@ class PdsController extends Controller
 
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
-
         return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'extraTrainingTables', 'other', 'declaration', 'signaturePath', 'photoPath'));
     }
 
     public function review4()
     {
-        $userId = Auth::id();
-        if (!$userId) {
-            abort(403, 'Unauthorized');
-        }
+        $userId = $this->requireUserId();
 
-        if ($redirect = $this->redirectIfRejected($userId)) {
-            return $redirect;
-        }
-
-        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
-        $signaturePath = $signatureFiles->signature_file_path ?? null;
-        $photoPath = $signatureFiles->photo_file_path ?? null;
+        [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
         $idInfo = DB::table('pds_id_infos')->where('user_id', $userId)->first();
-        // Limit to the on-form capacity (7 rows) and keep stable insertion order
         $references = DB::table('pds_references')
             ->where('user_id', $userId)
             ->orderBy('id')
             ->limit(7)
             ->get();
-        $passportPhotoPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('photo_file_path');
-
         $passportPhotoUrl = null;
-        if ($passportPhotoPath) {
-            $filename = basename($passportPhotoPath);
+        if ($photoPath) {
+            $filename = basename($photoPath);
             $sanitized = $filename ? 'passport_photo/' . $filename : null;
             if ($sanitized && Storage::disk('public')->exists($sanitized)) {
                 $passportPhotoUrl = $this->assetFromPublicDisk($sanitized);
@@ -311,32 +152,32 @@ class PdsController extends Controller
 
     public function review5()
     {
-        $userId = Auth::id();
-        if (!$userId) {
-            abort(403, 'Unauthorized');
-        }
+        $userId = $this->requireUserId();
 
-        if ($redirect = $this->redirectIfRejected($userId)) {
-            return $redirect;
-        }
+        [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
-        $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
-        $signaturePath = $signatureFiles->signature_file_path ?? null;
-        $photoPath = $signatureFiles->photo_file_path ?? null;
-
-        // Get work experience data from the new pds_form5_remarks table
-        // Keep user-entered order (insertion sequence)
         $workExperiences = PdsForm5Remark::where('user_id', $userId)->orderBy('id')->get();
         $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
 
         return view('pdsreview.pdsreview5', compact('workExperiences', 'declaration', 'signaturePath', 'photoPath'));
     }
 
-    private function redirectIfRejected(int $userId)
+    private function requireUserId(): int
     {
-        // Review pages are always accessible — rejected users should still be able
-        // to see their submitted data. The redirect to the edit form is handled
-        // by redirectIfLocked() in PdsStepController when they access the forms.
-        return null;
+        $userId = Auth::id();
+        if (!$userId) {
+            abort(403, 'Unauthorized');
+        }
+        return $userId;
+    }
+
+    private function getSignaturePaths(int $userId): array
+    {
+        $row = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+
+        return [
+            $row->signature_file_path ?? null,
+            $row->photo_file_path ?? null,
+        ];
     }
 }

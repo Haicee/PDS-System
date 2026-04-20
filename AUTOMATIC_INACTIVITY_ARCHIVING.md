@@ -162,7 +162,7 @@ php artisan users:check-inactive --dry-run
 ## Complete Workflow
 
 1. **User logs in** → `last_login_at` updated
-2. **2+ years pass** → User becomes inactive
+2. **2+ years pass** → User becomes inactive 
 3. **Daily cron runs** → Command finds inactive users
 4. **User archived** → Status=Inactive + Archive=True
 5. **Real-time update** → User moves to archive page

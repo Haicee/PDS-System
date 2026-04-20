@@ -3,22 +3,18 @@
 namespace App\Http\Controllers;
 
 use Spatie\Browsershot\Browsershot;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;    
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Storage;
+use App\Services\PdsDraftDataService;
 
 class PdsPdfController extends Controller
 {
-    // This method will render the PDF preview (auth)
+    public function __construct(private PdsDraftDataService $draftDataService) {}
+
     public function preview1(Request $request)
     {
-        // Extend PHP execution time for PDF generation
-        set_time_limit(180);
-        ini_set('memory_limit', '512M');
-        
+        $this->initPdfEnv();
         $userId = Auth::id();
         if (!$userId) {
             abort(403, 'Unauthorized');
@@ -45,7 +41,6 @@ class PdsPdfController extends Controller
         }
     }
 
-    // Signed preview endpoint for Browsershot
     public function preview(Request $request)
     {
         $userId = $request->input('user_id', Auth::id());
@@ -56,7 +51,6 @@ class PdsPdfController extends Controller
         return $this->renderPdfView($userId);
     }
 
-    // Admin preview for a specific user (HTML rendered in modal iframe)
     public function previewForAdmin(int $user)
     {
         $data = $this->buildPdfData($user);
@@ -64,26 +58,13 @@ class PdsPdfController extends Controller
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
     }
 
-    // Admin download PDF for a specific user
     public function downloadForAdmin(int $user)
     {
-        set_time_limit(180);
-        ini_set('memory_limit', '512M');
-        
-        $data = $this->buildPdfData($user);
-        $personal = $data['personal'];
-        $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
+        $this->initPdfEnv();
+        $data     = $this->buildPdfData($user);
+        $filename = $this->pdfFilename($data['personal']);
 
-        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
-        $pdfBinary = $this->makeShot($html)->pdf();
-
-        return response()->streamDownload(
-            function () use ($pdfBinary) {
-                echo $pdfBinary;
-            },
-            $filename,
-            ['Content-Type' => 'application/pdf']
-        );
+        return $this->streamPdf($data, $filename);
     }
 
     private function buildPdfData($userId)
@@ -101,44 +82,11 @@ class PdsPdfController extends Controller
         $children = $family->where('type', 'child')->values();
         $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
 
-        // Build extra education tables (education_1, education_2, ...) from draft
-        $extraEduTables = collect();
         $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+        $extraEduTables = collect();
         if ($draft && !empty($draft->data)) {
             $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $baseLevels = [
-                'elementary' => 'ELEMENTARY',
-                'secondary' => 'SECONDARY',
-                'vocational' => 'VOCATIONAL / TRADE COURSE',
-                'college' => 'COLLEGE',
-                'graduate_studies' => 'GRADUATE STUDIES',
-            ];
-            $dynKeys = array_keys(array_filter((array) $draftData, function($v, $k) {
-                return preg_match('/^education_\d+$/', $k);
-            }, ARRAY_FILTER_USE_BOTH));
-            sort($dynKeys);
-            foreach ($dynKeys as $dynKey) {
-                $table = $draftData[$dynKey];
-                if (!is_array($table)) continue;
-                $tableRows = collect();
-                foreach ($baseLevels as $key => $label) {
-                    $row = $table[$key] ?? [];
-                    $tableRows->push([
-                        'level' => $label,
-                        'school_name' => $row['school_name'] ?? null,
-                        'degree_course' => $row['basic_education'] ?? null,
-                        'from' => $row['from'] ?? null,
-                        'to' => $row['to'] ?? null,
-                        'highest_level' => $row['highest_level'] ?? null,
-                        'year_graduated' => $row['year_graduated'] ?? null,
-                        'academic_honors' => $row['scholarship_acadhonors'] ?? null,
-                    ]);
-                }
-                $hasAnyData = $tableRows->some(function($r) {
-                    return collect(array_diff_key($r, ['level' => true]))->some(fn($v) => trim((string)($v ?? '')) !== '');
-                });
-                if ($hasAnyData) $extraEduTables->push($tableRows);
-            }
+            $extraEduTables = $this->draftDataService->buildExtraEduTables($draftData);
         }
         $eligibilities = DB::table('pds_eligibilities')
             ->where('user_id', $userId)
@@ -148,123 +96,69 @@ class PdsPdfController extends Controller
                       ->whereNotIn('eligibility', ['NA', 'N/A', 'NONE']);
             })
             ->get();
-        // Keep user-entered order (insertion sequence) for work experiences
         $work = DB::table('pds_work_experiences')
             ->where('user_id', $userId)
             ->get();
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->get();
         $training = DB::table('pds_training_programs')->where('user_id', $userId)->get();
 
-        // Use draft data when draft has more rows than DB (handles unsaved/newly added rows)
-        if ($draft && !empty($draft->data)) {
-            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $titles    = $draftData['learning_title_of_ld'] ?? [];
-            $fromDates = $draftData['learning_from'] ?? [];
-            $toDates   = $draftData['learning_to'] ?? [];
-            $hours     = $draftData['learning_hours'] ?? [];
-            $types     = $draftData['learning_type_of_ld'] ?? [];
-            $conducted = $draftData['learning_conducted_sponsored_by'] ?? [];
-            $rows = collect();
-            foreach ($titles as $i => $title) {
-                $hasData = !empty($title) || !empty($fromDates[$i]) || !empty($toDates[$i])
-                    || !empty($hours[$i]) || !empty($types[$i]) || !empty($conducted[$i]);
-                if ($hasData) {
-                    $rows->push((object)[
-                        'title'        => $title,
-                        'from'         => $fromDates[$i] ?? null,
-                        'to'           => $toDates[$i] ?? null,
-                        'hours'        => $hours[$i] ?? null,
-                        'type_of_ld'   => $types[$i] ?? null,
-                        'conducted_by' => $conducted[$i] ?? null,
-                    ]);
-                }
-            }
-            // Always prefer draft — it is the most up-to-date source
-            if ($rows->isNotEmpty()) {
-                $training = $rows;
-            }
-        }
-
-        // Build extra training tables from dynamic learning_N keys in draft
-        // Each entry is a collection of rows (only rows with data) for one table
         $extraTrainingTables = collect();
         if ($draft && !empty($draft->data)) {
             $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $dynKeys = array_keys(array_filter((array) $draftData, function($v, $k) {
-                return preg_match('/^learning_\d+$/', $k);
-            }, ARRAY_FILTER_USE_BOTH));
-            sort($dynKeys);
-            foreach ($dynKeys as $dynKey) {
-                $table = $draftData[$dynKey];
-                if (!is_array($table)) continue;
-                $tableRows = collect();
-                $rowCount = count($table['title_of_ld'] ?? []);
-                for ($i = 0; $i < $rowCount; $i++) {
-                    $rowData = (object)[
-                        'title'        => $table['title_of_ld'][$i] ?? null,
-                        'from'         => $table['from'][$i] ?? null,
-                        'to'           => $table['to'][$i] ?? null,
-                        'hours'        => $table['hours'][$i] ?? null,
-                        'type_of_ld'   => $table['type_of_ld'][$i] ?? null,
-                        'conducted_by' => $table['conducted_sponsored_by'][$i] ?? null,
-                    ];
-                    $hasData = collect((array) $rowData)->some(fn($v) => trim((string)($v ?? '')) !== '');
-                    if ($hasData) $tableRows->push($rowData);
-                }
-                if ($tableRows->isNotEmpty()) $extraTrainingTables->push($tableRows);
+            $draftRows = $this->draftDataService->parseTrainingFromDraft($draftData);
+            if ($draftRows->isNotEmpty()) {
+                $training = $draftRows;
             }
+            $extraTrainingTables = $this->draftDataService->buildExtraTrainingTables($draftData);
         }
 
         $otherInfo = DB::table('pds_other_info')->where('user_id', $userId)->get();
-        // Limit to the on-form capacity (7 rows) and keep stable insertion order
         $references = DB::table('pds_references')
             ->where('user_id', $userId)
             ->orderBy('id')
             ->limit(7)
             ->get();
-        // Keep user-entered order (insertion sequence) for remarks
         $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->orderBy('id')->get();
 
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
-$signaturePath = $signatureFiles->signature_file_path ?? null;
-$photoPath = $signatureFiles->photo_file_path ?? null;
+        $signaturePath = $signatureFiles->signature_file_path ?? null;
+        $photoPath = $signatureFiles->photo_file_path ?? null;
 
-// Browsershot-safe URL or Base64
-$signatureUrl = null;
-$photoUrl = null;
+        $signatureUrl = null;
+        $photoUrl = null;
 
-if ($signaturePath && file_exists(storage_path('app/public/' . $signaturePath))) {
-    $signatureUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $signaturePath)));
-}
+        if ($signaturePath && file_exists(storage_path('app/public/' . $signaturePath))) {
+            $signatureUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $signaturePath)));
+        }
 
-if ($photoPath && file_exists(storage_path('app/public/' . $photoPath))) {
-    $photoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $photoPath)));
-}
+        if ($photoPath && file_exists(storage_path('app/public/' . $photoPath))) {
+            $photoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $photoPath)));
+        }
 
-return compact(
-    'personal',
-    'address',
-    'contact',
-    'idInfo',
-    'declaration',
-    'family',
-    'spouse',
-    'father',
-    'mother',
-    'children',
-    'education',
-    'extraEduTables',
-    'eligibilities',
-    'work',
-    'voluntary',
-    'training',
-    'extraTrainingTables',
-    'otherInfo',
-    'references',
-    'remarks',
-    'signatureUrl',
-    'photoUrl' // <-- use this in Blade
-);
+        return compact(
+            'personal',
+            'address',
+            'contact',
+            'idInfo',
+            'declaration',
+            'family',
+            'spouse',
+            'father',
+            'mother',
+            'children',
+            'education',
+            'extraEduTables',
+            'eligibilities',
+            'work',
+            'voluntary',
+            'training',
+            'extraTrainingTables',
+            'otherInfo',
+            'references',
+            'remarks',
+            'signatureUrl',
+            'photoUrl'
+        );
     }
 
     private function renderPdfView($userId)
@@ -274,26 +168,36 @@ return compact(
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
     }
 
-    // This method downloads the PDF via Browsershot
     public function download()
     {
-        set_time_limit(180);
-        ini_set('memory_limit', '512M');
-        
+        $this->initPdfEnv();
         $userId = Auth::id();
         if (!$userId) abort(403, 'Unauthorized');
 
-        $data = $this->buildPdfData($userId);
-        $personal = $data['personal'];
-        $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
+        $data     = $this->buildPdfData($userId);
+        $filename = $this->pdfFilename($data['personal']);
 
-        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
+        return $this->streamPdf($data, $filename);
+    }
+
+    private function initPdfEnv(): void
+    {
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
+    }
+
+    private function pdfFilename(?object $personal): string
+    {
+        return 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
+    }
+
+    private function streamPdf(array $data, string $filename): \Illuminate\Http\Response
+    {
+        $html      = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
         $pdfBinary = $this->makeShot($html)->pdf();
 
         return response()->streamDownload(
-            function () use ($pdfBinary) {
-                echo $pdfBinary;
-            },
+            function () use ($pdfBinary) { echo $pdfBinary; },
             $filename,
             ['Content-Type' => 'application/pdf']
         );
@@ -301,40 +205,33 @@ return compact(
 
     private function makeShot(string $html): Browsershot
     {
-        // Browsershot forbids HTML containing file://. Strip any accidental file:// or file:/ references (including backslashes/spaces) to prevent HtmlIsNotAllowedToContainFile.
-        $html = $html ?? '';
-
-        // Fast removal of protocol markers (handles variants like file:///, file:\, etc.)
         $html = str_ireplace([
             'file:///', 'file:\\', 'file://', 'file:/', 'file:\\/', 'file:\\', 'file:\\//'
         ], '', $html);
 
-        // Extra guard: remove any remaining file: tokens up to the next whitespace/quote/angle bracket
-        $html = preg_replace('#file:[^\s\"\
-\n<>]+#i', '', $html);
+        $html = preg_replace('#file:[^\s\"' . "\n" . '<>]+#i', '', $html);
 
         $chromePath = env('BROWSERSHOT_CHROME_PATH', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
-        $nodePath = env('BROWSERSHOT_NODE_PATH', 'C:\\Program Files\\nodejs\\node.exe');
-        $npmPath = env('BROWSERSHOT_NPM_PATH', 'C:\\Program Files\\nodejs\\npm.cmd');
+        $nodePath   = env('BROWSERSHOT_NODE_PATH',   'C:\\Program Files\\nodejs\\node.exe');
+        $npmPath    = env('BROWSERSHOT_NPM_PATH',    'C:\\Program Files\\nodejs\\npm.cmd');
 
         $shot = Browsershot::html($html)
-        ->paperSize(8.5, 13, 'in') // FORCE inches
-        ->margins(10, 10, 10, 10)
-        ->scale(.56)
-        ->emulateMedia('print')
-        ->showBackground()
-        ->setOption('printBackground', true)
-        ->timeout(180)
-        ->noSandbox()
-        ->hideHeaderAndFooter()
-        ->disableJavascript()
-        ->setOption('args', [
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-first-run',
-            '--disable-extensions',
-        ]);
-
+            ->paperSize(8.5, 13, 'in')
+            ->margins(10, 10, 10, 10)
+            ->scale(.56)
+            ->emulateMedia('print')
+            ->showBackground()
+            ->setOption('printBackground', true)
+            ->timeout(180)
+            ->noSandbox()
+            ->hideHeaderAndFooter()
+            ->disableJavascript()
+            ->setOption('args', [
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-first-run',
+                '--disable-extensions',
+            ]);
 
         if (is_file($nodePath)) {
             $shot->setNodeBinary($nodePath);

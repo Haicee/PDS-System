@@ -76,20 +76,17 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasSubmittedPds(): bool
     {
-    // Only employees can have PDS submissions
-    if ($this->role !== 'employee') {
-        return false;
-    }
+        if ($this->role !== 'employee') {
+            return false;
+        }
 
-    return DB::table('pds_personal_infos')
-        ->where('user_id', $this->id)
-        ->exists();
-}
+        return DB::table('pds_personal_infos')
+            ->where('user_id', $this->id)
+            ->exists();
+    }
 
     public function profile(): HasOne
     {
         return $this->hasOne(UserProfile::class, 'user_id');
     }
 }
-
-
