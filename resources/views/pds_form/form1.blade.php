@@ -567,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
             }
 
-            // Add a remove button to the new table (keep the existing add button)
+            // Add a remove button next to the add button
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.textContent = '×';
@@ -577,8 +577,20 @@ document.addEventListener('DOMContentLoaded', () => {
             removeButton.style.cursor = 'pointer';
             removeButton.style.padding = '0';
             removeButton.style.lineHeight = '1';
-            removeButton.onclick = () => removeEducationalBackgroundTable(newTable, eduTableCounter);
-            titleTd.querySelector('div').appendChild(removeButton);
+            // Capture current index in closure
+            const tableIndex = eduTableCounter;
+            removeButton.onclick = () => removeEducationalBackgroundTable(newTable, tableIndex);
+            const btnContainer = titleTd.querySelector('div.flex.items-center.gap-2');
+            if (btnContainer) {
+                btnContainer.appendChild(removeButton);
+            } else {
+                const addButton = titleTd.querySelector('button');
+                if (addButton) {
+                    addButton.insertAdjacentElement('afterend', removeButton);
+                } else {
+                    titleTd.querySelector('div').appendChild(removeButton);
+                }
+            }
         }
 
         // Update all field names to be unique (values are already empty from the pre-clone clear)
@@ -726,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (titleSpan) {
                     titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
                 }
-                // Add a remove button to the new table (keep the existing add button)
+                // Add a remove button next to the add button
                 const removeButton = document.createElement('button');
                 removeButton.type = 'button';
                 removeButton.textContent = '×';
@@ -737,7 +749,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 removeButton.style.padding = '0';
                 removeButton.style.lineHeight = '1';
                 removeButton.onclick = () => removeEducationalBackgroundTable(newTable, index);
-                titleTd.querySelector('div').appendChild(removeButton);
+                const btnContainer = titleTd.querySelector('div.flex.items-center.gap-2');
+                if (btnContainer) {
+                    btnContainer.appendChild(removeButton);
+                } else {
+                    const addButton = titleTd.querySelector('button');
+                    if (addButton) {
+                        addButton.insertAdjacentElement('afterend', removeButton);
+                    } else {
+                        titleTd.querySelector('div').appendChild(removeButton);
+                    }
+                }
             }
 
             // Update all field names to be unique
@@ -2518,9 +2540,11 @@ window.confirmModalCancelClick = function() {
         class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black relative">
       <div class="flex justify-between items-center">
         <span>III. EDUCATIONAL BACKGROUND</span>
-        <button type="button" onclick="addEducationalBackgroundTable()" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">
-          + Add
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="addEducationalBackgroundTable()" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">
+            + Add
+          </button>
+        </div>
       </div>
     </td>
   </tr>

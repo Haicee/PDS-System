@@ -1036,10 +1036,7 @@
   <tr>
     <td colspan="8"
         class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black">
-      <div class="flex justify-between items-center">
-        <span>III. EDUCATIONAL BACKGROUND</span>
-        <a href="{{ route('pds.form1') }}" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">+ Add</a>
-      </div>
+      III. EDUCATIONAL BACKGROUND
     </td>
   </tr>
 
@@ -1380,10 +1377,7 @@
   </colgroup>
   <tr>
     <td colspan="8" class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black">
-      <div class="flex justify-between items-center">
-        <span>III. EDUCATIONAL BACKGROUND</span>
-        <a href="{{ route('pds.form1') }}" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">+ Add</a>
-      </div>
+      III. EDUCATIONAL BACKGROUND
     </td>
   </tr>
   <tr>
