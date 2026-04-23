@@ -101,7 +101,7 @@ class PdsPersistenceService
             'telephone_no'     => $d['spouse_telephone_no'] ?? null,
         ];
         if ($this->rowHasData(array_diff_key($spouse, ['type' => true]))) {
-            DB::table('pds_family_members')->insert(array_merge($spouse, ['user_id' => $userId]));
+            DB::table('pds_family_members')->insert(array_merge($spouse, ['user_id' => $userId, 'created_at' => now(), 'updated_at' => now()]));
         }
 
         $childNames = collect($d['children_familybg'] ?? []);
@@ -112,6 +112,8 @@ class PdsPersistenceService
                 'type'          => 'child',
                 'firstname'     => $name,
                 'date_of_birth' => $childDobs->get($i),
+                'created_at'    => now(),
+                'updated_at'    => now(),
             ];
         })->filter(fn ($row) => strlen(trim((string) ($row['firstname'] ?? ''))) > 0);
 
@@ -141,7 +143,7 @@ class PdsPersistenceService
             'name_extension' => $d['father_name_extension'] ?? null,
         ];
         if ($this->rowHasData(array_diff_key($father, ['type' => true]))) {
-            DB::table('pds_family_members')->insert(array_merge($father, ['user_id' => $userId]));
+            DB::table('pds_family_members')->insert(array_merge($father, ['user_id' => $userId, 'created_at' => now(), 'updated_at' => now()]));
         }
 
         $mother = [
@@ -151,7 +153,7 @@ class PdsPersistenceService
             'surname'    => $d['mother_surname'] ?? null,
         ];
         if ($this->rowHasData(array_diff_key($mother, ['type' => true]))) {
-            DB::table('pds_family_members')->insert(array_merge($mother, ['user_id' => $userId]));
+            DB::table('pds_family_members')->insert(array_merge($mother, ['user_id' => $userId, 'created_at' => now(), 'updated_at' => now()]));
         }
     }
 

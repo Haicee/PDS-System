@@ -80,8 +80,10 @@ class PdsPdfController extends Controller
         $father = $family->where('type', 'father')->first();
         $mother = $family->where('type', 'mother')->first();
         $children = $family->where('type', 'child')->values();
+        // Fetch education from database (authoritative source for review)
         $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
 
+        // Extra education tables (dynamic tables) only exist in drafts
         $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
         $extraEduTables = collect();
         if ($draft && !empty($draft->data)) {
@@ -100,15 +102,13 @@ class PdsPdfController extends Controller
             ->where('user_id', $userId)
             ->get();
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->get();
+        // Fetch training from database (authoritative source for review)
         $training = DB::table('pds_training_programs')->where('user_id', $userId)->get();
 
+        // Extra training tables (dynamic tables) only exist in drafts
         $extraTrainingTables = collect();
         if ($draft && !empty($draft->data)) {
             $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $draftRows = $this->draftDataService->parseTrainingFromDraft($draftData);
-            if ($draftRows->isNotEmpty()) {
-                $training = $draftRows;
-            }
             $extraTrainingTables = $this->draftDataService->buildExtraTrainingTables($draftData);
         }
 
@@ -191,7 +191,7 @@ class PdsPdfController extends Controller
         return 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
     }
 
-    private function streamPdf(array $data, string $filename): \Illuminate\Http\Response
+    private function streamPdf(array $data, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $html      = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
         $pdfBinary = $this->makeShot($html)->pdf();

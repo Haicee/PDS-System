@@ -183,6 +183,11 @@ class PdsStepController extends Controller
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data  = $draft->data ?? [];
 
+        // For form 3, sync training data from database to populate dynamic tables
+        if ($step === 3) {
+            $data = $this->syncTrainingDataFromDb($userId, $data);
+        }
+
         $signaturePath = DB::table('pds_signature_files')
             ->where('user_id', $userId)
             ->value('signature_file_path');
@@ -199,6 +204,61 @@ class PdsStepController extends Controller
             ->first()?->highlighted_sections ?? [];
 
         return view('pds_form.form' . $step, compact('data', 'signaturePath', 'highlightedSections'));
+    }
+
+    /**
+     * Sync training data from pds_training_programs table to draft format.
+     * Only populates if draft is missing training data (preserves draft data as primary source).
+     */
+    private function syncTrainingDataFromDb(int $userId, array $data): array
+    {
+        // If draft already has training data (main or dynamic tables), use it
+        $hasDraftTraining = !empty($data['learning_title_of_ld'])
+            || collect($data)->keys()->contains(fn ($k) => preg_match('/^learning_\d+$/', $k));
+
+        if ($hasDraftTraining) {
+            return $data;
+        }
+
+        // Only fall back to DB if draft has no training data at all
+        $trainingRows = DB::table('pds_training_programs')
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->get();
+
+        if ($trainingRows->isEmpty()) {
+            return $data;
+        }
+
+        // Main table holds up to 27 rows
+        $mainTableRows = $trainingRows->take(27);
+        $extraRows = $trainingRows->slice(27);
+
+        // Populate main table arrays
+        $data['learning_title_of_ld'] = $mainTableRows->pluck('title')->toArray();
+        $data['learning_from'] = $mainTableRows->pluck('from')->toArray();
+        $data['learning_to'] = $mainTableRows->pluck('to')->toArray();
+        $data['learning_hours'] = $mainTableRows->pluck('hours')->toArray();
+        $data['learning_type_of_ld'] = $mainTableRows->pluck('type_of_ld')->toArray();
+        $data['learning_conducted_sponsored_by'] = $mainTableRows->pluck('conducted_by')->toArray();
+
+        // Create dynamic tables for overflow (5 rows per table)
+        $extraTableCount = ceil($extraRows->count() / 5);
+        for ($i = 0; $i < $extraTableCount; $i++) {
+            $tableRows = $extraRows->slice($i * 5, 5)->values();
+            $tableNum = $i + 1;
+
+            $data["learning_{$tableNum}"] = [
+                'title_of_ld' => $tableRows->pluck('title')->toArray(),
+                'from' => $tableRows->pluck('from')->toArray(),
+                'to' => $tableRows->pluck('to')->toArray(),
+                'hours' => $tableRows->pluck('hours')->toArray(),
+                'type_of_ld' => $tableRows->pluck('type_of_ld')->toArray(),
+                'conducted_sponsored_by' => $tableRows->pluck('conducted_by')->toArray(),
+            ];
+        }
+
+        return $data;
     }
 
     /**
@@ -346,7 +406,9 @@ class PdsStepController extends Controller
             Storage::disk('public')->delete($existingPath);
         }
 
-        DB::table('pds_signature_files')->where('user_id', $userId)->delete();
+        DB::table('pds_signature_files')->where('user_id', $userId)->update([
+            'signature_file_path' => null,
+        ]);
 
         $draft = PdsDraft::where('user_id', $userId)->first();
         if ($draft) {

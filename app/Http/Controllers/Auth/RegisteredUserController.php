@@ -32,7 +32,7 @@ class RegisteredUserController extends Controller
         return view('auth.register');
     }
 
-    private function trimNotificationHistory(Collection $notifiables, int $limit = 20): void
+    protected function trimNotificationHistory($notifiables, int $limit = 20): void
     {
         foreach ($notifiables as $notifiable) {
             $query = $notifiable->notifications()

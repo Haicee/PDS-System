@@ -566,13 +566,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (titleSpan) {
                 titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
             }
-            // Remove the add button from the new table
-            const addButton = titleTd.querySelector('button');
-            if (addButton) {
-                addButton.remove();
-            }
 
-            // Add a remove button to the new table
+            // Add a remove button to the new table (keep the existing add button)
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.textContent = '×';
@@ -731,13 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (titleSpan) {
                     titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
                 }
-                // Remove the add button from the new table
-                const addButton = titleTd.querySelector('button');
-                if (addButton) {
-                    addButton.remove();
-                }
-
-                // Add a remove button to the new table
+                // Add a remove button to the new table (keep the existing add button)
                 const removeButton = document.createElement('button');
                 removeButton.type = 'button';
                 removeButton.textContent = '×';

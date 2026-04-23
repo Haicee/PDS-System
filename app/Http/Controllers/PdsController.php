@@ -32,18 +32,15 @@ class PdsController extends Controller
         $mother   = $family->where('type', 'mother')->first();
         $children = $family->where('type', 'child')->values();
 
-        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+        // Fetch education from database (authoritative source for review)
+        $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
 
-        $education = collect();
+        // Extra education tables (dynamic tables) only exist in drafts
+        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
         $extraEduTables = collect();
         if ($draft && !empty($draft->data)) {
             $data = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $education = $this->draftDataService->parseBaseEducation($data);
             $extraEduTables = $this->draftDataService->buildExtraEduTables($data);
-        }
-
-        if ($education->isEmpty()) {
-            $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
         }
         $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
         $work = DB::table('pds_work_experiences')->where('user_id', $userId)->orderByDesc('from')->get();
@@ -100,19 +97,16 @@ class PdsController extends Controller
             ->where('user_id', $userId)
             ->get();
 
-        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
-
+        // Fetch training from database (authoritative source for review)
         $training = DB::table('pds_training_programs')
             ->where('user_id', $userId)
             ->get();
 
+        // Extra training tables (dynamic tables) only exist in drafts
+        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
         $extraTrainingTables = collect();
         if ($draft && !empty($draft->data)) {
             $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $draftRows = $this->draftDataService->parseTrainingFromDraft($draftData);
-            if ($draftRows->count() > $training->count()) {
-                $training = $draftRows;
-            }
             $extraTrainingTables = $this->draftDataService->buildExtraTrainingTables($draftData);
         }
 

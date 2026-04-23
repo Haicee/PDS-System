@@ -1036,7 +1036,10 @@
   <tr>
     <td colspan="8"
         class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black">
-      III. EDUCATIONAL BACKGROUND
+      <div class="flex justify-between items-center">
+        <span>III. EDUCATIONAL BACKGROUND</span>
+        <a href="{{ route('pds.form1') }}" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">+ Add</a>
+      </div>
     </td>
   </tr>
 
@@ -1377,7 +1380,10 @@
   </colgroup>
   <tr>
     <td colspan="8" class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black">
-      III. EDUCATIONAL BACKGROUND
+      <div class="flex justify-between items-center">
+        <span>III. EDUCATIONAL BACKGROUND</span>
+        <a href="{{ route('pds.form1') }}" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">+ Add</a>
+      </div>
     </td>
   </tr>
   <tr>
@@ -1402,7 +1408,7 @@
     <tr class="min-h-[20]" style="width:20%;">
       <td class="border text-center align-middle h-20">{{ $row['level'] }}</td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['school_name'] }}</div></td>
-      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['degree_course'] ?: $row['basic_education'] }}</div></td>
+      <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['degree_course'] ?: ($row['basic_education'] ?? '') }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($row['from']) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ format_pds_date($row['to']) }}</div></td>
       <td class="border h-10 align-middle"><div class="h-full w-full px-2 flex items-center justify-center">{{ $row['highest_level'] }}</div></td>

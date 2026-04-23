@@ -1168,7 +1168,9 @@
       <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
       <div class="flex justify-between items-center">
         <span>VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED</span>
-        <button type="button" onclick="addLearningTable()" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">+ Add Trainings</button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="addLearningTable()" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">+ Add Trainings</button>
+        </div>
       </div>
      </th>
 
@@ -1584,21 +1586,25 @@ window.addLearningTable = function() {
     newTable.setAttribute('data-section', `learning_development_${idx}`);
     newTable.setAttribute('data-learning-table-index', idx);
 
-    // Update header: replace title span content, remove add button, add × remove button
+    // Update header: replace title span content, add × remove button, keep add button
     const headerTh = newTable.querySelector('th[colspan="6"]');
     if (headerTh) {
         const span = headerTh.querySelector('span');
         if (span) span.textContent = 'VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED';
-        const addBtn = headerTh.querySelector('button');
-        if (addBtn) addBtn.remove();
 
+        // Add remove button to the button container (beside Add Trainings)
+        const btnContainer = headerTh.querySelector('div > div.flex');
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.textContent = '×';
-        removeBtn.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+        removeBtn.className = 'text-white text-2xl font-bold hover:text-red-300 transition-colors';
         removeBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;padding:0;line-height:1;';
         removeBtn.onclick = () => removeLearningTable(newTable, idx);
-        headerTh.querySelector('div').appendChild(removeBtn);
+        if (btnContainer) {
+            btnContainer.appendChild(removeBtn);
+        } else {
+            headerTh.querySelector('div').appendChild(removeBtn);
+        }
     }
 
     // Rename fields: learning_title_of_ld[] → learning_N[title_of_ld][]
@@ -1818,16 +1824,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (headerTh) {
                 const span = headerTh.querySelector('span');
                 if (span) span.textContent = 'VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED';
-                const addBtn = headerTh.querySelector('button');
-                if (addBtn) addBtn.remove();
 
+                // Add remove button to the button container (beside Add Trainings)
+                const btnContainer = headerTh.querySelector('div > div.flex');
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.textContent = '×';
-                removeBtn.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+                removeBtn.className = 'text-white text-2xl font-bold hover:text-red-300 transition-colors';
                 removeBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;padding:0;line-height:1;';
                 removeBtn.onclick = () => removeLearningTable(newTable, index);
-                headerTh.querySelector('div').appendChild(removeBtn);
+                if (btnContainer) {
+                    btnContainer.appendChild(removeBtn);
+                } else {
+                    headerTh.querySelector('div').appendChild(removeBtn);
+                }
             }
 
             const fieldMap = {

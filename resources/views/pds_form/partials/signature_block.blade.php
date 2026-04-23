@@ -1,4 +1,4 @@
-<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif';" border="1">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; border:4px solid black; border-top:0;">
     <colgroup>
         <col style="width:32.2%;">
         <col style="width:15.7%;">

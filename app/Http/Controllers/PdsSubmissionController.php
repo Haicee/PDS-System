@@ -36,12 +36,11 @@ class PdsSubmissionController extends Controller
         $sessionData = session('pds', []);
 
         $incoming = $request->except(array_keys($request->allFiles()));
-        $merged = array_replace_recursive($draftData, $sessionData, $incoming);
+        $merged = $this->mergeFormData($draftData, $sessionData, $incoming);
 
         $request->merge($merged);
 
         session(['pds' => $merged]);
-        $userId = Auth::id();
         $photoPath = $this->fileService->storePhoto($request, $userId);
         $signaturePath = $this->fileService->storeSignature($request, $userId);
         $rowHasData = function (array $row): bool {
@@ -200,7 +199,7 @@ class PdsSubmissionController extends Controller
             $allEdu = $edu->concat($extraEdu);
 
             if ($allEdu->isNotEmpty()) {
-                DB::table('pds_education_records')->insert($allEdu->all());
+                DB::table('pds_education_records')->insert($allEdu->values()->all());
             }
 
             $elig = collect($req->input('eligibility', []))->map(function ($val, $i) use ($req, $userId) {
@@ -213,7 +212,7 @@ class PdsSubmissionController extends Controller
                     'license_no' => $req->input("license_no.$i"),
                     'validity' => $req->input("validity.$i"),
                 ];
-            })->filter($rowHasData);
+            })->filter($rowHasData)->values();
             if ($elig->isNotEmpty()) {
                 $validateNa([$req->input('eligibility', [])], 'Eligibilities');
                 $this->syncTableRows('pds_eligibilities', $elig, $userId);
@@ -231,7 +230,7 @@ class PdsSubmissionController extends Controller
                     'status' => $req->input("work_status.$i"),
                     'govt_service' => $req->input("work_govt_service.$i"),
                 ];
-            })->filter($rowHasData);
+            })->filter($rowHasData)->values();
             if ($work->isNotEmpty()) {
                 $this->syncTableRows('pds_work_experiences', $work, $userId);
             } else {
@@ -248,7 +247,7 @@ class PdsSubmissionController extends Controller
                     'hours' => $req->input("voluntary_hours.$i"),
                     'position' => $req->input("voluntary_position_nature_of_work.$i"),
                 ];
-            })->filter($rowHasData);
+            })->filter($rowHasData)->values();
             if ($vol->isNotEmpty()) {
                 $validateNa([$req->input('voluntary_organization', [])], 'Voluntary work');
                 $this->syncTableRows('pds_voluntary_work', $vol, $userId);
@@ -256,7 +255,8 @@ class PdsSubmissionController extends Controller
                 DB::table('pds_voluntary_work')->where('user_id', $userId)->delete();
             }
 
-            $train = collect($req->input('learning_title_of_ld', []))->map(function ($title, $i) use ($req, $userId) {
+            // Collect main training table data
+            $mainTrain = collect($req->input('learning_title_of_ld', []))->map(function ($title, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
                     'title' => $title,
@@ -267,6 +267,36 @@ class PdsSubmissionController extends Controller
                     'conducted_by' => $req->input("learning_conducted_sponsored_by.$i"),
                 ];
             })->filter($rowHasData);
+
+            // Collect data from dynamic training tables (learning_1, learning_2, etc.)
+            $extraTrain = collect();
+            $allInputs = $req->all();
+            foreach ($allInputs as $key => $value) {
+                if (preg_match('/^learning_(\d+)$/', $key, $matches)) {
+                    $tableData = $value;
+                    $titles = $tableData['title_of_ld'] ?? [];
+                    foreach ($titles as $i => $title) {
+                        // Check if any data field has content (excluding user_id)
+                        $hasData = collect([$title, $tableData['from'][$i] ?? null, $tableData['to'][$i] ?? null, $tableData['hours'][$i] ?? null, $tableData['type_of_ld'][$i] ?? null, $tableData['conducted_sponsored_by'][$i] ?? null])
+                            ->some(fn ($v) => strlen(trim((string) $v)) > 0);
+                        if (!$hasData) continue;
+
+                        $extraTrain->push([
+                            'user_id' => $userId,
+                            'title' => $title,
+                            'from' => $tableData['from'][$i] ?? null,
+                            'to' => $tableData['to'][$i] ?? null,
+                            'hours' => $tableData['hours'][$i] ?? null,
+                            'type_of_ld' => $tableData['type_of_ld'][$i] ?? null,
+                            'conducted_by' => $tableData['conducted_sponsored_by'][$i] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Merge main and extra training data
+            $train = $mainTrain->concat($extraTrain)->values();
+
             if ($train->isNotEmpty()) {
                 $validateNa([$req->input('learning_title_of_ld', [])], 'Training');
                 $this->syncTableRows('pds_training_programs', $train, $userId);
@@ -422,6 +452,18 @@ class PdsSubmissionController extends Controller
     {
         $val = $request->input($key);
         return (!empty($val)) ? $val : ($draftData[$key] ?? null);
+    }
+
+    private function mergeFormData(array $draft, array $session, array $incoming): array
+    {
+        $base = $draft;
+        foreach ($session as $key => $value) {
+            $base[$key] = $value;
+        }
+        foreach ($incoming as $key => $value) {
+            $base[$key] = $value;
+        }
+        return $base;
     }
 
 }
