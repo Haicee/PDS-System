@@ -32,6 +32,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'status',
         'location_assigned',
         'role',
+        'is_archive',
+        'archived_at',
+        'archived_by',
+        'last_login_at',
     ];
 
     /**
@@ -54,6 +58,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_archive' => 'boolean',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -70,20 +76,17 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasSubmittedPds(): bool
     {
-    // Only employees can have PDS submissions
-    if ($this->role !== 'employee') {
-        return false;
-    }
+        if ($this->role !== 'employee') {
+            return false;
+        }
 
-    return DB::table('pds_personal_infos')
-        ->where('user_id', $this->id)
-        ->exists();
-}
+        return DB::table('pds_personal_infos')
+            ->where('user_id', $this->id)
+            ->exists();
+    }
 
     public function profile(): HasOne
     {
         return $this->hasOne(UserProfile::class, 'user_id');
     }
 }
-
-

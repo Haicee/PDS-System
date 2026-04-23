@@ -240,17 +240,8 @@ async function refreshAdminSubmissions() {
     }
 }
 
-function initAdminSubmissionsPolling() {
-    if (!window.currentAdminId) return;
-    refreshAdminSubmissions();
-    setInterval(refreshAdminSubmissions, 5000);
-}
-
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initNotificationChannel);
 } else {
     initNotificationChannel();
 }
-
-initNotificationPolling();
-initAdminSubmissionsPolling();

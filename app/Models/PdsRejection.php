@@ -14,5 +14,10 @@ class PdsRejection extends Model
         'name',
         'status',
         'notes',
+        'highlighted_sections',
+    ];
+
+    protected $casts = [
+        'highlighted_sections' => 'array',
     ];
 }

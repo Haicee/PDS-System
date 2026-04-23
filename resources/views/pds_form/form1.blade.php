@@ -1,15 +1,46 @@
 <x-app-layout>
- <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">    
+ <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
 <div id="autosaveOverlay" class="autosave-overlay hidden">Saving…</div>
+
+<!-- Custom Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex justify-center items-center">
+  <div class="relative p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3 text-center">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Confirm Removal</h3>
+      <div class="mt-2 px-7 py-3">
+        <p class="text-sm text-gray-500" id="confirmModalMessage">Are you sure you want to remove this educational background table?</p>
+      </div>
+      <div class="items-center px-4 py-3 flex justify-center gap-4">
+        <button id="confirmModalOk" type="button" onclick="event.preventDefault(); window.confirmModalOkClick(); return false;" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-24 shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">OK</button>
+        <button id="confirmModalCancel" type="button" onclick="window.confirmModalCancelClick()" class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-24 shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <form id="pds-form1" method="POST" action="{{ route('pds.saveStep', [1], false) }}" enctype="multipart/form-data">
     @csrf
     <style>
+      textarea.no-uppercase {
+        text-transform: none !important;
+      }
+      textarea[name="email_address"] {
+        text-transform: none !important;
+      }
+      .no-uppercase, .no-uppercase * {
+        text-transform: none !important;
+      }
         /* Print-friendly, spreadsheet-like grid */
         table { border-collapse: collapse; width: 100%; }
         td, th { padding: 4px; vertical-align: top; }
         /* Only apply borders where classes already exist */
         .border { border: 1px solid #000 !important; }
         .border-2 { border: 2px solid #000 !important; }
+        
+        /* Prevent uppercase conversion for email field */
+        .no-uppercase {
+            text-transform: none !important;
+        }
         .signature-box {
             position: relative;
             background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #e5e5e5 10px, #e5e5e5 20px);
@@ -40,6 +71,7 @@
         input, textarea, select { scroll-margin-top: 240px; }
         .autosave-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; font-weight: 700; color: #111; }
         .autosave-overlay.hidden { display: none; }
+        textarea.edu-row-error { background-color: #fee2e2 !important; outline: 2px solid #ef4444 !important; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
    <script>
@@ -52,14 +84,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.storageKey = window.storageKey || ('pds_form_step1_' + ({{ auth()->id() ?? 0 }}));
     const storageKey = window.storageKey;
     const triggerPersist = () => {
-        if (typeof window.persist === 'function') {
+        if (typeof window.persistInstant === 'function') {
+            window.persistInstant();
+        } else if (typeof window.persist === 'function') {
             window.persist();
         } else if (typeof window.saveCache === 'function') {
             window.saveCache();
         }
     };
+    window.triggerPersist = triggerPersist;
 
     const flat = {};
+    window.flat = flat;
 
     const walk = (obj, prefix = '') => {
         if (obj === null || obj === undefined) return;
@@ -112,8 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         countryInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // Force textarea input to uppercase
-    document.querySelectorAll('textarea').forEach(el => {
+    // Force textarea input to uppercase (except email field)
+    document.querySelectorAll('textarea:not([name="email_address"])').forEach(el => {
         el.addEventListener('input', () => {
             const start = el.selectionStart;
             const end = el.selectionEnd;
@@ -131,6 +167,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return v === 'NA' || v === 'N/A' || v === 'NONE';
     };
 
+    // Convert email to lowercase when loaded from database
+    const emailField = document.querySelector('textarea[name="email_address"]');
+    if (emailField && emailField.value) {
+        emailField.value = emailField.value.toLowerCase();
+    }
+
     // Collect []-suffixed fields
     const names = new Set();
     document.querySelectorAll('input[name$="[]"], textarea[name$="[]"]').forEach(el => {
@@ -144,165 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (name) names.add(name);
     });
 
-    // Education dynamic extra rows
-    const extraPrototype = document.getElementById('education-extra-prototype');
-    const addButtons = Array.from(document.querySelectorAll('[data-education-add]'));
-    const addRows = Array.from(document.querySelectorAll('tr[data-education-base]')).filter(row => row.querySelector('td.add-btn-cell.has-add-btn'));
-
-    // Hover highlight spans entire row for add-enabled rows (anywhere in the row)
-    addRows.forEach(row => {
-        row.addEventListener('mouseenter', () => row.classList.add('row-add-hover'));
-        row.addEventListener('mouseleave', () => row.classList.remove('row-add-hover'));
-    });
-
-    const autoHeight = (ta) => {
-        ta.addEventListener('input', () => {
-            ta.style.height = 'auto';
-            ta.style.height = ta.scrollHeight + 'px';
-        });
-    };
-
-    const enforceUppercase = (ta) => {
-        ta.style.textTransform = 'uppercase';
-        ta.addEventListener('input', () => {
-            const start = ta.selectionStart;
-            const end = ta.selectionEnd;
-            ta.value = (ta.value || '').toUpperCase();
-            ta.selectionStart = start;
-            ta.selectionEnd = end;
-        });
-    };
-
-    const addEducationRow = (level = '', values = {}, baseRowHint = null) => {
-        if (!extraPrototype) return;
-        const levelKey = (level || '').trim();
-        const fragment = extraPrototype.content.cloneNode(true);
-        const row = fragment.querySelector('tr');
-        row.dataset.educationExtra = '1';
-        row.dataset.educationLevel = levelKey;
-
-        const textareas = Array.from(fragment.querySelectorAll('textarea'));
-        textareas.forEach((ta, idx) => {
-            const name = ta.getAttribute('name');
-            if (idx === 0) {
-                if (levelKey) {
-                    ta.value = levelKey;
-                }
-                ta.readOnly = true;
-                ta.classList.add('pointer-events-none', 'bg-transparent', 'text-transparent', 'caret-transparent', 'select-none');
-            }
-            if (name && values[name] !== undefined) {
-                ta.value = values[name] ?? '';
-            }
-            ta.required = true;
-            autoHeight(ta);
-            enforceUppercase(ta);
-        });
-
-        // Register required validation on newly added fields
-        textareas.forEach(ta => {
-            if (!requiredFields.includes(ta)) {
-                requiredFields.push(ta);
-                ta.addEventListener('input', validateRequired);
-                ta.addEventListener('change', validateRequired);
-            }
-        });
-
-        validateRequired();
-
-        const removeBtn = fragment.querySelector('[data-education-remove]');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                row.remove();
-                triggerPersist();
-            });
-        }
-
-        const baseRow = baseRowHint || document.querySelector(`tr[data-education-base="${CSS.escape(levelKey)}"]`);
-        if (baseRow) {
-            let insertAfter = baseRow;
-            while (
-                insertAfter.nextElementSibling &&
-                insertAfter.nextElementSibling.dataset.educationExtra === '1' &&
-                insertAfter.nextElementSibling.dataset.educationLevel === levelKey
-            ) {
-                insertAfter = insertAfter.nextElementSibling;
-            }
-            insertAfter.insertAdjacentElement('afterend', row);
-        } else {
-            extraPrototype.parentElement.insertBefore(row, extraPrototype);
-        }
-
-        triggerPersist();
-    };
-
-    addButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const level = (btn.getAttribute('data-education-add') || '').trim();
-            const baseRow = btn.closest('tr');
-            addEducationRow(level, {}, baseRow);
-        });
-    });
-
-    // Restore dynamic education rows from cache/draft so refresh keeps added rows (cache-first like form2)
-    const hydrateExistingExtras = () => {
-        // Prefer local cache (captures unsent changes)
-        let source = {};
-        try {
-            source = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
-        } catch (e) {
-            source = {};
-        }
-
-        const serverSource = (draftData && Object.keys(draftData).length) ? draftData : sessionData;
-        const hasLocalCache = Object.keys(source).length > 0;
-
-        // Backfill only missing keys from server draft/session; never override cached values
-        if (serverSource) {
-            Object.entries(serverSource).forEach(([k, v]) => {
-                if (!hasLocalCache && source[k] === undefined) {
-                    source[k] = v;
-                }
-            });
-        }
-
-        if (!Object.keys(source).length) return;
-
-        const keys = [
-            'education_extra_level',
-            'education_extra_school_name',
-            'education_extra_basic_education',
-            'education_extra_from',
-            'education_extra_to',
-            'education_extra_highest_level',
-            'education_extra_year_graduated',
-            'education_extra_scholarship_acadhonors'
-        ];
-
-        const getArray = (obj, key) => {
-            if (Array.isArray(obj[key])) return obj[key];
-            const bracketKey = `${key}[]`;
-            if (Array.isArray(obj[bracketKey])) return obj[bracketKey];
-            return [];
-        };
-
-        const arrays = Object.fromEntries(keys.map(k => [k, getArray(source, k)]));
-        const maxLen = Math.max(0, ...Object.values(arrays).map(arr => arr.length));
-
-        for (let i = 0; i < maxLen; i++) {
-            const level = arrays.education_extra_level[i] || '';
-            const values = {};
-            let hasData = (level || '').trim().length > 0;
-            keys.forEach(k => {
-                values[`${k}[]`] = arrays[k][i] ?? '';
-                if (!hasData && (arrays[k][i] ?? '').toString().trim().length > 0) {
-                    hasData = true;
-                }
-            });
-            if (!hasData) continue; // skip empty cached rows
-            addEducationRow(level, values);
-        }
-    };
 
     // Special handling: children rows
     const childrenNameFields = Array.from(document.querySelectorAll('textarea[name="children_familybg[]"]'));
@@ -565,9 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     validateRequired();
 
-    // Hydrate any cached/auto-saved dynamic education rows on load (requires validateRequired/requiredFields)
-    hydrateExistingExtras();
-
     if (form && nextBtn) {
         form.addEventListener('submit', (e) => {
             // Ensure country is set on submit
@@ -600,11 +480,453 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 focusFirstMissing();
+                return;
+            }
+
+            // Validate added educational background tables for incomplete rows
+            const rowCols = ['school_name', 'basic_education', 'from', 'to', 'highest_level', 'year_graduated', 'scholarship_acadhonors'];
+            const isNaVal = (v) => { const u = (v||'').trim().toUpperCase(); return u === 'NA' || u === 'N/A' || u === 'NONE'; };
+            const addedEduTables = document.querySelectorAll('table[data-edu-table-index]');
+            let incompleteField = null;
+
+            // Clear previous row-error highlights
+            document.querySelectorAll('textarea.edu-row-error').forEach(el => {
+                el.classList.remove('edu-row-error');
+            });
+
+            for (const tbl of addedEduTables) {
+                const idx = tbl.getAttribute('data-edu-table-index');
+                const prefix = `education_${idx}`;
+                const rows = ['elementary', 'secondary', 'vocational', 'college', 'graduate_studies'];
+
+                for (const row of rows) {
+                    const fields = {};
+                    let hasAnyValue = false;
+                    let missingCols = [];
+
+                    rowCols.forEach(col => {
+                        const el = tbl.querySelector(`textarea[name="${prefix}[${row}][${col}]"]`);
+                        const val = (el ? el.value : '').trim();
+                        fields[col] = { el, val };
+                        if (val !== '' && !isNaVal(val)) hasAnyValue = true;
+                    });
+
+                    if (!hasAnyValue) continue;
+
+                    rowCols.forEach(col => {
+                        const { el, val } = fields[col];
+                        if (el && val === '') {
+                            el.classList.add('edu-row-error');
+                            missingCols.push(col);
+                            if (!incompleteField) incompleteField = el;
+                        }
+                    });
+                }
+            }
+
+            if (incompleteField) {
+                e.preventDefault();
+                e.stopPropagation();
+                incompleteField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                incompleteField.focus();
+                alert('Some educational background rows are incomplete. Please finish filling in all columns for each row you have started, or clear the row entirely.');
             }
         });
     }
 
+    // Counter for additional educational background tables
+    let eduTableCounter = 0;
+
+    // Function to add a new educational background table
+    window.addEducationalBackgroundTable = function() {
+        eduTableCounter++;
+        const originalTable = document.querySelector('table[data-section="educational_background"]');
+        if (!originalTable) return;
+
+        // Temporarily clear original textarea values before cloning so the clone starts empty
+        const originalTextareas = originalTable.querySelectorAll('textarea');
+        const savedValues = [];
+        originalTextareas.forEach(ta => {
+            savedValues.push(ta.value);
+            ta.value = '';
+        });
+
+        const newTable = originalTable.cloneNode(true);
+
+        // Restore original textarea values immediately after clone
+        originalTextareas.forEach((ta, i) => { ta.value = savedValues[i]; });
+
+        newTable.setAttribute('data-section', `educational_background_${eduTableCounter}`);
+        newTable.setAttribute('data-edu-table-index', eduTableCounter);
+
+        // Update the title in the new table
+        const titleTd = newTable.querySelector('td[colspan="8"]');
+        if (titleTd) {
+            const titleSpan = titleTd.querySelector('span');
+            if (titleSpan) {
+                titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
+            }
+
+            // Add a remove button to the new table (keep the existing add button)
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.textContent = '×';
+            removeButton.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+            removeButton.style.border = 'none';
+            removeButton.style.background = 'transparent';
+            removeButton.style.cursor = 'pointer';
+            removeButton.style.padding = '0';
+            removeButton.style.lineHeight = '1';
+            removeButton.onclick = () => removeEducationalBackgroundTable(newTable, eduTableCounter);
+            titleTd.querySelector('div').appendChild(removeButton);
+        }
+
+        // Update all field names to be unique (values are already empty from the pre-clone clear)
+        const textareas = newTable.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+            const originalName = textarea.getAttribute('name');
+            if (originalName && originalName.startsWith('education[')) {
+                const newName = originalName.replace('education[', `education_${eduTableCounter}[`);
+                textarea.setAttribute('name', newName);
+            }
+            // Remove required attribute from dynamically added fields
+            textarea.removeAttribute('required');
+        });
+
+        // Insert the new table before the signature-date-section
+        const signatureSection = document.getElementById('signature-date-section');
+        if (signatureSection) {
+            signatureSection.parentNode.insertBefore(newTable, signatureSection);
+        } else {
+            originalTable.parentNode.insertBefore(newTable, originalTable.nextSibling);
+        }
+
+        // Guarantee all new table fields are empty after DOM insertion
+        newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => { f.value = ''; });
+
+        // Purge any stale education_N keys for this index from localStorage and in-memory flat
+        try {
+            const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            const prefix = `education_${eduTableCounter}[`;
+            Object.keys(cached).forEach(k => { if (k.startsWith(prefix)) delete cached[k]; });
+            localStorage.setItem(storageKey, JSON.stringify(cached));
+        } catch(e) {}
+        // Also clear from in-memory flat so server data doesn't re-populate via loadCache
+        const flatPrefix = `education_${eduTableCounter}[`;
+        Object.keys(flat).forEach(k => { if (k.startsWith(flatPrefix)) delete flat[k]; });
+
+        // Re-attach event listeners for the new fields
+        attachEducationEventListeners(newTable);
+
+        // Clear this index from the _removed list (user is re-adding it)
+        try {
+            const removedKey = storageKey + '_removed';
+            let removed = JSON.parse(localStorage.getItem(removedKey) || '[]');
+            removed = removed.filter(i => i !== eduTableCounter);
+            localStorage.setItem(removedKey, JSON.stringify(removed));
+        } catch(e) {}
+
+        // Trigger cache save — persists empty education_N keys so loadCache won't backfill from server
+        triggerPersist();
+
+        // Scroll to the new table
+        newTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // Function to remove an educational background table
+    window.removeEducationalBackgroundTable = function(table, index) {
+        const modal = document.getElementById('confirmModal');
+        const modalMessage = document.getElementById('confirmModalMessage');
+
+        modalMessage.textContent = 'Are you sure you want to remove this educational background table?';
+        modal.classList.remove('hidden');
+
+        // Store the table and index in data attributes for event delegation
+        modal.dataset.tableIndex = index;
+        modal.dataset.pendingRemoval = 'true';
+    };
+
+
+    // Restore dynamically added educational background tables from session data
+    const restoreDynamicEducationTables = () => {
+        let localData = {};
+        try { localData = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch(e) {}
+
+        // Determine indices from BOTH localStorage AND flat (server draft).
+        // localStorage alone covers same-session adds; flat alone covers new-session after rejection.
+        const flatEducationKeys = Object.keys(flat).filter(key => key.match(/^education_\d+\[/));
+        const localEducationKeys = Object.keys(localData).filter(key => key.match(/^education_\d+\[/));
+
+        const tableIndices = new Set();
+        [...flatEducationKeys, ...localEducationKeys].forEach(key => {
+            const match = key.match(/^education_(\d+)\[/);
+            if (match) tableIndices.add(parseInt(match[1], 10));
+        });
+
+        if (tableIndices.size === 0) return;
+
+        // merged is used for populating field values (localStorage preferred over server)
+        const merged = Object.assign({}, flat, localData);
+
+        // Only restore indices that have at least one non-empty value in merged data.
+        const indicesWithData = new Set();
+        tableIndices.forEach(idx => {
+            const prefix = `education_${idx}[`;
+            const hasValue = Object.entries(merged).some(([k, v]) => k.startsWith(prefix) && v !== '' && v !== null && v !== undefined);
+            if (hasValue) indicesWithData.add(idx);
+        });
+
+        // Read removed indices — user explicitly deleted these, never restore even if flat has them
+        let removedIndices = new Set();
+        try {
+            const raw = localStorage.getItem(storageKey + '_removed');
+            if (raw) JSON.parse(raw).forEach(i => removedIndices.add(i));
+        } catch(e) {}
+
+        // Seed flat-only indices into localStorage so future saves preserve them
+        // BUT skip indices the user has explicitly removed
+        flatEducationKeys.forEach(key => {
+            const m = key.match(/^education_(\d+)\[/);
+            if (m && removedIndices.has(parseInt(m[1], 10))) return;
+            if (!(key in localData)) {
+                localData[key] = flat[key];
+            }
+        });
+        try { localStorage.setItem(storageKey, JSON.stringify(localData)); } catch(e) {}
+
+        // Exclude removed indices from restoration
+        removedIndices.forEach(i => indicesWithData.delete(i));
+
+        const sortedIndices = Array.from(indicesWithData).sort((a, b) => a - b);
+        sortedIndices.forEach(index => {
+            // Skip if the table already exists in the DOM (avoid duplicates on re-call)
+            if (document.querySelector(`table[data-edu-table-index="${index}"]`)) return;
+
+            eduTableCounter = Math.max(eduTableCounter, index);
+            const originalTable = document.querySelector('table[data-section="educational_background"]');
+            if (!originalTable) return;
+
+            // Temporarily clear original textarea values so the clone starts empty
+            const origTAs = originalTable.querySelectorAll('textarea');
+            const savedVals = [];
+            origTAs.forEach(ta => { savedVals.push(ta.value); ta.value = ''; });
+
+            const newTable = originalTable.cloneNode(true);
+
+            // Restore original textarea values immediately
+            origTAs.forEach((ta, i) => { ta.value = savedVals[i]; });
+
+            newTable.setAttribute('data-section', `educational_background_${index}`);
+            newTable.setAttribute('data-edu-table-index', index);
+
+            // Update the title in the new table
+            const titleTd = newTable.querySelector('td[colspan="8"]');
+            if (titleTd) {
+                const titleSpan = titleTd.querySelector('span');
+                if (titleSpan) {
+                    titleSpan.textContent = 'III. EDUCATIONAL BACKGROUND';
+                }
+                // Add a remove button to the new table (keep the existing add button)
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.textContent = '×';
+                removeButton.className = 'ml-2 text-white text-2xl font-bold hover:text-red-300 transition-colors';
+                removeButton.style.border = 'none';
+                removeButton.style.background = 'transparent';
+                removeButton.style.cursor = 'pointer';
+                removeButton.style.padding = '0';
+                removeButton.style.lineHeight = '1';
+                removeButton.onclick = () => removeEducationalBackgroundTable(newTable, index);
+                titleTd.querySelector('div').appendChild(removeButton);
+            }
+
+            // Update all field names to be unique
+            const textareas = newTable.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                const originalName = textarea.getAttribute('name');
+                if (originalName && originalName.startsWith('education[')) {
+                    const newName = originalName.replace('education[', `education_${index}[`);
+                    textarea.setAttribute('name', newName);
+                }
+                // Remove required attribute from dynamically added fields
+                textarea.removeAttribute('required');
+            });
+
+            // Insert the new table before the signature-date-section
+            const signatureSection = document.getElementById('signature-date-section');
+            if (signatureSection) {
+                signatureSection.parentNode.insertBefore(newTable, signatureSection);
+            } else {
+                originalTable.parentNode.insertBefore(newTable, originalTable.nextSibling);
+            }
+
+            // Populate field values from localStorage (preferred) or session flat
+            newTable.querySelectorAll('textarea').forEach(textarea => {
+                const name = textarea.getAttribute('name');
+                if (name && merged[name] !== undefined) {
+                    setField(textarea, merged[name]);
+                }
+            });
+
+            // Re-attach event listeners for the new fields
+            attachEducationEventListeners(newTable);
+        });
+    };
+
+    // Expose restore function so the second script block can call it after loadCache
+    window.restoreDynamicEducationTables = restoreDynamicEducationTables;
+
+    // Call restore function after initial field population
+    setTimeout(restoreDynamicEducationTables, 500);
+
+    // Function to attach event listeners to education fields in a table
+    function attachEducationEventListeners(table) {
+        const isNA = (val) => {
+            const v = (val || '').trim().toUpperCase();
+            return v === 'NA' || v === 'N/A' || v === 'NONE';
+        };
+
+        // Handle school_name fields for NA logic
+        const schoolFields = table.querySelectorAll('textarea[name*="[school_name]"]');
+        schoolFields.forEach(schoolField => {
+            const rowSelectors = ['[basic_education]', '[from]', '[to]', '[highest_level]', '[year_graduated]', '[scholarship_acadhonors]'];
+
+            const refreshRow = () => {
+                const isRowNA = isNA(schoolField.value);
+                const rowPrefix = schoolField.name.replace(/\[school_name\]$/, '');
+                rowSelectors.forEach(sel => {
+                    const targetName = `${rowPrefix}${sel}`;
+                    const targets = table.querySelectorAll(`textarea[name="${targetName}"], input[name="${targetName}"]`);
+                    targets.forEach(target => {
+                        target.disabled = isRowNA;
+                        target.readOnly = isRowNA;
+                        target.classList.toggle('bg-gray-200', isRowNA);
+                        target.classList.toggle('text-gray-500', isRowNA);
+                        target.classList.toggle('cursor-not-allowed', isRowNA);
+                        target.classList.toggle('pointer-events-none', isRowNA);
+                    });
+                });
+            };
+
+            schoolField.addEventListener('input', refreshRow);
+            schoolField.addEventListener('change', refreshRow);
+            refreshRow();
+        });
+
+        // Handle textarea auto-resize
+        table.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        });
+
+        // Handle uppercase conversion (except email)
+        table.querySelectorAll('textarea:not([name*="email"])').forEach(el => {
+            el.addEventListener('input', () => {
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                const upper = el.value.toUpperCase();
+                if (el.value !== upper) {
+                    el.value = upper;
+                    el.setSelectionRange(start, end);
+                }
+            });
+        });
+
+        // Handle numeric-only fields (from, to, year_graduated)
+        table.querySelectorAll('textarea[data-numeric="true"]').forEach(el => {
+            el.addEventListener('input', () => {
+                const pos = el.selectionStart;
+                const cleaned = el.value.replace(/[^0-9]/g, '');
+                if (el.value !== cleaned) {
+                    el.value = cleaned;
+                    el.setSelectionRange(Math.min(pos, cleaned.length), Math.min(pos, cleaned.length));
+                }
+            });
+            el.addEventListener('keydown', (e) => {
+                const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter','Home','End'];
+                if (!allowed.includes(e.key) && !/^[0-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                }
+            });
+        });
+    }
+
+    // Apply event listeners to the original (static) educational background table
+    const originalEduTable = document.querySelector('table[data-section="educational_background"]');
+    if (originalEduTable) {
+        attachEducationEventListeners(originalEduTable);
+    }
+
 });
+</script>
+
+<script>
+// Global functions for modal buttons (called via inline onclick)
+window.confirmModalOkClick = function() {
+    console.log('confirmModalOkClick called');
+    const modal = document.getElementById('confirmModal');
+    console.log('Modal before:', modal.classList.contains('hidden'));
+    const index = modal.dataset.tableIndex ? parseInt(modal.dataset.tableIndex, 10) : null;
+    console.log('Index:', index);
+    const table = index ? document.querySelector(`table[data-edu-table-index="${index}"]`) : null;
+    console.log('Table found:', !!table);
+
+    if (table) {
+        // Access the flat object from the window scope
+        const flat = window.flat || {};
+        // Clear the data from the flat object
+        const keysToRemove = Object.keys(flat).filter(key => key.startsWith(`education_${index}[`));
+        keysToRemove.forEach(key => {
+            delete flat[key];
+        });
+
+        // Remove the table from DOM
+        table.remove();
+
+        // Purge this index's keys from localStorage and record it as explicitly removed
+        try {
+            const storageKey = window.storageKey;
+            const cached = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            const prefix = `education_${index}[`;
+            Object.keys(cached).forEach(k => { if (k.startsWith(prefix)) delete cached[k]; });
+            localStorage.setItem(storageKey, JSON.stringify(cached));
+            // Track removed index so restore never brings it back even if server draft still has it
+            const removedKey = storageKey + '_removed';
+            let removed = [];
+            try { removed = JSON.parse(localStorage.getItem(removedKey) || '[]'); } catch(e) {}
+            if (!removed.includes(index)) removed.push(index);
+            localStorage.setItem(removedKey, JSON.stringify(removed));
+        } catch(e) {}
+
+        // Trigger cache save to clear the data (wrap in try-catch to prevent errors from interfering)
+        try {
+            if (typeof window.triggerPersist === 'function') {
+                window.triggerPersist();
+            } else if (typeof window.persistInstant === 'function') {
+                window.persistInstant();
+            } else if (typeof window.persist === 'function') {
+                window.persist();
+            }
+        } catch (e) {
+            console.error('Error during persist:', e);
+        }
+    }
+
+    // Hide modal and reset state
+    modal.classList.add('hidden');
+    console.log('Modal after:', modal.classList.contains('hidden'));
+    delete modal.dataset.tableIndex;
+    delete modal.dataset.pendingRemoval;
+};
+
+window.confirmModalCancelClick = function() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.add('hidden');
+    delete modal.dataset.tableIndex;
+    delete modal.dataset.pendingRemoval;
+};
 </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
   <!-- HEADER -->
@@ -616,11 +938,6 @@ document.addEventListener('DOMContentLoaded', () => {
     <h1 class="font-extrabold text-4xl text-center mb-4 font-['Arial_Black','sans-serif'] flex-1">
       PERSONAL DATA SHEET
     </h1>
-    <div class="flex items-center">
-      <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-        Download PDF
-      </a>
-    </div>
   </header>
 
   <p class=" font-['Arial','sans-serif'] text-base italic font-bold mb-1">
@@ -635,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </p>
 
   <!-- MAIN TABLE -->
-  <table class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base w-[100%]" >
+  <table data-section="personal_information" class="align-middle w-full border border-black  table-fixed  font-['Arial_Narrow','sans-serif'] text-base w-[100%]" >
 
     <!-- FIXED GRID -->
     <colgroup>
@@ -706,12 +1023,11 @@ document.addEventListener('DOMContentLoaded', () => {
            <textarea
       name="employee_name_extension"
       id="name_extension"
-      required
       rows="1"
       class="w-full px-2 text-lg resize-none
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden"
-      placeholder="Enter Name Extension"
+      placeholder="(Optional)"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
@@ -748,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <tr>
       <td class="bg-[#e7e7e7] px-2 align-middle border">
     3. DATE OF BIRTH
-    <p class="text-xs font-normal ml-7">(dd/mm/yyyy)</p>
+    <p class="text-base font-normal ml-6">(dd/mm/yyyy)</p>
   </td>
 
   <td class="border h-10">
@@ -1077,6 +1393,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr>
           <td class="px-2 py-1 align-top border-r border-black">
             18. PERMANENT ADDRESS
+            <button type="button" 
+                    onclick="copyResidentialToPermanent()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-2 rounded transition-colors duration-200 mt-10 text-center"
+                    style="font-size: 15px; white-space: nowrap; display: block; width: fit-content; margin-left: auto; margin-right: auto;">
+              Same as Above
+            </button>
           </td>
         </tr>
       </table>
@@ -1172,7 +1494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </td>    
 
-    <tr>
+  <tr>
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border">10. UMID ID NO.</td>
       <td class="border px-2 h-10">
 
@@ -1366,9 +1688,10 @@ document.addEventListener('DOMContentLoaded', () => {
       rows="1"
       class="w-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden align-top px-2"
+             whitespace-pre-wrap overflow-hidden align-top px-2 no-uppercase"
       placeholder="Enter Email Address"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
+      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'; this.value = this.value;"
+      style="text-transform: none !important;"
     ></textarea>
             </div>
             </td>
@@ -1383,7 +1706,8 @@ document.addEventListener('DOMContentLoaded', () => {
   </table>
 
 
-   <table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+   
+   <table data-section="family_background" class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
   <style>
     /* Show education add buttons only on hover */
     tr[data-education-base] .edu-add-btn {
@@ -1506,12 +1830,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>
             <textarea
       name="spouse_name_extension"
-      required
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2"
-      placeholder="Enter Name Extension"
+      placeholder="(Optional)"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
         </div>
@@ -1536,14 +1859,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1587,14 +1911,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1636,14 +1961,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1686,14 +2012,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1736,14 +2063,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1785,14 +2113,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1838,14 +2167,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1875,12 +2205,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>
             <textarea
       name="father_name_extension"
-      required
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
              whitespace-pre-wrap overflow-hidden px-2"
-      placeholder="Enter Name Extension"
+      placeholder="(Optional)"
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
         </div>
@@ -1904,14 +2233,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1956,14 +2286,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -1994,14 +2325,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2046,14 +2378,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2098,14 +2431,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
@@ -2150,21 +2484,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <td class="border">
        <div  class="h-full w-full">
-         <textarea
+         <input
+      type="date"
       name="children_dateofbirth_familybg[]"
-      rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
-             whitespace-pre-wrap overflow-hidden px-2 text-center"
-      oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
-    >{{ $childDob }}</textarea>
+             bg-transparent text-center"
+      style="font-size: 18px; padding:4px; border:none; box-sizing:border-box; margin:0;"
+      value="{{ $childDob }}"
+      max="{{ now()->format('Y-m-d') }}" />
        </div>
       </td>
     </tr>
   </table>
 
 
-<table class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+<table data-section="educational_background" class="w-full border border-black border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
 
   <!-- EXACT COLUMN GRID (8 columns) -->
   <colgroup>
@@ -2180,8 +2515,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   <tr>
     <td colspan="8"
-        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black">
-      III. EDUCATIONAL BACKGROUND
+        class="font-['Arial_Narrow','Arial',sans-serif] font-bold bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black relative">
+      <div class="flex justify-between items-center">
+        <span>III. EDUCATIONAL BACKGROUND</span>
+        <button type="button" onclick="addEducationalBackgroundTable()" class="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-200 transition-colors">
+          + Add
+        </button>
+      </div>
     </td>
   </tr>
 
@@ -2244,6 +2584,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[elementary][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2258,6 +2599,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[elementary][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2286,6 +2628,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[elementary][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2349,6 +2692,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[secondary][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2363,6 +2707,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[secondary][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2391,6 +2736,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[secondary][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2400,7 +2746,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative add-btn-cell has-add-btn">
+          class="border h-10">
           <div class="h-full w-full">
          <textarea
       name="education[secondary][scholarship_acadhonors]"
@@ -2412,11 +2758,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="SECONDARY" aria-label="Add secondary row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="VOCATIONAL / TRADE COURSE">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2454,6 +2799,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[vocational][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2468,6 +2814,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[vocational][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2496,6 +2843,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[vocational][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2517,11 +2865,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="VOCATIONAL / TRADE COURSE" aria-label="Add vocational row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="COLLEGE">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">COLLEGE</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2559,6 +2906,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[college][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2573,6 +2921,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[college][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2601,6 +2950,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[college][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2622,11 +2972,10 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="COLLEGE" aria-label="Add college row">+</button>
       </td>
   </tr>
 
-   <tr class="min-h-[20]" style="width: 20%;" data-education-base="GRADUATE STUDIES">
+   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
 
     <!-- EDITABLE CELL PATTERN -->
@@ -2664,6 +3013,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[graduate_studies][from]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2678,6 +3028,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[graduate_studies][to]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2706,6 +3057,7 @@ document.addEventListener('DOMContentLoaded', () => {
          <textarea
       name="education[graduate_studies][year_graduated]"
       required
+      data-numeric="true"
       rows="1"
       class="w-full h-full text-lg resize-none
              focus:outline-none focus:ring-0
@@ -2715,7 +3067,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </td>
 
      <td
-          class="border h-10 relative add-btn-cell has-add-btn">
+          class="border h-10">
           <div class="h-full w-full">
          <textarea
       name="education[graduate_studies][scholarship_acadhonors]"
@@ -2727,82 +3079,24 @@ document.addEventListener('DOMContentLoaded', () => {
       oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"
     ></textarea>
       </div>
-      <button type="button" class="absolute -right-8 -bottom-4 w-8 h-8 flex items-center justify-center text-lg font-bold bg-emerald-600 text-white rounded-full shadow border border-emerald-700 hover:bg-emerald-700 edu-add-btn" data-education-add="GRADUATE STUDIES" aria-label="Add graduate row">+</button>
       </td>
   </tr>
+</table>
 
-  <!-- Dynamic extra education rows (hydrated client-side) -->
-  <tbody id="education-extra-rows"></tbody>
-
-  <!-- Prototype for dynamic education row -->
-  <template id="education-extra-prototype">
-    <tr data-education-extra-row>
-      <td class="border text-center align-middle h-20">
-        <textarea name="education_extra_level[]" rows="1"
-          class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-          oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_school_name[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_basic_education[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_from[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_to[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus-ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_highest_level[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10">
-        <div class="h-full w-full">
-          <textarea name="education_extra_year_graduated[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-      </td>
-
-      <td class="border h-10 relative">
-        <div class="h-full w-full">
-          <textarea name="education_extra_scholarship_acadhonors[]" rows="1"
-            class="w-full h-full text-lg resize-none focus:outline-none focus:ring-0 whitespace-pre-wrap overflow-hidden px-2 py-3 text-center"
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px';"></textarea>
-        </div>
-        <button type="button" data-education-remove class="absolute -right-7 top-2 text-red-600 font-bold text-lg px-1">✕</button>
-      </td>
-    </tr>
-  </template>
-
- 
+<!-- Signature and Date Section - Always at the bottom -->
+<div id="signature-date-section" class="w-full border-collapse table-fixed font-['Arial_Narrow','sans-serif'] text-base">
+  <table class="w-full border border-collapse table-fixed">
+    <!-- EXACT COLUMN GRID (8 columns) -->
+    <colgroup>
+      <col style="width:27%"> <!-- LEVEL -->
+      <col style="width:30%"> <!-- SCHOOL -->
+      <col style="width:33%"> <!-- COURSE -->
+      <col style="width:10%"> <!-- FROM -->
+      <col style="width:10%"> <!-- TO -->
+      <col style="width:17%"> <!-- HIGHEST -->
+      <col style="width:15%"> <!-- YEAR -->
+      <col style="width:17.5%"> <!-- HONORS -->
+    </colgroup>
 
   <tr>
     <td class="border h-2 text-center text-xl font-bold italic align-middle">
@@ -2824,11 +3118,20 @@ document.addEventListener('DOMContentLoaded', () => {
             id="signaturePreviewImg"
             src="{{ !empty($signaturePath) ? Storage::url($signaturePath) : '' }}"
             alt="Signature preview"
-            class="absolute inset-0 w-full h-full object-contain {{ empty($signaturePath) ? 'hidden' : '' }}"
+            class="absolute inset-0 w-full h-full object-contain hidden"
           >
           <div id="signaturePlaceholder" class="absolute inset-0 flex items-center justify-center text-center text-xs text-gray-600 px-3">
             Upload signature here
           </div>
+          <button
+            type="button"
+            id="removeSignatureBtn"
+            onclick="removeSignature(event)"
+            class="hidden absolute top-1 right-1 w-5 h-5 text-gray-500 hover:text-red-500 text-lg font-bold z-10"
+            title="Remove signature"
+          >
+            ×
+          </button>
         </label>
 
         <input type="hidden" name="signature_path" id="signature_path" value="{{ $signaturePath ?? '' }}">
@@ -2853,6 +3156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ></input>
       </td>
 </table>
+</div>
 
 <table class="bg-transparent">
     <div class="flex justify-end mr-2 font-['Arial_Narrow','sans-serif']">
@@ -2866,7 +3170,134 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     </form>
 <script>
+        function copyResidentialToPermanent() {
+            // Copy residential address to permanent address
+            const fields = [
+                'house_block_lot', 'permanent_house_block_lot',
+                'street', 'permanent_street', 
+                'subdivision_village', 'permanent_subdivision_village',
+                'baranggay', 'permanent_baranggay',
+                'city_municipality', 'permanent_city_municipality',
+                'province', 'permanent_province'
+            ];
+            
+            let hasChanges = false;
+            
+            for (let i = 0; i < fields.length; i += 2) {
+                const sourceField = document.querySelector(`[name="${fields[i]}"]`);
+                const targetField = document.querySelector(`[name="${fields[i+1]}"]`);
+                
+                if (sourceField && targetField) {
+                    const oldValue = targetField.value;
+                    targetField.value = sourceField.value;
+                    // Trigger the auto-resize for textareas
+                    targetField.style.height = 'auto';
+                    targetField.style.height = targetField.scrollHeight + 'px';
+                    
+                    // Check if value actually changed
+                    if (oldValue !== targetField.value) {
+                        hasChanges = true;
+                        // Trigger input event to notify autosave
+                        targetField.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            }
+            
+            // Trigger autosave if any changes were made
+            if (hasChanges && typeof persist === 'function') {
+                hasUserInput = true;
+                persist();
+            }
+        }
+
+        function checkChildrenFields() {
+            // Get all children name and date of birth fields
+            const childrenNameFields = document.querySelectorAll('textarea[name="children_familybg[]"]');
+            const childrenDobFields = document.querySelectorAll('input[name="children_dateofbirth_familybg[]"]');
+            
+            // Check if first child name is "NA"
+            const firstChildName = childrenNameFields[0]?.value.trim().toUpperCase() || '';
+            const isNA = firstChildName === 'NA' || firstChildName === 'N/A' || firstChildName === 'N.A.';
+            
+            // Process each row
+            childrenNameFields.forEach((nameField, index) => {
+                const dobField = childrenDobFields[index];
+                const hasName = nameField.value.trim() !== '';
+                
+                if (index === 0) {
+                    // First row - check NA logic and sequential logic
+                    if (isNA) {
+                        // If first child is NA, disable first row too
+                        nameField.disabled = false; // Allow editing to remove NA
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            dobField.disabled = true;
+                            dobField.style.backgroundColor = '#f5f5f5';
+                            dobField.style.display = 'none';
+                            dobField.value = '';
+                        }
+                    } else {
+                        // Normal sequential logic for first row
+                        nameField.disabled = false;
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            if (hasName) {
+                                dobField.disabled = false;
+                                dobField.style.display = 'block';
+                                dobField.style.backgroundColor = 'transparent';
+                            } else {
+                                dobField.style.display = 'none';
+                                dobField.value = '';
+                            }
+                        }
+                    }
+                } else {
+                    // Remaining rows - check NA logic and sequential logic
+                    if (isNA) {
+                        // If first child is NA, disable all remaining rows
+                        nameField.disabled = true;
+                        nameField.style.backgroundColor = '#f5f5f5';
+                        nameField.value = '';
+                        
+                        if (dobField) {
+                            dobField.disabled = true;
+                            dobField.style.backgroundColor = '#f5f5f5';
+                            dobField.style.display = 'none';
+                            dobField.value = '';
+                        }
+                    } else {
+                        // Normal sequential logic for remaining rows
+                        nameField.disabled = false;
+                        nameField.style.backgroundColor = 'transparent';
+                        
+                        if (dobField) {
+                            if (hasName) {
+                                dobField.disabled = false;
+                                dobField.style.display = 'block';
+                                dobField.style.backgroundColor = 'transparent';
+                            } else {
+                                dobField.style.display = 'none';
+                                dobField.value = '';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+
+  // Check children fields on page load
+  checkChildrenFields();
+  
+  // Add event listeners to all children name fields
+  const childrenNameFields = document.querySelectorAll('textarea[name="children_familybg[]"]');
+  childrenNameFields.forEach(field => {
+    field.addEventListener('input', checkChildrenFields);
+    field.addEventListener('change', checkChildrenFields);
+  });
 
   const form = document.querySelector('#pds-form1');
   const autosaveOverlay = document.getElementById('autosaveOverlay');
@@ -2918,7 +3349,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dataUrl = signatureDataInput?.value;
     const pathVal = signaturePathInput?.value || initialSignaturePath;
     const url = dataUrl || buildSignatureUrl(pathVal);
-    if (url) {
+
+    // Only show signature if URL is valid and not empty
+    if (url && url.trim() !== '' && url !== 'null' && url !== 'undefined') {
       signaturePreviewImg.src = url;
       signaturePreviewImg.classList.remove('hidden');
       signaturePlaceholder.classList.add('hidden');
@@ -2928,7 +3361,34 @@ document.addEventListener('DOMContentLoaded', () => {
       signaturePlaceholder.classList.remove('hidden');
       signatureBox?.classList.remove('signature-has-image');
     }
+
+    // Update remove button visibility based on image visibility
+    const removeBtn = document.getElementById('removeSignatureBtn');
+    if (removeBtn) {
+      if (!signaturePreviewImg.classList.contains('hidden')) {
+        removeBtn.classList.remove('hidden');
+      } else {
+        removeBtn.classList.add('hidden');
+      }
+    }
   };
+
+  // Ensure remove button is hidden on initial load if no signature
+  const initialRemoveBtnCheck = () => {
+    const removeBtn = document.getElementById('removeSignatureBtn');
+    const sigImg = document.getElementById('signaturePreviewImg');
+    if (removeBtn && sigImg) {
+      // Hide button if image is hidden or has no valid src
+      const isHidden = sigImg.classList.contains('hidden');
+      const hasNoSrc = !sigImg.src || sigImg.src.trim() === '' || sigImg.src === window.location.href;
+      if (isHidden || hasNoSrc) {
+        removeBtn.classList.add('hidden');
+      }
+    }
+  };
+
+  // Run initial check immediately
+  initialRemoveBtnCheck();
 
   // LOAD CACHE (localStorage + optional override from draft)
   const loadCache = (overrideData = null) => {
@@ -2976,8 +3436,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    Object.entries(data).forEach(([name, stored]) => {
-      const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+    Object.entries(data).forEach(([rawName, stored]) => {
+      let name = rawName;
+      let elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+      // Server draft arrays come back without [] (e.g. children_familybg), but fields use []
+      if (!elements.length && Array.isArray(stored) && !name.endsWith('[]')) {
+        const altName = `${name}[]`;
+        const altElements = Array.from(form.querySelectorAll(`[name="${altName}"]`));
+        if (altElements.length) {
+          name = altName;
+          elements = altElements;
+        }
+      }
+
+      // Single-select checkbox groups: always use value-matching, never positional
+      if (singleSelectCheckboxNames && singleSelectCheckboxNames.has(name)) {
+        if (stored === null || stored === '' || stored === undefined) return;
+        elements.forEach(el => { el.checked = String(stored) === String(el.value); });
+        return;
+      }
 
       if (name.endsWith('[]') && Array.isArray(stored)) {
         elements.forEach((el, idx) => {
@@ -2998,6 +3476,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       elements.forEach(el => {
         if (el.type === 'checkbox') {
+          if (singleSelectCheckboxNames && singleSelectCheckboxNames.has(el.name) && (stored === null || stored === '' || stored === undefined)) {
+            // No local selection saved — leave unchecked so hydrateSingleSelect (server data) stays
+            return;
+          }
           if (Array.isArray(stored)) {
             el.checked = stored.includes(el.value);
           } else {
@@ -3020,7 +3502,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // SAVE CACHE locally (preserve [] groups as arrays)
   const saveCache = () => {
-    const data = {};
+    // Start from existing localStorage so keys for tables not yet in the DOM are preserved
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch(e) { data = {}; }
 
     Array.from(form.elements).forEach(el => {
       if (!el.name || el.disabled) return;
@@ -3040,8 +3524,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (singleSelectCheckboxNames.has(el.name)) {
           if (el.checked) {
             data[el.name] = rawValue;
-          } else if (!data[el.name]) {
-            data[el.name] = '';
+          } else if (data[el.name] === undefined) {
+            data[el.name] = null;
           }
         } else {
           if (!data[el.name]) data[el.name] = isArrayField ? [] : [];
@@ -3099,10 +3583,49 @@ document.addEventListener('DOMContentLoaded', () => {
         signaturePreviewImg.src = output;
         signaturePreviewImg.classList.remove('hidden');
         signaturePlaceholder.classList.add('hidden');
+        signatureBox?.classList.add('signature-has-image');
+        document.getElementById('removeSignatureBtn')?.classList.remove('hidden');
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+  };
+
+  // --- Remove signature function ---
+  window.removeSignature = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (signatureDataInput) signatureDataInput.value = '';
+    if (signaturePathInput) signaturePathInput.value = '';
+    if (signaturePreviewImg) {
+      signaturePreviewImg.src = '';
+      signaturePreviewImg.classList.add('hidden');
+    }
+    if (signaturePlaceholder) signaturePlaceholder.classList.remove('hidden');
+    if (signatureBox) signatureBox.classList.remove('signature-has-image');
+    if (signatureFileInput) signatureFileInput.value = '';
+    document.getElementById('removeSignatureBtn')?.classList.add('hidden');
+
+    // Clear signature data from localStorage
+    try {
+      const cacheData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      delete cacheData.signature_data;
+      delete cacheData.signature_path;
+      localStorage.setItem(storageKey, JSON.stringify(cacheData));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+
+    // Clear signature from server
+    fetch('{{ route("pds.clearSignature") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+      },
+      body: JSON.stringify({})
+    }).catch(err => console.error('Failed to clear signature from server:', err));
   };
 
   // AUTOSAVE to server (throttled with retry + overlay until OK)
@@ -3125,6 +3648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     };
+    window.appendSingleSelectGroups = appendSingleSelectGroups;
 
     // When no dynamic education extra rows exist, explicitly send empty arrays
     const appendEmptyEducationExtras = (formData) => {
@@ -3144,11 +3668,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     };
+    window.appendEmptyEducationExtras = appendEmptyEducationExtras;
+
+    // Append explicitly removed education_N indices so server deletes them from draft
+    const appendRemovedEducationIndices = (formData) => {
+      try {
+        const removedKey = window.storageKey + '_removed';
+        const removed = JSON.parse(localStorage.getItem(removedKey) || '[]');
+        removed.forEach(idx => formData.append('_edu_removed[]', idx));
+      } catch(e) {}
+    };
+    window.appendRemovedEducationIndices = appendRemovedEducationIndices;
 
     const send = () => {
+      if (!navigator.onLine) {
+        console.warn('Auto-save skipped: offline');
+        showOverlay(true);
+        failureCount += 1;
+        const offlineDelay = Math.min(baseDelay * failureCount, maxDelay);
+        timer = setTimeout(send, offlineDelay);
+        return;
+      }
       const formData = new FormData(form);
       appendSingleSelectGroups(formData);
       appendEmptyEducationExtras(formData);
+      appendRemovedEducationIndices(formData);
       console.log('Auto-saving to server...');
       fetch('{{ route('pds.autosave', [], false) }}', {
         method: 'POST',
@@ -3220,8 +3764,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Instant persist - bypasses throttling for critical operations
+  const persistInstant = () => {
+    console.log('Instant persist function called');
+    saveCache();
+    if (hasUserInput) {
+      // Bypass throttling and send immediately
+      const formData = new FormData(form);
+      if (typeof window.appendSingleSelectGroups === 'function') {
+        window.appendSingleSelectGroups(formData);
+      }
+      if (typeof window.appendEmptyEducationExtras === 'function') {
+        window.appendEmptyEducationExtras(formData);
+      }
+      if (typeof window.appendRemovedEducationIndices === 'function') {
+        window.appendRemovedEducationIndices(formData);
+      }
+
+      fetch('{{ route("pds.autosave") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Instant save successful:', data);
+      })
+      .catch(error => {
+        console.error('Instant save error:', error);
+      });
+    }
+  };
+  window.persistInstant = persistInstant;
+
   // Expose persist so add/remove buttons can trigger it
   window.persist = persist;
+  window.persistInstant = persistInstant;
 
   // Hydrate: server/session defaults, then local cache overrides
   const initialPayload = { ...(draftData || {}), ...(sessionData || {}) };
@@ -3277,10 +3857,19 @@ document.addEventListener('DOMContentLoaded', () => {
     hasUserInput = true;
     persist();
   });
-  form.addEventListener('change', (e) => {
-    console.log('Form change event triggered on:', e.target.name, e.target.type);
-    hasUserInput = true;
-    persist();
+
+  // Flush pending data to server on page unload so a quick refresh doesn't lose changes
+  window.addEventListener('beforeunload', () => {
+    if (!hasUserInput) return;
+    saveCache();
+    const formData = new FormData(form);
+    if (typeof window.appendSingleSelectGroups === 'function') window.appendSingleSelectGroups(formData);
+    if (typeof window.appendEmptyEducationExtras === 'function') window.appendEmptyEducationExtras(formData);
+    if (typeof window.appendRemovedEducationIndices === 'function') window.appendRemovedEducationIndices(formData);
+    navigator.sendBeacon(
+      '{{ route('pds.autosave', [], false) }}',
+      formData
+    );
   });
 
   // Sync all date fields across forms using localStorage - form1 is the master
@@ -3349,31 +3938,31 @@ input[type="date"] {
   margin-left: 100px;
 }
 
-/* Make calendar icon bigger and black in WebKit browsers (Chrome, Safari, Edge) */
+/* Make calendar icon bigger and blue in WebKit browsers (Chrome, Safari, Edge) */
 input[type="date"]::-webkit-calendar-picker-indicator {
   width: 30px;
   height: 30px;
   cursor: pointer;
   background-size: 30px 30px;
   background-color: transparent;
-  filter: invert(0) brightness(0) !important;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   opacity: 1 !important;
-  -webkit-filter: invert(0) brightness(0) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(4500%) hue-rotate(190deg) brightness(95%) contrast(150%) !important;
   vertical-align: middle;
   position: absolute;
   right: 5px;
 }
 
-/* Make calendar icon bigger and black in Firefox */
+/* Make calendar icon bigger and blue in Firefox */
 input[type="date"]::-moz-calendar-picker-indicator {
   width: 30px;
   height: 30px;
   cursor: pointer;
   background-size: 30px 30px;
   background-color: transparent;
-  filter: invert(0) brightness(0) !important;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   opacity: 1 !important;
-  -webkit-filter: invert(0) brightness(0) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
   vertical-align: middle;
   position: absolute;
   right: 5px;
@@ -3430,5 +4019,41 @@ input[type="date"]::-moz-datetime-edit-year-field {
 }
 </style>
 
+<script>
+// Immediate protection for email field - runs before any other scripts
+document.addEventListener('DOMContentLoaded', () => {
+    const emailField = document.querySelector('textarea[name="email_address"]');
+    if (emailField) {
+        // Force text-transform to none with highest priority
+        emailField.style.textTransform = 'none';
+        emailField.style.setProperty('text-transform', 'none', 'important');
+        emailField.classList.add('no-uppercase');
+        
+        // Remove ALL event listeners (clean slate)
+        const clone = emailField.cloneNode(true);
+        clone.value = emailField.value;
+        emailField.parentNode.replaceChild(clone, emailField);
+        
+        // Ensure style is maintained
+        clone.style.textTransform = 'none';
+        clone.style.setProperty('text-transform', 'none', 'important');
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 
 </x-app-layout>

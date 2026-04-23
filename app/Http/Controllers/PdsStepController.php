@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\PdsDraft;
 use App\Models\PdsRejection;
 use App\Models\PdsSubmission;
+use App\Services\PdsFileService;
+use App\Services\PdsPersistenceService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
@@ -15,15 +17,17 @@ use Illuminate\Support\Arr;
 
 class PdsStepController extends Controller
 {
+    public function __construct(
+        private PdsFileService $fileService,
+        private PdsPersistenceService $persistenceService,
+    ) {}
+
     public function saveStep(Request $request, int $step)
     {
         $userId = Auth::id();
 
-        $signaturePath = $this->storeSignature($request, $userId);
-        $fileKeys = array_keys($request->allFiles());
-        $data = $request->except(array_merge(['_token'], $fileKeys));
-
-        $data = $this->normalizeArrayFields($data);
+        $data          = $this->extractRequestData($request);
+        $signaturePath = $this->fileService->storeSignature($request, $userId);
 
         if ($signaturePath) {
             $data['signature_path'] = $signaturePath;
@@ -53,36 +57,8 @@ class PdsStepController extends Controller
 
         if ($step === 2) {
             $rowValidator = Validator::make($data, []);
-
-            $checkRows = function (array $columns) use ($data, $rowValidator) {
-                $cols = array_map(fn ($key) => collect($data[$key] ?? []), $columns);
-                $max = collect($cols)->map->count()->max();
-                for ($i = 0; $i < $max; $i++) {
-                    $rowVals = array_map(fn ($col) => trim((string) $col->get($i)), $cols);
-                    $rowHasData = collect($rowVals)->some(function ($val) {
-                        $upper = strtoupper($val);
-                        return $val !== '' && !in_array($upper, ['NA', 'N/A', 'NONE'], true);
-                    });
-                    if (!$rowHasData) {
-                        continue;
-                    }
-
-                    foreach ($columns as $idx => $key) {
-                        $val = $rowVals[$idx] ?? '';
-                        $upper = strtoupper($val);
-                        $isNa = in_array($upper, ['NA', 'N/A', 'NONE'], true);
-                        if ($val === '' || $isNa) {
-                            if (!$isNa) {
-                                $rowValidator->errors()->add("{$key}.{$i}", 'Complete all fields in this row or clear the first column.');
-                            }
-                        }
-                    }
-                }
-            };
-
-            $checkRows(['eligibility', 'rating', 'date', 'place', 'license_no', 'validity']);
-            $checkRows(['work_from', 'work_to', 'work_position_title', 'work_department', 'work_status', 'work_govt_service']);
-
+            $this->checkTableRows($data, $rowValidator, ['eligibility', 'rating', 'date', 'place', 'license_no', 'validity']);
+            $this->checkTableRows($data, $rowValidator, ['work_from', 'work_to', 'work_position_title', 'work_department', 'work_status', 'work_govt_service']);
             if ($rowValidator->errors()->isNotEmpty()) {
                 return redirect()->back()->withErrors($rowValidator)->withInput();
             }
@@ -90,53 +66,19 @@ class PdsStepController extends Controller
 
         if ($step === 3) {
             $rowValidator = Validator::make($data, []);
-
-            $checkRows = function (array $columns) use ($data, $rowValidator) {
-                $cols = array_map(fn ($key) => collect($data[$key] ?? []), $columns);
-                $max = collect($cols)->map->count()->max();
-                for ($i = 0; $i < $max; $i++) {
-                    $rowVals = array_map(fn ($col) => trim((string) $col->get($i)), $cols);
-                    $rowHasData = collect($rowVals)->some(function ($val) {
-                        $upper = strtoupper($val);
-                        return $val !== '' && !in_array($upper, ['NA', 'N/A', 'NONE'], true);
-                    });
-                    if (!$rowHasData) {
-                        continue;
-                    }
-
-                    foreach ($columns as $idx => $key) {
-                        $val = $rowVals[$idx] ?? '';
-                        $upper = strtoupper($val);
-                        $isNa = in_array($upper, ['NA', 'N/A', 'NONE'], true);
-                        if ($val === '' || $isNa) {
-                            if (!$isNa) {
-                                $rowValidator->errors()->add("{$key}.{$i}", 'Complete all fields in this row or clear the entries.');
-                            }
-                        }
-                    }
-                }
-            };
-
-            $checkRows(['learning_title_of_ld', 'learning_from', 'learning_to', 'learning_hours', 'learning_type_of_ld', 'learning_conducted_sponsored_by']);
-            $checkRows(['voluntary_organization', 'voluntary_from', 'voluntary_to', 'voluntary_hours', 'voluntary_position_nature_of_work']);
-            $checkRows(['special_skills_hobbies', 'non_academic_distinctions_recognition', 'membership_in_association_organization']);
-
+            $this->checkTableRows($data, $rowValidator, ['learning_title_of_ld', 'learning_from', 'learning_to', 'learning_hours', 'learning_type_of_ld', 'learning_conducted_sponsored_by']);
+            $this->checkTableRows($data, $rowValidator, ['voluntary_organization', 'voluntary_from', 'voluntary_to', 'voluntary_hours', 'voluntary_position_nature_of_work']);
+            $this->checkTableRows($data, $rowValidator, ['special_skills_hobbies', 'non_academic_distinctions_recognition', 'membership_in_association_organization']);
             if ($rowValidator->errors()->isNotEmpty()) {
                 return redirect()->back()->withErrors($rowValidator)->withInput();
             }
         }
 
-        $draft = PdsDraft::firstOrCreate(
-            ['user_id' => $userId]
-        );
+        $draft = $this->saveDraftAndSyncSession($userId, $data);
 
-        $existingData = $draft->data ?? [];
-
-        $draft->data = $this->replaceArrays($existingData, $data);
-        $draft->save();
-
-        // keep session cache in sync per user
-        session(['pds' => $draft->data, 'pds_owner' => $userId]);
+        if ($step === 1) {
+            $this->persistenceService->persistForm1($userId, $draft->data);
+        }
 
         $nextRoute = match ($step) {
             1 => 'pds.form2',
@@ -153,35 +95,58 @@ class PdsStepController extends Controller
     public function autoSave(Request $request)
     {
         $userId = Auth::id();
-        \Log::info('Auto-save attempt', ['user_id' => $userId, 'has_data' => !empty($request->all())]);
-        
+        Log::info('Auto-save attempt', ['user_id' => $userId, 'has_data' => !empty($request->all())]);
+
         if (!$userId) {
-            \Log::error('Auto-save failed: No user authenticated');
+            Log::error('Auto-save failed: No user authenticated');
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $signaturePath = $this->storeSignature($request, $userId);
-        $fileKeys = array_keys($request->allFiles());
-        $data = $request->except(array_merge(['_token'], $fileKeys));
+        $data       = $this->extractRequestData($request);
+        $eduRemoved = $request->input('_edu_removed', []);
+        unset($data['_edu_removed']);
 
-        $data = $this->normalizeArrayFields($data);
-
+        $signaturePath = $this->fileService->storeSignature($request, $userId);
         if ($signaturePath) {
             $data['signature_path'] = $signaturePath;
         }
 
-        $draft = PdsDraft::firstOrCreate(['user_id' => $userId]);
+        $draft        = PdsDraft::firstOrCreate(['user_id' => $userId]);
         $existingData = $draft->data ?? [];
+
+        foreach ($eduRemoved as $idx) {
+            unset($existingData['education_' . intval($idx)]);
+        }
 
         $draft->data = $this->replaceArrays($existingData, $data);
         $draft->save();
-
-        // keep session cache in sync per user
         session(['pds' => $draft->data, 'pds_owner' => $userId]);
 
-        \Log::info('Auto-save successful', ['user_id' => $userId, 'data_keys' => array_keys($data)]);
+        Log::info('Auto-save successful', ['user_id' => $userId, 'data_keys' => array_keys($data)]);
 
         return response()->json(['status' => 'ok', 'saved_keys' => array_keys($data)]);
+    }
+
+    public function deleteDraftKey(Request $request)
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $key = $request->input('key');
+        // Only allow deleting learning_N or education_N keys for safety
+        if (!$key || !preg_match('/^(learning|education)_\d+$/', $key)) {
+            return response()->json(['message' => 'Invalid key'], 422);
+        }
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        if ($draft) {
+            $draftData = $draft->data ?? [];
+            unset($draftData[$key]);
+            $draft->data = $draftData;
+            $draft->save();
+            session(['pds' => $draft->data, 'pds_owner' => $userId]);
+        }
+        return response()->json(['status' => 'ok', 'deleted' => $key]);
     }
 
     public function draft()
@@ -198,93 +163,102 @@ class PdsStepController extends Controller
         ]);
     }
 
-    public function form1()
+    public function form1() { return $this->loadFormView(1); }
+    public function form2() { return $this->loadFormView(2); }
+    public function form3() { return $this->loadFormView(3); }
+    public function form4() { return $this->loadFormView(4); }
+    public function form5() { return $this->loadFormView(5); }
+
+    private function loadFormView(int $step)
     {
         $userId = Auth::id();
-        $redirect = $this->redirectIfLocked($userId);
-        if ($redirect) {
+        if ($redirect = $this->redirectIfLocked($userId)) {
             return $redirect;
         }
-        // clear stale session cache if it belongs to another user
+
         if (session('pds_owner') && session('pds_owner') !== $userId) {
             session()->forget(['pds', 'pds_owner']);
         }
+
         $draft = PdsDraft::where('user_id', $userId)->first();
-        $data = $draft->data ?? [];
+        $data  = $draft->data ?? [];
+
+        // For form 3, sync training data from database to populate dynamic tables
+        if ($step === 3) {
+            $data = $this->syncTrainingDataFromDb($userId, $data);
+        }
+
+        $signaturePath = DB::table('pds_signature_files')
+            ->where('user_id', $userId)
+            ->value('signature_file_path');
+
+        if (!$signaturePath) {
+            unset($data['signature_path'], $data['signature_data']);
+        }
+
         if (!empty($data)) {
             session(['pds' => $data, 'pds_owner' => $userId]);
         }
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
 
-        return view('pds_form.form1', compact('data', 'signaturePath'));
+        $highlightedSections = PdsRejection::where('user_id', $userId)
+            ->first()?->highlighted_sections ?? [];
+
+        return view('pds_form.form' . $step, compact('data', 'signaturePath', 'highlightedSections'));
     }
 
-      public function form2()
+    /**
+     * Sync training data from pds_training_programs table to draft format.
+     * Only populates if draft is missing training data (preserves draft data as primary source).
+     */
+    private function syncTrainingDataFromDb(int $userId, array $data): array
     {
-        $userId = Auth::id();
-        $redirect = $this->redirectIfLocked($userId);
-        if ($redirect) {
-            return $redirect;
-        }
-        if (session('pds_owner') && session('pds_owner') !== $userId) {
-            session()->forget(['pds', 'pds_owner']);
-        }
-        $draft = PdsDraft::where('user_id', $userId)->first();
-        $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        // If draft already has training data (main or dynamic tables), use it
+        $hasDraftTraining = !empty($data['learning_title_of_ld'])
+            || collect($data)->keys()->contains(fn ($k) => preg_match('/^learning_\d+$/', $k));
 
-        return view('pds_form.form2', compact('data', 'signaturePath'));
-    }
-
-      public function form3()
-    {
-        $userId = Auth::id();
-        $redirect = $this->redirectIfLocked($userId);
-        if ($redirect) {
-            return $redirect;
+        if ($hasDraftTraining) {
+            return $data;
         }
-        if (session('pds_owner') && session('pds_owner') !== $userId) {
-            session()->forget(['pds', 'pds_owner']);
-        }
-        $draft = PdsDraft::where('user_id', $userId)->first();
-        $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
 
-        return view('pds_form.form3', compact('data', 'signaturePath'));
-    }
+        // Only fall back to DB if draft has no training data at all
+        $trainingRows = DB::table('pds_training_programs')
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->get();
 
-      public function form4()
-    {
-        $userId = Auth::id();
-        $redirect = $this->redirectIfLocked($userId);
-        if ($redirect) {
-            return $redirect;
+        if ($trainingRows->isEmpty()) {
+            return $data;
         }
-        if (session('pds_owner') && session('pds_owner') !== $userId) {
-            session()->forget(['pds', 'pds_owner']);
-        }
-        $draft = PdsDraft::where('user_id', $userId)->first();
-        $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
 
-        return view('pds_form.form4', compact('data', 'signaturePath'));
-    }
+        // Main table holds up to 27 rows
+        $mainTableRows = $trainingRows->take(27);
+        $extraRows = $trainingRows->slice(27);
 
-    public function form5()
-    {
-        $userId = Auth::id();
-        $redirect = $this->redirectIfLocked($userId);
-        if ($redirect) {
-            return $redirect;
-        }
-        if (session('pds_owner') && session('pds_owner') !== $userId) {
-            session()->forget(['pds', 'pds_owner']);
-        }
-        $draft = PdsDraft::where('user_id', $userId)->first();
-        $data = $draft->data ?? [];
-        $signaturePath = $data['signature_path'] ?? DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
+        // Populate main table arrays
+        $data['learning_title_of_ld'] = $mainTableRows->pluck('title')->toArray();
+        $data['learning_from'] = $mainTableRows->pluck('from')->toArray();
+        $data['learning_to'] = $mainTableRows->pluck('to')->toArray();
+        $data['learning_hours'] = $mainTableRows->pluck('hours')->toArray();
+        $data['learning_type_of_ld'] = $mainTableRows->pluck('type_of_ld')->toArray();
+        $data['learning_conducted_sponsored_by'] = $mainTableRows->pluck('conducted_by')->toArray();
 
-        return view('pds_form.form5', compact('data', 'signaturePath'));
+        // Create dynamic tables for overflow (5 rows per table)
+        $extraTableCount = ceil($extraRows->count() / 5);
+        for ($i = 0; $i < $extraTableCount; $i++) {
+            $tableRows = $extraRows->slice($i * 5, 5)->values();
+            $tableNum = $i + 1;
+
+            $data["learning_{$tableNum}"] = [
+                'title_of_ld' => $tableRows->pluck('title')->toArray(),
+                'from' => $tableRows->pluck('from')->toArray(),
+                'to' => $tableRows->pluck('to')->toArray(),
+                'hours' => $tableRows->pluck('hours')->toArray(),
+                'type_of_ld' => $tableRows->pluck('type_of_ld')->toArray(),
+                'conducted_sponsored_by' => $tableRows->pluck('conducted_by')->toArray(),
+            ];
+        }
+
+        return $data;
     }
 
     /**
@@ -305,13 +279,7 @@ class PdsStepController extends Controller
             'education_extra_scholarship_acadhonors',
         ];
 
-        foreach ($singleSelectCheckboxes as $key) {
-            if (array_key_exists($key, $data)) {
-                $data[$key] = Arr::wrap($data[$key]);
-            }
-        }
-
-        foreach ($educationExtraKeys as $key) {
+        foreach (array_merge($singleSelectCheckboxes, $educationExtraKeys) as $key) {
             if (array_key_exists($key, $data)) {
                 $data[$key] = Arr::wrap($data[$key]);
             }
@@ -329,15 +297,74 @@ class PdsStepController extends Controller
      */
     private function replaceArrays(array $existing, array $incoming): array
     {
+        // Remove education_N / learning_N keys only when incoming explicitly sends that key with all-empty values.
+        // If a key is simply absent from incoming, it means the table wasn't in the DOM at save time
+        // (e.g. page-load autosave fires before the restore recreates the table), so preserve it.
         foreach ($incoming as $key => $value) {
-            if (is_array($value)) {
-                $existing[$key] = $value;
-            } else {
-                $existing[$key] = $value;
+            if (preg_match('/^(education|learning)_\d+$/', $key) && is_array($value)) {
+                $allEmpty = true;
+                array_walk_recursive($value, function($v) use (&$allEmpty) {
+                    if (trim((string)($v ?? '')) !== '') $allEmpty = false;
+                });
+                if ($allEmpty) {
+                    unset($existing[$key]);
+                }
             }
         }
 
+        foreach ($incoming as $key => $value) {
+            $existing[$key] = $value;
+        }
+
         return $existing;
+    }
+
+    private function extractRequestData(Request $request): array
+    {
+        $fileKeys = array_keys($request->allFiles());
+        $data     = $request->except(array_merge(['_token'], $fileKeys));
+
+        return $this->normalizeArrayFields($data);
+    }
+
+    private function saveDraftAndSyncSession(int $userId, array $data): PdsDraft
+    {
+        $draft        = PdsDraft::firstOrCreate(['user_id' => $userId]);
+        $existingData = $draft->data ?? [];
+
+        $draft->data = $this->replaceArrays($existingData, $data);
+        $draft->save();
+
+        session(['pds' => $draft->data, 'pds_owner' => $userId]);
+
+        return $draft;
+    }
+
+    private function checkTableRows(array $data, \Illuminate\Validation\Validator $validator, array $columns): void
+    {
+        $cols = array_map(fn ($key) => collect($data[$key] ?? []), $columns);
+        $max  = collect($cols)->map->count()->max() ?? 0;
+
+        for ($i = 0; $i < $max; $i++) {
+            $rowVals = array_map(fn ($col) => trim((string) $col->get($i)), $cols);
+            $rowHasData = collect($rowVals)->some(function ($val) {
+                $upper = strtoupper($val);
+                return $val !== '' && !in_array($upper, ['NA', 'N/A', 'NONE'], true);
+            });
+
+            if (!$rowHasData) {
+                continue;
+            }
+
+            foreach ($columns as $idx => $key) {
+                $val   = $rowVals[$idx] ?? '';
+                $upper = strtoupper($val);
+                $isNa  = in_array($upper, ['NA', 'N/A', 'NONE'], true);
+                if ($val === '' && !$isNa) {
+                    $validator->errors()->add("{$key}.{$i}", 'Complete all fields in this row or clear the first column.');
+                }
+            }
+        }
     }
 
     private function redirectIfLocked(?int $userId)
@@ -367,77 +394,32 @@ class PdsStepController extends Controller
         return null;
     }
 
-    private function storeSignature(Request $request, int $userId): ?string
+    public function clearSignature(Request $request)
     {
-        $disk = 'public';
-        $directory = 'pds/signatures';
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
         $existingPath = DB::table('pds_signature_files')->where('user_id', $userId)->value('signature_file_path');
-        $providedPath = $request->input('signature_path');
-        if ($providedPath && !$request->hasFile('signature') && !$request->hasFile('signature_attachment')) {
-            return $providedPath;
+        if ($existingPath && Storage::disk('public')->exists($existingPath)) {
+            Storage::disk('public')->delete($existingPath);
         }
 
-        $deleteExisting = function (?string $path) use ($disk) {
-            if ($path && Storage::disk($disk)->exists($path)) {
-                Storage::disk($disk)->delete($path);
-            }
-        };
+        DB::table('pds_signature_files')->where('user_id', $userId)->update([
+            'signature_file_path' => null,
+        ]);
 
-        $fileKeys = [
-            'signature',
-            'signature_attachment',
-            'signature_attachment_1',
-            'signature_attachment_2',
-            'signature_attachment_3',
-            'signature_attachment_4',
-            'signature_attachment_5',
-            'signature_file',
-        ];
-
-        foreach ($fileKeys as $key) {
-            $uploaded = $request->file($key);
-            if ($uploaded) {
-                $filename = 'signature_' . $userId . '_' . time() . '.' . $uploaded->getClientOriginalExtension();
-                $path = $uploaded->storeAs($directory, $filename, $disk);
-                DB::table('pds_signature_files')->updateOrInsert(
-                    ['user_id' => $userId],
-                    ['signature_file_path' => $path]
-                );
-                if ($existingPath && $existingPath !== $path) {
-                    $deleteExisting($existingPath);
-                }
-                return $path;
-            }
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        if ($draft) {
+            $draftData = $draft->data ?? [];
+            unset($draftData['signature_path'], $draftData['signature_data']);
+            $draft->data = $draftData;
+            $draft->save();
         }
 
-        $dataUrl = $request->input('signature_data');
-        if ($dataUrl && str_starts_with($dataUrl, 'data:image')) {
-            if (preg_match('/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/', $dataUrl, $matches)) {
-                $mime = $matches[1];
-                $base64 = $matches[2];
-                $binary = base64_decode($base64);
-                if ($binary !== false) {
-                    $extension = match ($mime) {
-                        'image/png' => 'png',
-                        'image/webp' => 'webp',
-                        default => 'jpg',
-                    };
-                    $filename = 'signature_' . $userId . '_' . time() . '.' . $extension;
-                    $path = $directory . '/' . $filename;
-                    Storage::disk($disk)->put($path, $binary, 'public');
-                    DB::table('pds_signature_files')->updateOrInsert(
-                        ['user_id' => $userId],
-                        ['signature_file_path' => $path]
-                    );
-                    if ($existingPath && $existingPath !== $path) {
-                        $deleteExisting($existingPath);
-                    }
-                    return $path;
-                }
-            }
-        }
+        session()->forget(['pds', 'pds_owner']);
 
-        return $existingPath;
+        return response()->json(['status' => 'ok']);
     }
 }

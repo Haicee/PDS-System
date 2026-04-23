@@ -110,7 +110,12 @@
                 });
             },
             statusClass() { return this.working.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'; },
-            typeClass() { return this.working.type === 'Permanent Employee' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'; },
+            typeClass() { 
+                if (this.working.type === 'Permanent Employee') return 'bg-emerald-50 text-emerald-600';
+                if (this.working.type === 'Contract of Service') return 'bg-indigo-50 text-indigo-600';
+                if (this.working.type === 'Job Order') return 'bg-purple-50 text-purple-600';
+                return 'bg-slate-50 text-slate-600';
+            },
         }">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 w-full max-w-full">
                 <div class="flex items-center gap-4 sm:gap-5 min-w-0">
@@ -160,10 +165,11 @@
 
             <div class="grid gap-3 sm:grid-cols-2 sm:gap-4 min-w-0">
                 <label class="flex flex-col gap-1">
-                    <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Employee Status</span>
+                    <span class="font-semibold text-slate-500 text-[11px] sm:text-xs">Employment Status</span>
                     <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-500 w-full max-w-full" x-model="working.type">
                         <option value="Permanent Employee">Permanent Employee</option>
                         <option value="Contract of Service">Contract of Service</option>
+                        <option value="Job Order">Job Order</option>
                     </select>
                 </label>
 
@@ -240,7 +246,7 @@
                 <button type="button" class="text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-700" x-on:click="reset()">Undo</button>
             </div>
             <div class="flex gap-2 sm:gap-3">
-                <x-secondary-button class="px-4 py-2 text-xs sm:text-sm" x-on:click="$dispatch('close')">Cancel</x-secondary-button>
+                <x-secondary-button class="px-4 py-2 text-xs sm:text-sm" x-on:click="reset(); $dispatch('close')">Cancel</x-secondary-button>
                 <x-primary-button class="px-4 py-2 text-xs sm:text-sm" x-on:click="save()" x-bind:disabled="saving">
                     <span x-show="!saving">Save changes</span>
                     <span x-show="saving">Saving...</span>

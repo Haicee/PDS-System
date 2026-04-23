@@ -1,11 +1,6 @@
 <x-app-layout>
 <form id="pds-form4" method="POST" action="{{ route('pds.saveStep', [4], false) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
   <style>
     body { font-family: 'Arial Narrow','Arial',sans-serif; }
     table { border-collapse: collapse; }
@@ -480,13 +475,37 @@
       reader.readAsDataURL(file);
     }
 
+    // thumbmark
+    function previewThumb(event) {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+
+      const img = document.getElementById('thumbPreview');
+      const placeholder = document.getElementById('thumbPlaceholder');
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (img) {
+          img.src = e.target?.result || '';
+          img.classList.remove('hidden');
+        }
+        if (placeholder) {
+          placeholder.classList.add('hidden');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
     // Auto-grow textareas used in the references table and ID/date fields
     function autoSize(el) {
       el.style.height = 'auto';
       el.style.height = `${el.scrollHeight}px`;
     }
 
+    let _hydrating4 = false;
     document.addEventListener('DOMContentLoaded', () => {
+      _hydrating4 = true;
+
       const form = document.querySelector('#pds-form4');
       if (!form) return;
 
@@ -747,6 +766,7 @@
       let prevDisableReferences = null;
 
       const refreshRows = () => {
+        if (_hydrating4) return;
         const refFirst = referenceFirstRow[0];
         const disableRefs = refFirst ? isNA(refFirst.value) : false;
 
@@ -857,6 +877,7 @@
       };
 
       const refreshSequential = () => {
+        if (_hydrating4) return;
         let allow = true;
         sequentialOrder.forEach(name => {
           const group = groupMap.get(name);
@@ -886,17 +907,6 @@
             firstMissing = el;
           }
         });
-
-        if (!firstMissing) {
-          const photoProvided = (() => {
-            const hasFile = photoFileInput && photoFileInput.files && photoFileInput.files.length > 0;
-            const hasData = photoDataInput && (photoDataInput.value || '').trim() !== '';
-            return hasFile || hasData;
-          })();
-          if (!photoProvided && photoFileInput) {
-            firstMissing = photoFileInput;
-          }
-        }
 
         if (!firstMissing) {
           for (const name of govFields) {
@@ -1176,35 +1186,46 @@
         };
       })();
       const persist = () => {
+        if (_hydrating4) return;
         saveCache();
         autoSaveToServer();
       };
 
+      const finishHydration4 = () => {
+        _hydrating4 = false;
+        refreshRows();
+        refreshSequential();
+        validateRequired();
+        saveCache();
+      };
+
       loadCache();
       updateSignaturePreview4();
-      // Persist merged cache once so a fast refresh keeps latest values
-      saveCache();
-
-      refreshSequential();
-      validateRequired();
       loadCachedPhoto();
 
       fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
         .then(r => r.ok ? r.json() : null)
         .then(json => {
-          if (!json || !json.data) return;
+          if (!json || !json.data) { finishHydration4(); return; }
           loadCache(json.data);
           updateSignaturePreview4();
-          // Persist merged cache once so a fast refresh keeps latest values
-          saveCache();
-          refreshSequential();
-          validateRequired();
           loadCachedPhoto();
+          finishHydration4();
         })
-        .catch(() => {});
+        .catch(() => { finishHydration4(); });
 
       form.addEventListener('input', persist);
       form.addEventListener('change', persist);
+
+      // Flush pending data to server on page unload so a quick refresh doesn't lose changes
+      window.addEventListener('beforeunload', () => {
+        if (_hydrating4) return;
+        saveCache();
+        navigator.sendBeacon(
+          '{{ route('pds.autosave', [], false) }}',
+          new FormData(form)
+        );
+      });
     });
 
     // Check for master date from form1 and apply it
@@ -1230,6 +1251,23 @@
       }
     }
 
+    function checkAllNo() {
+      const names = ['q34_a','q34_b','q35_a','q35_b','q36','q37','q38_a','q38_b','q39','q40_a','q40_b','q40_c'];
+      names.forEach(name => {
+        const boxes = document.querySelectorAll(`input[type="checkbox"][name="${name}"]`);
+        boxes.forEach(box => {
+          if (box.value === 'NO') {
+            box.checked = true;
+          } else {
+            box.checked = false;
+          }
+        });
+        // Trigger change on the NO box to fire existing handlers
+        const noBox = document.querySelector(`input[type="checkbox"][name="${name}"][value="NO"]`);
+        if (noBox) noBox.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
     // Check for master date when page loads
     syncFromForm1();
 
@@ -1239,6 +1277,10 @@
   
   <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
   <div class="pds-sheet">
+
+  <div class="flex justify-end mb-2">
+    <button type="button" id="noToAllBtn" class="px-4 py-1.5 bg-red-600 text-white text-sm rounded shadow hover:bg-red-700 transition" onclick="checkAllNo()">No to All</button>
+  </div>
 
   <table class="border-black w-full text-sm border-2 border-b-0">
     <tr>
@@ -1465,7 +1507,7 @@
 
     </table> 
 
-    <table class="w-full h-full border-l-2 border-b-0 border-black font-['Arial_Narrow','Arial',sans-serif]">
+    <table data-section="references" class="w-full h-full border-l-2 border-b-0 border-black font-['Arial_Narrow','Arial',sans-serif]">
       <tr>
         <td class="border-l-3 border border-t-2 border-r-2 border-b-3 border-black" colspan="3">
           <span class="ml-2">41. REFERENCES </span><span class="font-semibold">(Person not related by consanguinity or affinity to applicant / appointee)</span>
@@ -1502,7 +1544,7 @@
         <!-- Upload option -->
         <label class="px-3 py-1 bg-indigo-600 text-white rounded shadow cursor-pointer">
           Upload photo
-          <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhotoFromFile(this.files[0])" required>
+          <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhotoFromFile(this.files[0])">
         </label>
         <input type="hidden" id="photoData" name="photo_data">
       </div>
@@ -1627,7 +1669,6 @@
         <input
           type="date"
           name="date4"
-          required
           class="w-full h-full text-center text-lg bg-transparent border-none focus:outline-none px-2 py-1"
         />
       </div>
@@ -1644,8 +1685,24 @@
     <table class="border-3 border-t-0 border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
       <tr>
         <td class="p-2 text-center align-middle font-semibold text-sm">
-          SUBSCRIBED AND SWORN to before me this _____________________________ , affiant exhibiting his/her validly issued government ID as indicated above.
+          SUBSCRIBED AND SWORN to before me this <span id="masterDateDisplay" style="display: inline-block; border-bottom: 1px solid black; min-width: 150px;"></span>, affiant exhibiting his/her validly issued government ID as indicated above.
         </td>
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            const masterDate = localStorage.getItem('pds_master_date');
+            const dateDisplay = document.getElementById('masterDateDisplay');
+            if (masterDate) {
+              // Format YYYY-MM-DD to DD/MM/YY
+              const date = new Date(masterDate);
+              const day = String(date.getDate()).padStart(2, '0');
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const year = String(date.getFullYear()); // Get last 2 digits
+              dateDisplay.textContent = `${day}/${month}/${year}`;
+            } else {
+              dateDisplay.textContent = '_____________________________';
+            }
+          });
+        </script>
       </tr>
       <tr>
         <td class="p-2 align-top text-center">
@@ -1762,4 +1819,19 @@ input[type="date"]::-moz-datetime-edit-year-field {
   text-align: center;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 </x-app-layout>

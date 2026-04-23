@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PdsSubmission;
+use App\Models\ProfileEditRequest;
+use App\Models\PdsRejection;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -11,26 +14,26 @@ class EmployeeController extends Controller
     {
         $userId = auth()->id();
 
-        $pendingCount = \App\Models\PdsSubmission::where('user_id', $userId)
+        $pendingCount = PdsSubmission::where('user_id', $userId)
             ->where(function ($query) {
                 $query->whereNull('status')->orWhereRaw('LOWER(status) = ?', ['pending']);
             })
             ->count();
 
-        $approvedCount = \App\Models\PdsSubmission::where('user_id', $userId)
+        $approvedCount = PdsSubmission::where('user_id', $userId)
             ->whereRaw('LOWER(status) = ?', ['approved'])
             ->count();
 
-        $rejectedCount = \App\Models\PdsSubmission::where('user_id', $userId)
+        $rejectedCount = PdsSubmission::where('user_id', $userId)
             ->whereRaw('LOWER(status) = ?', ['rejected'])
             ->count();
 
-        $latestSubmission = \App\Models\PdsSubmission::where('user_id', $userId)
+        $latestSubmission = PdsSubmission::where('user_id', $userId)
             ->orderByDesc('submitted')
             ->orderByDesc('id')
             ->first();
 
-        $latestEditRequest = \App\Models\ProfileEditRequest::where('user_id', $userId)
+        $latestEditRequest = ProfileEditRequest::where('user_id', $userId)
             ->latest()
             ->first();
 
@@ -74,7 +77,7 @@ class EmployeeController extends Controller
             ]);
         }
 
-        return back();
+        return redirect()->route('pds.form1');
     }
 
     public function dismissApproval(Request $request)
@@ -83,7 +86,7 @@ class EmployeeController extends Controller
         $userId = auth()->id();
 
         if ($submissionId && $userId) {
-            $submission = \App\Models\PdsSubmission::where('id', $submissionId)
+            $submission = PdsSubmission::where('id', $submissionId)
                 ->where('user_id', $userId)
                 ->first();
 
@@ -121,7 +124,7 @@ class EmployeeController extends Controller
 
     private function buildPdsModalData(int $userId): ?array
     {
-        $latestSubmission = \App\Models\PdsSubmission::where('user_id', $userId)
+        $latestSubmission = PdsSubmission::where('user_id', $userId)
             ->orderByDesc('submitted')
             ->orderByDesc('id')
             ->first();

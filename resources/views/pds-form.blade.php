@@ -30,7 +30,15 @@
                 class="bg-white shadow-sm sm:rounded-2xl border border-slate-100 flex flex-col flex-1 min-h-0"
                 x-data="{
                     search: '',
+                    @if(request('status') === 'pending')
+                    activeTab: 'pending',
+                    @elseif(request('status') === 'approved')
+                    activeTab: 'approved',
+                    @elseif(request('status') === 'rejected')
+                    activeTab: 'rejected',
+                    @else
                     activeTab: 'all',
+                    @endif
                     filtersOpen: false,
                     searchOpen: false,
                     modalOpen: false,
@@ -38,6 +46,7 @@
                     confirmOpen: false,
                     confirmAction: null,
                     rejectNote: '',
+                    rejectSections: [],
 
                     submissions: {{ Js::from($submissions ?? []) }},
 
@@ -65,6 +74,19 @@
                                 }
                             }
                         });
+
+                        // Auto-open preview when highlight query param is present (from notification)
+                        const params = new URLSearchParams(window.location.search);
+                        const highlight = params.get('highlight');
+                        if (highlight) {
+                            // match by user_id first, else by submission id
+                            const match = this.submissions.find(
+                                (s) => String(s.user_id) === String(highlight) || String(s.id) === String(highlight)
+                            );
+                            if (match) {
+                                this.open(match);
+                            }
+                        }
                     },
 
                     normalized(v) {
@@ -109,25 +131,32 @@
                         this.confirmAction = newStatus;
                         if (newStatus !== 'rejected') {
                             this.rejectNote = '';
+                            this.rejectSections = [];
                         }
                         this.confirmOpen = true;
                     },
 
                     confirmStatus() {
                         if (!this.confirmAction) return;
-                        this.setStatus(this.confirmAction, this.confirmAction === 'rejected' ? this.rejectNote : '');
+                        this.setStatus(
+                            this.confirmAction,
+                            this.confirmAction === 'rejected' ? this.rejectNote : '',
+                            this.confirmAction === 'rejected' ? this.rejectSections : []
+                        );
                         this.confirmAction = null;
                         this.rejectNote = '';
+                        this.rejectSections = [];
                         this.confirmOpen = false;
                     },
 
                     cancelConfirm() {
                         this.confirmAction = null;
                         this.rejectNote = '';
+                        this.rejectSections = [];
                         this.confirmOpen = false;
                     },
 
-                    async setStatus(newStatus, note = '') {
+                    async setStatus(newStatus, note = '', highlightedSections = []) {
                         if (!this.selected) return;
                         const statusKey = this.normalized(newStatus);
                         const statusLabel = statusKey === 'approved'
@@ -143,7 +172,7 @@
                                     'Content-Type': 'application/json',
                                     'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
                                 },
-                                body: JSON.stringify({ status: statusLabel, note }),
+                                body: JSON.stringify({ status: statusLabel, note, highlighted_sections: highlightedSections }),
                             });
 
                             if (!response.ok) throw new Error('Failed to update status');

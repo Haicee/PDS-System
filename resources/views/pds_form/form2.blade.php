@@ -2,11 +2,7 @@
 <div id="autosaveOverlay2" class="autosave-overlay hidden">Saving…</div>
 <form id="pds-form2" method="POST" action="{{ route('pds.saveStep', [2], false) }}" enctype="multipart/form-data">
 @csrf
-    <div class="max-w-6xl mx-auto p-4 flex justify-end">
-        <a href="{{ route('pds.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">
-            Download PDF
-        </a>
-    </div>
+
     <style>
         table { border-collapse: collapse; width: 100%; }
         td, th { padding: 4px; vertical-align: top; }
@@ -45,7 +41,210 @@
         .autosave-overlay.hidden { display: none; }
     </style>
     <script>
+        let _hydrating = false;
+        function checkWorkFields() {
+            if (_hydrating) return;
+            // Get all work fields for sequential row logic
+            const positionFields = document.querySelectorAll('textarea[name="work_position_title[]"]');
+            const workFromFields = document.querySelectorAll('input[name="work_from[]"]');
+            const workToFields = document.querySelectorAll('input[name="work_to[]"]');
+            const departmentFields = document.querySelectorAll('textarea[name="work_department[]"]');
+            const statusFields = document.querySelectorAll('textarea[name="work_status[]"]');
+            const govtServiceFields = document.querySelectorAll('textarea[name="work_govt_service[]"]');
+
+            const isNA = (val) => {
+                const v = (val || '').trim().toUpperCase();
+                return v === 'NA' || v === 'N/A' || v === 'NONE';
+            };
+
+            const isRowComplete = (index) => {
+                const positionVal = positionFields[index]?.value?.trim() || '';
+                if (positionVal === '') return false; // Empty first column = incomplete
+                if (isNA(positionVal)) return true; // NA in first column = complete (skip row)
+
+                // Check if all required fields in the row are filled
+                const fromVal = workFromFields[index]?.value?.trim() || '';
+                const toVal = workToFields[index]?.value?.trim() || '';
+                const deptVal = departmentFields[index]?.value?.trim() || '';
+                const statusVal = statusFields[index]?.value?.trim() || '';
+                const govtVal = govtServiceFields[index]?.value?.trim() || '';
+
+                // All fields are required if position is filled (not NA)
+                return (fromVal !== '' || isNA(fromVal)) &&
+                       (toVal !== '' || isNA(toVal)) &&
+                       (deptVal !== '' || isNA(deptVal)) &&
+                       (statusVal !== '' || isNA(statusVal)) &&
+                       (govtVal !== '' || isNA(govtVal));
+            };
+
+            const setRowEnabled = (index, enabled) => {
+                const fields = [
+                    positionFields[index],
+                    workFromFields[index],
+                    workToFields[index],
+                    departmentFields[index],
+                    statusFields[index],
+                    govtServiceFields[index]
+                ];
+
+                fields.forEach(field => {
+                    if (!field) return;
+                    field.disabled = !enabled;
+                    field.classList.toggle('bg-gray-200', !enabled);
+                    field.classList.toggle('text-gray-500', !enabled);
+                    field.classList.toggle('cursor-not-allowed', !enabled);
+                    if (!enabled && field.type === 'date') {
+                        field.classList.remove('visible');
+                    }
+                });
+            };
+
+            // Process each row sequentially
+            let allowNextRow = true;
+            positionFields.forEach((positionField, index) => {
+                const workFromField = workFromFields[index];
+                const workToField = workToFields[index];
+                const hasPosition = positionField.value.trim() !== '';
+                const isNAValue = isNA(positionField.value);
+
+                // First row is always enabled
+                if (index === 0) {
+                    setRowEnabled(index, true);
+                } else {
+                    // Enable row only if previous rows are complete
+                    setRowEnabled(index, allowNextRow);
+                }
+
+                // Show/hide date fields based on position value and row enabled state
+                const workRowAllBlank = !hasPosition &&
+                    (departmentFields[index] ? departmentFields[index].value.trim() === '' : true) &&
+                    (statusFields[index] ? statusFields[index].value.trim() === '' : true) &&
+                    (govtServiceFields[index] ? govtServiceFields[index].value.trim() === '' : true);
+                if (workFromField && !workFromField.disabled) {
+                    if (hasPosition && !isNAValue) {
+                        workFromField.classList.add('visible');
+                        workFromField.style.backgroundColor = 'transparent';
+                    } else {
+                        workFromField.classList.remove('visible');
+                        if (workRowAllBlank) workFromField.value = '';
+                    }
+                }
+
+                if (workToField && !workToField.disabled) {
+                    if (hasPosition && !isNAValue) {
+                        workToField.classList.add('visible');
+                        workToField.style.backgroundColor = 'transparent';
+                    } else {
+                        workToField.classList.remove('visible');
+                        if (workRowAllBlank) workToField.value = '';
+                    }
+                }
+
+                // Update allowNextRow for the next iteration
+                if (allowNextRow) {
+                    allowNextRow = isRowComplete(index);
+                }
+            });
+        }
+
+        function checkEligibilityFields() {
+            if (_hydrating) return;
+            // Get all eligibility fields for sequential row logic
+            const eligibilityFields = document.querySelectorAll('textarea[name="eligibility[]"]');
+            const ratingFields = document.querySelectorAll('textarea[name="rating[]"]');
+            const dateFields = document.querySelectorAll('input[name="date[]"]');
+            const placeFields = document.querySelectorAll('textarea[name="place[]"]');
+            const licenseFields = document.querySelectorAll('textarea[name="license_no[]"]');
+            const validityFields = document.querySelectorAll('textarea[name="validity[]"]');
+
+            const isNA = (val) => {
+                const v = (val || '').trim().toUpperCase();
+                return v === 'NA' || v === 'N/A' || v === 'NONE';
+            };
+
+            const isRowComplete = (index) => {
+                const eligibilityVal = eligibilityFields[index]?.value?.trim() || '';
+                if (eligibilityVal === '') return false; // Empty first column = incomplete
+                if (isNA(eligibilityVal)) return true; // NA in first column = complete (skip row)
+
+                // Check if all required fields in the row are filled
+                const ratingVal = ratingFields[index]?.value?.trim() || '';
+                const dateVal = dateFields[index]?.value?.trim() || '';
+                const placeVal = placeFields[index]?.value?.trim() || '';
+                const licenseVal = licenseFields[index]?.value?.trim() || '';
+                const validityVal = validityFields[index]?.value?.trim() || '';
+
+                // All fields are required if eligibility is filled (not NA)
+                return (ratingVal !== '' || isNA(ratingVal)) &&
+                       (dateVal !== '' || isNA(dateVal)) &&
+                       (placeVal !== '' || isNA(placeVal)) &&
+                       (licenseVal !== '' || isNA(licenseVal)) &&
+                       (validityVal !== '' || isNA(validityVal));
+            };
+
+            const setRowEnabled = (index, enabled) => {
+                const fields = [
+                    eligibilityFields[index],
+                    ratingFields[index],
+                    dateFields[index],
+                    placeFields[index],
+                    licenseFields[index],
+                    validityFields[index]
+                ];
+
+                fields.forEach(field => {
+                    if (!field) return;
+                    field.disabled = !enabled;
+                    field.classList.toggle('bg-gray-200', !enabled);
+                    field.classList.toggle('text-gray-500', !enabled);
+                    field.classList.toggle('cursor-not-allowed', !enabled);
+                    if (!enabled && field.type === 'date') {
+                        field.classList.remove('visible');
+                    }
+                });
+            };
+
+            // Process each row sequentially
+            let allowNextRow = true;
+            eligibilityFields.forEach((eligibilityField, index) => {
+                const dateField = dateFields[index];
+                const hasEligibility = eligibilityField.value.trim() !== '';
+                const isNAValue = isNA(eligibilityField.value);
+
+                // First row is always enabled
+                if (index === 0) {
+                    setRowEnabled(index, true);
+                } else {
+                    // Enable row only if previous rows are complete
+                    setRowEnabled(index, allowNextRow);
+                }
+
+                // Show/hide date fields based on eligibility value and row enabled state
+                const eligRowAllBlank = !hasEligibility &&
+                    (ratingFields[index] ? ratingFields[index].value.trim() === '' : true) &&
+                    (placeFields[index] ? placeFields[index].value.trim() === '' : true) &&
+                    (licenseFields[index] ? licenseFields[index].value.trim() === '' : true) &&
+                    (validityFields[index] ? validityFields[index].value.trim() === '' : true);
+                if (dateField && !dateField.disabled) {
+                    if (hasEligibility && !isNAValue) {
+                        dateField.classList.add('visible');
+                        dateField.style.backgroundColor = 'transparent';
+                    } else {
+                        dateField.classList.remove('visible');
+                        if (eligRowAllBlank) dateField.value = '';
+                    }
+                }
+
+                // Update allowNextRow for the next iteration
+                if (allowNextRow) {
+                    allowNextRow = isRowComplete(index);
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            _hydrating = true;
+
             const autoSize = (el) => {
                 el.style.height = 'auto';
                 el.style.height = `${el.scrollHeight}px`;
@@ -76,8 +275,8 @@
 
             // First-row logic for eligibility and work tables
             const rowGroup = (names) => names.map(n => Array.from(document.querySelectorAll(`[name="${n}"]`))).filter(arr => arr.length).map(arr => arr[0]);
-            const eligibilityFirstRow = rowGroup(['eligibility[]','rating[]','date[]','place[]','license_no[]','validity[]']);
-            const workFirstRow = rowGroup(['work_from[]','work_to[]','work_position_title[]','work_department[]','work_status[]','work_govt_service[]']);
+            const eligibilityFirstRow = rowGroup(['eligibility[]']);
+            const workFirstRow = rowGroup(['work_position_title[]']);
 
             const disableFollowingRows = (names, disable) => {
                 names.forEach(n => {
@@ -153,6 +352,7 @@
             let prevDisableWorkRows = null;
 
             const refreshRows = () => {
+                if (_hydrating) return;
                 const eligibilityFirst = eligibilityFirstRow[0];
                 const workFirst = workFirstRow[0];
 
@@ -184,6 +384,44 @@
                 f.addEventListener('input', refreshRows);
             });
             refreshRows();
+
+            // Check work fields on page load
+            checkWorkFields();
+
+            // Add event listeners to all work table fields for sequential logic
+            const workTableFields = document.querySelectorAll(
+                'textarea[name="work_position_title[]"], input[name="work_from[]"], input[name="work_to[]"], ' +
+                'textarea[name="work_department[]"], textarea[name="work_status[]"], textarea[name="work_govt_service[]"]'
+            );
+            workTableFields.forEach(field => {
+                field.addEventListener('input', checkWorkFields);
+                field.addEventListener('change', checkWorkFields);
+            });
+
+            // Check eligibility fields on page load
+            checkEligibilityFields();
+
+            // Add event listeners to all eligibility table fields for sequential logic
+            const eligibilityTableFields = document.querySelectorAll(
+                'textarea[name="eligibility[]"], textarea[name="rating[]"], input[name="date[]"], ' +
+                'textarea[name="place[]"], textarea[name="license_no[]"], textarea[name="validity[]"]'
+            );
+            eligibilityTableFields.forEach(field => {
+                field.addEventListener('input', checkEligibilityFields);
+                field.addEventListener('change', checkEligibilityFields);
+            });
+
+            // Enforce numeric-only input for license number and validity fields
+            document.querySelectorAll('textarea[name="license_no[]"], textarea[name="validity[]"]').forEach(el => {
+                el.addEventListener('input', () => {
+                    const pos = el.selectionStart;
+                    const cleaned = el.value.replace(/[^0-9]/g, '');
+                    if (el.value !== cleaned) {
+                        el.value = cleaned;
+                        el.selectionStart = el.selectionEnd = Math.max(0, pos - 1);
+                    }
+                });
+            });
 
             // Next button inline validation: required fields + first rows (allow NA as filled)
             const nextBtn = document.getElementById('next-btn');
@@ -460,8 +698,19 @@
                 }
 
                 // For fields with [] names, ensure arrays apply in order
-                Object.entries(data).forEach(([name, stored]) => {
-                    const elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+                Object.entries(data).forEach(([rawName, stored]) => {
+                    let name = rawName;
+                    let elements = Array.from(form.querySelectorAll(`[name="${name}"]`));
+
+                    // Server draft arrays come back without [] (e.g. eligibility), but fields use []
+                    if (!elements.length && Array.isArray(stored) && !name.endsWith('[]')) {
+                        const altName = `${name}[]`;
+                        const altElements = Array.from(form.querySelectorAll(`[name="${altName}"]`));
+                        if (altElements.length) {
+                            name = altName;
+                            elements = altElements;
+                        }
+                    }
 
                     if (name.endsWith('[]') && Array.isArray(stored)) {
                         elements.forEach((el, idx) => {
@@ -602,29 +851,45 @@
             })();
 
             const persist = () => {
+                if (_hydrating) return;
                 saveCache();
                 autoSaveToServer();
             };
 
+            const finishHydration = () => {
+                _hydrating = false;
+                refreshRows();
+                checkWorkFields();
+                checkEligibilityFields();
+                saveCache();
+            };
+
             loadCache();
             updateSignaturePreviewFromInputs2();
-            // Persist merged cache once so a fast refresh keeps latest values
-            saveCache();
 
             // If served via static view (no $data), fetch draft and hydrate once
             fetch('{{ route('pds.draft', [], false) }}', { headers: { 'Accept': 'application/json' } })
                 .then(r => r.ok ? r.json() : null)
                 .then(json => {
-                    if (!json || !json.data) return;
+                    if (!json || !json.data) { finishHydration(); return; }
                     loadCache(json.data);
                     updateSignaturePreviewFromInputs2();
-                    // Persist merged cache once so a fast refresh keeps latest values
-                    saveCache();
+                    finishHydration();
                 })
-                .catch(() => {});
+                .catch(() => { finishHydration(); });
 
             form.addEventListener('input', persist);
             form.addEventListener('change', persist);
+
+            // Flush pending data to server on page unload so a quick refresh doesn't lose changes
+            window.addEventListener('beforeunload', () => {
+                if (_hydrating) return;
+                saveCache();
+                navigator.sendBeacon(
+                    '{{ route('pds.autosave', [], false) }}',
+                    new FormData(form)
+                );
+            });
         });
 
         // Check for master date from form1 and apply it
@@ -650,15 +915,15 @@
     </script>
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
 
-    <table class="border border-black w-full font-['Arial_Narrow','sans-serif']">
+    <table data-section="civil_service" class="border border-black w-full font-['Arial_Narrow','sans-serif']">
 
       <colgroup>
         <col style="width: 35%;">
         <col style="width: 10%;">
         <col style="width: 15%;">
         <col style="width: 15%;">
-        <col style="width: 8%;">
-        <col style="width: 8%;">
+        <col style="width: 10%;">
+        <col style="width: 10%;">
       </colgroup>
       
     <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white  italic text-xl px-2 border-2 border-black font-bold" colspan="6">
@@ -697,16 +962,28 @@
       <tr>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Eligibility' : '' }}" name="eligibility[]" ></textarea></td>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Rating' : '' }}" name="rating[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Date' : '' }}" name="date[]"></textarea></td>
+        <td class="border align-top">
+          <div class="h-full w-full">
+            <input
+              type="date"
+              name="date[]"
+              class="w-full h-full text-lg resize-none
+                     focus:outline-none focus:ring-0
+                     bg-transparent text-center"
+              style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0; display: none;"
+              max="{{ now()->format('Y-m-d') }}" 
+              placeholder="{{ $i === 0 ? 'Date' : '' }}"/>
+          </div>
+        </td>
         <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Place' : '' }}" name="place[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'License No.' : '' }}" name="license_no[]"></textarea></td>
-        <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Validity' : '' }}" name="validity[]"></textarea></td>
+        <td class="border align-top"><textarea rows="1" inputmode="numeric" pattern="[0-9]*" placeholder="{{ $i === 0 ? 'License' : '' }}" name="license_no[]" class="w-full focus:outline-none focus:ring-0 bg-transparent text-center" style="border:none; padding:8px; resize:none; overflow-wrap:break-word; word-break:break-all;"></textarea></td>
+        <td class="border align-top"><textarea rows="1" inputmode="numeric" pattern="[0-9]*" placeholder="{{ $i === 0 ? 'Validity' : '' }}" name="validity[]" class="w-full focus:outline-none focus:ring-0 bg-transparent text-center" style="border:none; padding:8px; resize:none; overflow-wrap:break-word; word-break:break-all;"></textarea></td>
       </tr>
    @endfor
     </table>
     
 
-    <table class="border border-black font-['Arial_Narrow','sans-serif'] w-full">
+    <table data-section="work_experience" class="border border-black font-['Arial_Narrow','sans-serif'] w-full">
 
       <colgroup>
         <col style="width: 8%;">
@@ -750,8 +1027,30 @@
 
     @for ($i = 0; $i < 27; $i++)
      <tr>
-      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'From' : '' }}" name="work_from[]"></textarea></td>
-      <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'To' : '' }}" name="work_to[]"></textarea></td>
+      <td class="border align-top">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="work_from[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0;"
+            placeholder="{{ $i === 0 ? 'From' : '' }}"/>
+        </div>
+      </td>
+      <td class="border align-top">
+        <div class="h-full w-full">
+          <input
+            type="date"
+            name="work_to[]"
+            class="w-full h-full text-lg resize-none
+                   focus:outline-none focus:ring-0
+                   bg-transparent text-center"
+            style="font-size: 14px; padding:2px; border:none; box-sizing:border-box; margin:0;"
+            placeholder="{{ $i === 0 ? 'To' : '' }}"/>
+        </div>
+      </td>
       <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Position Title' : '' }}" name="work_position_title[]"></textarea></td>
       <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Department/Agency/Office/Company' : '' }}" name="work_department[]"></textarea></td>
       <td class="border align-top"><textarea rows="1" placeholder="{{ $i === 0 ? 'Status' : '' }}" name="work_status[]"></textarea></td>
@@ -841,40 +1140,84 @@ input[type="date"] {
   margin-left: 50px;
 }
 
-/* Hide calendar icon since date is synced from form1 */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  display: none;
+/* Hide eligibility date inputs by default */
+input[name="date[]"] {
+  display: none !important;
 }
 
-input[type="date"]::-moz-calendar-picker-indicator {
-  display: none;
+/* Hide work date inputs by default */
+input[name="work_from[]"], input[name="work_to[]"] {
+  display: none !important;
+}
+
+/* Show date inputs when they should be visible */
+input[type="date"].visible {
+  display: block !important;
+}
+
+/* Make calendar icon visible and clickable with blue stroke */
+input[type="date"].visible::-webkit-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(4500%) hue-rotate(190deg) brightness(95%) contrast(150%) !important;
+  transform: scale(1.5);
+  margin-left: 5px;
+}
+
+input[type="date"].visible::-moz-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+}
+
+/* Hide calendar icon for the signature date field */
+input[name="date2"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+input[name="date2"]::-moz-calendar-picker-indicator {
+  display: none !important;
+}
+
+input[type="date"].visible::-moz-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  -webkit-filter: invert(35%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(95%) contrast(95%) !important;
+  transform: scale(1.5);
+  margin-left: 5px;
 }
 
 /* Ensure text is vertically centered and black */
 input[type="date"]::-webkit-datetime-edit-text {
   vertical-align: middle;
   color: #000000;
-  font-size: 16px;
+  font-size: 20px;
   text-align: center !important;
 }
 
 input[type="date"]::-webkit-datetime-edit-month-field {
   vertical-align: middle;
-  font-size: 16px;
+  font-size: 20px;
   color: #000000;
   text-align: center !important;
 }
 
 input[type="date"]::-webkit-datetime-edit-day-field {
   vertical-align: middle;
-  font-size: 16px;
+  font-size: 20px;
   color: #000000;
   text-align: center !important;
 }
 
 input[type="date"]::-webkit-datetime-edit-year-field {
   vertical-align: middle;
-  font-size: 16px;
+  font-size: 20px;
   color: #000000;
   text-align: center !important;
 }
@@ -900,4 +1243,241 @@ input[type="date"]::-moz-datetime-edit-year-field {
   text-align: center !important;
 }
 </style>
+
+<script>
+function checkEligibilityFields() {
+    // Get all eligibility fields for sequential row logic
+    const eligibilityFields = document.querySelectorAll('textarea[name="eligibility[]"]');
+    const ratingFields = document.querySelectorAll('textarea[name="rating[]"]');
+    const dateFields = document.querySelectorAll('input[name="date[]"]');
+    const placeFields = document.querySelectorAll('textarea[name="place[]"]');
+    const licenseFields = document.querySelectorAll('textarea[name="license_no[]"]');
+    const validityFields = document.querySelectorAll('textarea[name="validity[]"]');
+    
+    const isNA = (val) => {
+        const v = (val || '').trim().toUpperCase();
+        return v === 'NA' || v === 'N/A' || v === 'NONE';
+    };
+    
+    const isRowComplete = (index) => {
+        const eligVal = eligibilityFields[index]?.value?.trim() || '';
+        if (eligVal === '') return false; // Empty first column = incomplete
+        if (isNA(eligVal)) return true; // NA in first column = complete (skip row)
+        
+        // Check if all required fields in the row are filled
+        const ratingVal = ratingFields[index]?.value?.trim() || '';
+        const dateVal = dateFields[index]?.value?.trim() || '';
+        const placeVal = placeFields[index]?.value?.trim() || '';
+        
+        // Rating, date, and place are required if eligibility is filled (not NA)
+        return (ratingVal !== '' || isNA(ratingVal)) && 
+               (dateVal !== '' || isNA(dateVal)) && 
+               (placeVal !== '' || isNA(placeVal));
+    };
+    
+    const setRowEnabled = (index, enabled) => {
+        const fields = [
+            eligibilityFields[index],
+            ratingFields[index],
+            dateFields[index],
+            placeFields[index],
+            licenseFields[index],
+            validityFields[index]
+        ];
+        
+        fields.forEach(field => {
+            if (!field) return;
+            field.disabled = !enabled;
+            field.classList.toggle('bg-gray-200', !enabled);
+            field.classList.toggle('text-gray-500', !enabled);
+            field.classList.toggle('cursor-not-allowed', !enabled);
+            if (!enabled && field.tagName === 'TEXTAREA') {
+                field.value = '';
+            }
+            if (!enabled && field.tagName === 'INPUT') {
+                field.value = '';
+                field.classList.remove('visible');
+            }
+        });
+    };
+    
+    // Process each row sequentially
+    let allowNextRow = true;
+    eligibilityFields.forEach((eligibilityField, index) => {
+        const dateField = dateFields[index];
+        const hasEligibility = eligibilityField.value.trim() !== '';
+        const isNAValue = isNA(eligibilityField.value);
+        
+        // First row is always enabled
+        if (index === 0) {
+            setRowEnabled(index, true);
+        } else {
+            // Enable row only if previous rows are complete
+            setRowEnabled(index, allowNextRow);
+        }
+        
+        // Show/hide date field based on eligibility value
+        if (dateField && !dateField.disabled) {
+            if (hasEligibility && !isNAValue) {
+                dateField.classList.add('visible');
+                dateField.style.backgroundColor = 'transparent';
+            } else {
+                dateField.classList.remove('visible');
+                if (!isNAValue) {
+                    dateField.value = '';
+                }
+            }
+        }
+        
+        // Update allowNextRow for the next iteration
+        if (allowNextRow) {
+            allowNextRow = isRowComplete(index);
+        }
+    });
+}
+
+function checkWorkFields() {
+    // Get all work fields for sequential row logic
+    const workFromFields = document.querySelectorAll('input[name="work_from[]"]');
+    const workToFields = document.querySelectorAll('input[name="work_to[]"]');
+    const positionFields = document.querySelectorAll('textarea[name="work_position_title[]"]');
+    const departmentFields = document.querySelectorAll('textarea[name="work_department[]"]');
+    const statusFields = document.querySelectorAll('textarea[name="work_status[]"]');
+    const govtServiceFields = document.querySelectorAll('textarea[name="work_govt_service[]"]');
+    
+    const isNA = (val) => {
+        const v = (val || '').trim().toUpperCase();
+        return v === 'NA' || v === 'N/A' || v === 'NONE';
+    };
+    
+    const isRowComplete = (index) => {
+        const posVal = positionFields[index]?.value?.trim() || '';
+        if (posVal === '') return false; // Empty first column = incomplete
+        if (isNA(posVal)) return true; // NA in first column = complete (skip row)
+        
+        // Check if all required fields in the row are filled
+        const fromVal = workFromFields[index]?.value?.trim() || '';
+        const toVal = workToFields[index]?.value?.trim() || '';
+        const deptVal = departmentFields[index]?.value?.trim() || '';
+        const statusVal = statusFields[index]?.value?.trim() || '';
+        const govtVal = govtServiceFields[index]?.value?.trim() || '';
+        
+        // All fields are required if position is filled (not NA)
+        return (fromVal !== '' || isNA(fromVal)) && 
+               (toVal !== '' || isNA(toVal)) && 
+               (deptVal !== '' || isNA(deptVal)) &&
+               (statusVal !== '' || isNA(statusVal)) &&
+               (govtVal !== '' || isNA(govtVal));
+    };
+    
+    const setRowEnabled = (index, enabled) => {
+        const fields = [
+            workFromFields[index],
+            workToFields[index],
+            positionFields[index],
+            departmentFields[index],
+            statusFields[index],
+            govtServiceFields[index]
+        ];
+        
+        fields.forEach(field => {
+            if (!field) return;
+            field.disabled = !enabled;
+            field.classList.toggle('bg-gray-200', !enabled);
+            field.classList.toggle('text-gray-500', !enabled);
+            field.classList.toggle('cursor-not-allowed', !enabled);
+            if (!enabled && field.tagName === 'TEXTAREA') {
+                field.value = '';
+            }
+            if (!enabled && field.tagName === 'INPUT') {
+                field.value = '';
+                field.classList.remove('visible');
+            }
+        });
+    };
+    
+    // Process each row sequentially
+    let allowNextRow = true;
+    positionFields.forEach((positionField, index) => {
+        const workFromField = workFromFields[index];
+        const workToField = workToFields[index];
+        const hasPosition = positionField.value.trim() !== '';
+        const isNAValue = isNA(positionField.value);
+        
+        // First row is always enabled
+        if (index === 0) {
+            setRowEnabled(index, true);
+        } else {
+            // Enable row only if previous rows are complete
+            setRowEnabled(index, allowNextRow);
+        }
+        
+        // Show/hide date fields based on position value and row enabled state
+        if (workFromField && !workFromField.disabled) {
+            if (hasPosition && !isNAValue) {
+                workFromField.classList.add('visible');
+                workFromField.style.backgroundColor = 'transparent';
+            } else {
+                workFromField.classList.remove('visible');
+            }
+        }
+        
+        if (workToField && !workToField.disabled) {
+            if (hasPosition && !isNAValue) {
+                workToField.classList.add('visible');
+                workToField.style.backgroundColor = 'transparent';
+            } else {
+                workToField.classList.remove('visible');
+            }
+        }
+        
+        // Update allowNextRow for the next iteration
+        if (allowNextRow) {
+            allowNextRow = isRowComplete(index);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Check eligibility fields on page load
+    checkEligibilityFields();
+    
+    // Add event listeners to all eligibility table fields for sequential logic
+    const eligibilityTableFields = document.querySelectorAll(
+        'textarea[name="eligibility[]"], textarea[name="rating[]"], input[name="date[]"], ' +
+        'textarea[name="place[]"], textarea[name="license_no[]"], textarea[name="validity[]"]'
+    );
+    eligibilityTableFields.forEach(field => {
+        field.addEventListener('input', checkEligibilityFields);
+        field.addEventListener('change', checkEligibilityFields);
+    });
+    
+    // Check work fields on page load
+    checkWorkFields();
+    
+    // Add event listeners to all work table fields for sequential logic
+    const workTableFields = document.querySelectorAll(
+        'input[name="work_from[]"], input[name="work_to[]"], textarea[name="work_position_title[]"], ' +
+        'textarea[name="work_department[]"], textarea[name="work_status[]"], textarea[name="work_govt_service[]"]'
+    );
+    workTableFields.forEach(field => {
+        field.addEventListener('input', checkWorkFields);
+        field.addEventListener('change', checkWorkFields);
+    });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = @json($highlightedSections ?? []);
+    if (!Array.isArray(sections) || sections.length === 0) return;
+    sections.forEach(key => {
+        const el = document.querySelector(`[data-section="${key}"]`);
+        if (el) {
+            el.style.outline = '3px solid #ef4444';
+            el.style.outlineOffset = '2px';
+            el.style.borderRadius = '2px';
+        }
+    });
+});
+</script>
 </x-app-layout>

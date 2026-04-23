@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminUser;
+use App\Models\User;
+use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Storage;
 
 abstract class Controller
@@ -40,5 +44,38 @@ abstract class Controller
     protected function assetFromPublicDisk(string $path): string
     {
         return $this->withAppHost(Storage::disk('public')->url($path));
+    }
+
+    /**
+     * Trim notification history for a notifiable, keeping only the most recent $limit entries.
+     */
+    protected function trimNotificationHistory($notifiable, int $limit = 20): void
+    {
+        $query = $notifiable->notifications()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->skip($limit);
+
+        do {
+            $excessIds = $query->take(500)->pluck('id');
+            if ($excessIds->isEmpty()) {
+                break;
+            }
+            $notifiable->notifications()->whereIn('id', $excessIds)->delete();
+        } while ($excessIds->count() === 500);
+    }
+
+    protected function notifyAdmins(object $notification): void
+    {
+        $adminUsers    = AdminUser::all();
+        $roleAdmins    = User::where('role', 'admin')->get();
+        $recipients    = $adminUsers->concat($roleAdmins);
+
+        if ($recipients->isNotEmpty()) {
+            NotificationFacade::send($recipients, $notification);
+            foreach ($recipients as $recipient) {
+                $this->trimNotificationHistory($recipient);
+            }
+        }
     }
 }

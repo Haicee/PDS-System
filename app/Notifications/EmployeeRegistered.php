@@ -31,7 +31,7 @@ class EmployeeRegistered extends Notification implements ShouldBroadcast
             'email' => $this->user->email,
             'role' => $this->user->role,
             'type' => $this->user->type,
-            'link' => route('manage-user'),
+            'link' => route('manage-user', ['view_user' => $this->user?->id]),
         ];
     }
 

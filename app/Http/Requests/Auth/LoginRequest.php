@@ -43,6 +43,17 @@ class LoginRequest extends FormRequest
 
         $credentials = $this->only('email', 'password');
         $remember = $this->boolean('remember');
+        $email = $this->input('email');
+
+        // Check if email exists in either admin_users or users table
+        $emailExists = $this->checkEmailExists($email);
+
+        if (!$emailExists) {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'email' => 'This email address is not registered in our system.',
+            ]);
+        }
 
         // Try admin first and ensure role is allowed
         if (Auth::guard('admin')->attempt($credentials, $remember)) {
@@ -91,9 +102,28 @@ class LoginRequest extends FormRequest
 
         RateLimiter::hit($this->throttleKey());
 
+        // Email exists but authentication failed - must be wrong password or wrong role
         throw ValidationException::withMessages([
-            'email' => trans('auth.failed'),
+            'password' => 'The password you entered is incorrect.',
         ]);
+    }
+
+    /**
+     * Check if email exists in either admin_users or users table
+     */
+    private function checkEmailExists($email): bool
+    {
+        // Check in admin_users table
+        $adminExists = \DB::table('admin_users')
+            ->where('email', $email)
+            ->exists();
+
+        // Check in users table  
+        $userExists = \DB::table('users')
+            ->where('email', $email)
+            ->exists();
+
+        return $adminExists || $userExists;
     }
 
     /**
@@ -112,10 +142,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'email' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.',
         ]);
     }
 

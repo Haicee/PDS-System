@@ -4,16 +4,17 @@ namespace App\Http\Controllers;
 
 use Spatie\Browsershot\Browsershot;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;    
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Storage;
+use App\Services\PdsDraftDataService;
 
 class PdsPdfController extends Controller
 {
-    // This method will render the PDF preview (auth)
+    public function __construct(private PdsDraftDataService $draftDataService) {}
+
     public function preview1(Request $request)
     {
+        $this->initPdfEnv();
         $userId = Auth::id();
         if (!$userId) {
             abort(403, 'Unauthorized');
@@ -26,15 +27,20 @@ class PdsPdfController extends Controller
 
         $data = $this->buildPdfData($userId);
         $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
-        $pdfBinary = $this->makeShot($html)->pdf();
-
-        return response($pdfBinary, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="PDS_preview.pdf"'
-        ]);
+        
+        try {
+            $pdfBinary = $this->makeShot($html)->pdf();
+            
+            return response($pdfBinary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="PDS_preview.pdf"'
+            ]);
+        } catch (\Exception $e) {
+            // If PDF generation fails, return HTML view with error message
+            return response()->view('pds_form.pdf', $data + ['pdfMode' => true, 'pdfError' => $e->getMessage()]);
+        }
     }
 
-    // Signed preview endpoint for Browsershot
     public function preview(Request $request)
     {
         $userId = $request->input('user_id', Auth::id());
@@ -45,7 +51,6 @@ class PdsPdfController extends Controller
         return $this->renderPdfView($userId);
     }
 
-    // Admin preview for a specific user (HTML rendered in modal iframe)
     public function previewForAdmin(int $user)
     {
         $data = $this->buildPdfData($user);
@@ -53,23 +58,13 @@ class PdsPdfController extends Controller
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
     }
 
-    // Admin download PDF for a specific user
     public function downloadForAdmin(int $user)
     {
-        $data = $this->buildPdfData($user);
-        $personal = $data['personal'];
-        $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
+        $this->initPdfEnv();
+        $data     = $this->buildPdfData($user);
+        $filename = $this->pdfFilename($data['personal']);
 
-        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
-        $pdfBinary =  $this->makeShot($html)->pdf();
-
-        return response()->streamDownload(
-            function () use ($pdfBinary) {
-                echo $pdfBinary;
-            },
-            $filename,
-            ['Content-Type' => 'application/pdf']
-        );
+        return $this->streamPdf($data, $filename);
     }
 
     private function buildPdfData($userId)
@@ -85,61 +80,85 @@ class PdsPdfController extends Controller
         $father = $family->where('type', 'father')->first();
         $mother = $family->where('type', 'mother')->first();
         $children = $family->where('type', 'child')->values();
+        // Fetch education from database (authoritative source for review)
         $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
-        $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
-        // Keep user-entered order (insertion sequence) for work experiences
+
+        // Extra education tables (dynamic tables) only exist in drafts
+        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+        $extraEduTables = collect();
+        if ($draft && !empty($draft->data)) {
+            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
+            $extraEduTables = $this->draftDataService->buildExtraEduTables($draftData);
+        }
+        $eligibilities = DB::table('pds_eligibilities')
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->whereNotNull('eligibility')
+                      ->where('eligibility', '!=', '')
+                      ->whereNotIn('eligibility', ['NA', 'N/A', 'NONE']);
+            })
+            ->get();
         $work = DB::table('pds_work_experiences')
             ->where('user_id', $userId)
             ->get();
         $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->get();
+        // Fetch training from database (authoritative source for review)
         $training = DB::table('pds_training_programs')->where('user_id', $userId)->get();
+
+        // Extra training tables (dynamic tables) only exist in drafts
+        $extraTrainingTables = collect();
+        if ($draft && !empty($draft->data)) {
+            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
+            $extraTrainingTables = $this->draftDataService->buildExtraTrainingTables($draftData);
+        }
+
         $otherInfo = DB::table('pds_other_info')->where('user_id', $userId)->get();
-        // Limit to the on-form capacity (7 rows) and keep stable insertion order
         $references = DB::table('pds_references')
             ->where('user_id', $userId)
             ->orderBy('id')
             ->limit(7)
             ->get();
-        $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->get();
+        $remarks = DB::table('pds_form5_remarks')->where('user_id', $userId)->orderBy('id')->get();
 
         $signatureFiles = DB::table('pds_signature_files')->where('user_id', $userId)->first();
-$signaturePath = $signatureFiles->signature_file_path ?? null;
-$photoPath = $signatureFiles->photo_file_path ?? null;
+        $signaturePath = $signatureFiles->signature_file_path ?? null;
+        $photoPath = $signatureFiles->photo_file_path ?? null;
 
-// Browsershot-safe URL or Base64
-$signatureUrl = null;
-$photoUrl = null;
+        $signatureUrl = null;
+        $photoUrl = null;
 
-if ($signaturePath && file_exists(storage_path('app/public/' . $signaturePath))) {
-    $signatureUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $signaturePath)));
-}
+        if ($signaturePath && file_exists(storage_path('app/public/' . $signaturePath))) {
+            $signatureUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $signaturePath)));
+        }
 
-if ($photoPath && file_exists(storage_path('app/public/' . $photoPath))) {
-    $photoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $photoPath)));
-}
+        if ($photoPath && file_exists(storage_path('app/public/' . $photoPath))) {
+            $photoUrl = 'data:image/png;base64,' . base64_encode(file_get_contents(storage_path('app/public/' . $photoPath)));
+        }
 
-return compact(
-    'personal',
-    'address',
-    'contact',
-    'idInfo',
-    'declaration',
-    'family',
-    'spouse',
-    'father',
-    'mother',
-    'children',
-    'education',
-    'eligibilities',
-    'work',
-    'voluntary',
-    'training',
-    'otherInfo',
-    'references',
-    'remarks',
-    'signatureUrl',
-    'photoUrl' // <-- use this in Blade
-);
+        return compact(
+            'personal',
+            'address',
+            'contact',
+            'idInfo',
+            'declaration',
+            'family',
+            'spouse',
+            'father',
+            'mother',
+            'children',
+            'education',
+            'extraEduTables',
+            'eligibilities',
+            'work',
+            'voluntary',
+            'training',
+            'extraTrainingTables',
+            'otherInfo',
+            'references',
+            'remarks',
+            'signatureUrl',
+            'photoUrl'
+        );
     }
 
     private function renderPdfView($userId)
@@ -149,24 +168,36 @@ return compact(
         return view('pds_form.pdf', $data + ['pdfMode' => true]);
     }
 
-    // This method downloads the PDF via Spatie Browsershot
     public function download()
     {
+        $this->initPdfEnv();
         $userId = Auth::id();
         if (!$userId) abort(403, 'Unauthorized');
 
-        $data = $this->buildPdfData($userId);
-        $personal = $data['personal'];
-        $filename = 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
+        $data     = $this->buildPdfData($userId);
+        $filename = $this->pdfFilename($data['personal']);
 
-        $html = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
+        return $this->streamPdf($data, $filename);
+    }
 
-        $pdfBinary =  $this->makeShot($html)->pdf();
+    private function initPdfEnv(): void
+    {
+        set_time_limit(180);
+        ini_set('memory_limit', '512M');
+    }
+
+    private function pdfFilename(?object $personal): string
+    {
+        return 'PDS_' . ($personal->surname ?? 'user') . '_' . now()->format('Y-m-d') . '.pdf';
+    }
+
+    private function streamPdf(array $data, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $html      = view('pds_form.pdf', $data + ['pdfMode' => true])->render();
+        $pdfBinary = $this->makeShot($html)->pdf();
 
         return response()->streamDownload(
-            function () use ($pdfBinary) {
-                echo $pdfBinary;
-            },
+            function () use ($pdfBinary) { echo $pdfBinary; },
             $filename,
             ['Content-Type' => 'application/pdf']
         );
@@ -174,35 +205,33 @@ return compact(
 
     private function makeShot(string $html): Browsershot
     {
-        // Browsershot forbids HTML containing file://. Strip any accidental file:// or file:/ references (including backslashes/spaces) to prevent HtmlIsNotAllowedToContainFile.
-        $html = $html ?? '';
-
-        // Fast removal of protocol markers (handles variants like file:///, file:\, etc.)
         $html = str_ireplace([
             'file:///', 'file:\\', 'file://', 'file:/', 'file:\\/', 'file:\\', 'file:\\//'
         ], '', $html);
 
-        // Extra guard: remove any remaining file: tokens up to the next whitespace/quote/angle bracket
-        $html = preg_replace('#file:[^\s\"\
-\n<>]+#i', '', $html);
+        $html = preg_replace('#file:[^\s\"' . "\n" . '<>]+#i', '', $html);
 
         $chromePath = env('BROWSERSHOT_CHROME_PATH', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
-        $nodePath = env('BROWSERSHOT_NODE_PATH', 'C:\\Program Files\\nodejs\\node.exe');
-        $npmPath = env('BROWSERSHOT_NPM_PATH', 'C:\\Program Files\\nodejs\\npm.cmd');
+        $nodePath   = env('BROWSERSHOT_NODE_PATH',   'C:\\Program Files\\nodejs\\node.exe');
+        $npmPath    = env('BROWSERSHOT_NPM_PATH',    'C:\\Program Files\\nodejs\\npm.cmd');
 
         $shot = Browsershot::html($html)
-        ->paperSize(8.5, 13, 'in') // FORCE inches
-        ->margins(5, 10, 5, 10)
-        ->scale(.56)
-        ->emulateMedia('print')
-        ->showBackground()
-        ->setOption('printBackground', true)
-        ->waitUntilNetworkIdle()
-        ->timeout(240)
-        ->setDelay(1000)
-        ->hideHeaderAndFooter()
-        ->setOption('args', ['--disable-dev-shm-usage', '--no-sandbox']);
-
+            ->paperSize(8.5, 13, 'in')
+            ->margins(10, 10, 10, 10)
+            ->scale(.56)
+            ->emulateMedia('print')
+            ->showBackground()
+            ->setOption('printBackground', true)
+            ->timeout(180)
+            ->noSandbox()
+            ->hideHeaderAndFooter()
+            ->disableJavascript()
+            ->setOption('args', [
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-first-run',
+                '--disable-extensions',
+            ]);
 
         if (is_file($nodePath)) {
             $shot->setNodeBinary($nodePath);

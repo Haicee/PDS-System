@@ -8,9 +8,13 @@
 <x-app-layout>
 @endif
 <form method="POST" action="{{ route('pds.saveStep', 2) }}" enctype="multipart/form-data">
+    <div class="max-w-6xl mx-auto p-4 flex justify-end gap-3">
+      <a href="{{ route('pdsreview1.pdf') }}" class="px-4 py-2 bg-emerald-600 text-white rounded shadow border border-emerald-700 hover:bg-emerald-700">Preview PDF</a>
+      <a href="{{ route('pds.pdf.download') }}" class="px-4 py-2 bg-slate-700 text-white rounded shadow border border-slate-800 hover:bg-slate-800">Download PDF</a>
+    </div>
 @csrf
     <style>
-        body { margin: 24px; }
+        body { margin: 0px; }
         table { border-collapse: collapse; width: 100%; table-layout: fixed; }
         td, th { padding: 4px; vertical-align: middle; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
 
@@ -26,6 +30,7 @@
         td { height: 38px; min-height: 38px; vertical-align: middle; }
     </style>  
     <div class="max-w-6xl mx-auto p-4 font-serif text-sm">
+  @include('pdsreview.partials.date-format-helper')
 
     <table class="border border-black w-full font-['Arial_Narrow','sans-serif']">
 
@@ -78,12 +83,12 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $row = $rows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-middle text-center">{{ $row->eligibility ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->rating ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->exam_date ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->exam_place ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->license_no ?? ' ' }}</td>
-    <td class="border align-middle text-center">{{ $row->validity ?? ' ' }}</td>
+    <td class="border align-middle text-center">{{ $row->eligibility ?? ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $row->rating ?? ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $row ? (format_pds_date($row->exam_date ?? null) ?: (($row->eligibility ?? '') === 'NA' ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $row->exam_place ?? ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $row->license_no ?? ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $row->validity ?? ($i === 0 ? 'NA' : ' ') }}</td>
   </tr>
 @endfor
     </table>
@@ -139,8 +144,8 @@
 @for ($i = 0; $i < $maxRows; $i++)
   @php $workRow = $workRows[$i] ?? null; @endphp
   <tr>
-    <td class="border align-middle text-center">{{ $workRow->from ?? " " }}</td>
-    <td class="border align-middle text-center">{{ $workRow->to ?? " " }}</td>
+    <td class="border align-middle text-center">{{ $workRow ? (format_pds_date($workRow->from ?? null) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
+    <td class="border align-middle text-center">{{ $workRow ? (format_pds_date($workRow->to ?? null) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
     <td class="border align-middle text-center">{{ $workRow->position_title ?? " " }}</td>
     <td class="border align-middle text-center">{{ $workRow->department ?? " " }}</td>
     <td class="border align-middle text-center">{{ $workRow->status ?? " " }}</td>
@@ -163,14 +168,18 @@
 
         <td class="border" colspan="2">
           <div class="h-full w-full flex flex-col items-center justify-center p-2 space-y-2">
-            @php $signatureUrl = !empty($signaturePath) ? asset('storage/'.$signaturePath) : null; @endphp
+            @php
+              $signatureCleanPath = !empty($signaturePath) ? preg_replace('/^public\//', '', $signaturePath) : null;
+              $signatureUrl = !empty($signatureCleanPath) ? asset('storage/'.$signatureCleanPath) : null;
+            @endphp
             @if($signatureUrl)
               <img src="{{ $signatureUrl }}"
      alt="Signature"
      class="object-contain"
      style="max-height: 150px;
             mix-blend-mode: multiply;
-            filter: contrast(1.2) brightness(1.1);">
+            filter: contrast(1.2) brightness(1.1);"
+     onerror="this.alt='';this.style.display='none';">
             @else
               <div class="text-xs text-gray-600">No signature on file</div>
             @endif
@@ -181,11 +190,14 @@
           DATE
         </td>
 
-        <td class="border h-10">
-          <div class="h-full w-full flex items-center justify-center">
-            <div class="text-3xl text-center">{{ $declaration->date_accomplished ?? '—' }}</div>
-          </div>
-        </td>
+
+       <td class="border h-10">
+  <div class="h-full w-full flex items-center justify-center">
+    <div class="text-3xl text-center">
+      {{ format_pds_date($declaration->date_accomplished ?? null) ?? '—' }}
+    </div>
+  </div>
+</td>
       </tr>
     </table>
 

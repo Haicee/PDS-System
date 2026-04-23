@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Support\Facades\Route;
 
 class PdsSubmitted extends Notification implements ShouldBroadcast
 {
@@ -32,7 +33,9 @@ class PdsSubmitted extends Notification implements ShouldBroadcast
             'email' => $this->user->email,
             'role' => $this->user->role,
             'type' => $this->user->type,
-            'link' => route('pds.form'),
+            'link' => Route::has('pds.form')
+                ? route('pds.form', ['highlight' => $this->user?->id])
+                : route('pds.preview.admin', ['user' => $this->user?->id]),
         ];
     }
     

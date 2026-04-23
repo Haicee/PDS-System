@@ -4,13 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\ProfileEditRequest;
-use App\Models\AdminUser;
 use App\Notifications\EmployeeProfileUpdated;
 use App\Notifications\ProfileEditRequested;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -53,23 +51,7 @@ class ProfileController extends Controller
             'status' => 'pending',
         ]);
 
-        $notification = new ProfileEditRequested($editRequest);
-        $admins = AdminUser::all();
-        $adminUsers = \App\Models\User::where('role', 'admin')->get();
-
-        if ($admins->isNotEmpty()) {
-            Notification::send($admins, $notification);
-            foreach ($admins as $admin) {
-                $this->trimNotificationHistory($admin);
-            }
-        }
-
-        if ($adminUsers->isNotEmpty()) {
-            Notification::send($adminUsers, $notification);
-            foreach ($adminUsers as $adminUser) {
-                $this->trimNotificationHistory($adminUser);
-            }
-        }
+        $this->notifyAdmins(new ProfileEditRequested($editRequest));
 
         return Redirect::route('profile.edit')->with('status', 'profile-edit-requested');
     }
@@ -81,7 +63,6 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $original = $user->only(['name','gender','unit','phone','email','type','location_assigned']);
-        $originalPhoto = $user->profile?->profile;
 
         $user->fill($request->validated());
 
@@ -131,33 +112,16 @@ class ProfileController extends Controller
         }
 
         if (!empty($changed)) {
-            $notification = new EmployeeProfileUpdated($user, $changed);
-            $admins = AdminUser::all();
-            $adminUsers = \App\Models\User::where('role', 'admin')->get();
-
-            if ($admins->isNotEmpty()) {
-                Notification::send($admins, $notification);
-                foreach ($admins as $admin) {
-                    $this->trimNotificationHistory($admin);
-                }
-            }
-
-            if ($adminUsers->isNotEmpty()) {
-                Notification::send($adminUsers, $notification);
-                foreach ($adminUsers as $adminUser) {
-                    $this->trimNotificationHistory($adminUser);
-                }
-            }
+            $this->notifyAdmins(new EmployeeProfileUpdated($user, $changed));
         }
 
-        // Consume approved edit request (one-time edit window)
         $latestApproved = ProfileEditRequest::where('user_id', $user->id)
             ->where('status', 'approved')
             ->latest()
             ->first();
         if ($latestApproved) {
             $latestApproved->update([
-                'status' => 'rejected', // used/consumed
+                'status' => 'rejected',
                 'remarks' => 'Edit window used on save',
                 'reviewed_at' => $latestApproved->reviewed_at ?? now(),
                 'reviewed_by' => $latestApproved->reviewed_by,
@@ -165,22 +129,6 @@ class ProfileController extends Controller
         }
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
-    }
-
-    private function trimNotificationHistory($notifiable, int $limit = 20): void
-    {
-        $query = $notifiable->notifications()
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->skip($limit);
-
-        do {
-            $excessIds = $query->take(500)->pluck('id');
-            if ($excessIds->isEmpty()) {
-                break;
-            }
-            $notifiable->notifications()->whereIn('id', $excessIds)->delete();
-        } while ($excessIds->count() === 500);
     }
 
     /**

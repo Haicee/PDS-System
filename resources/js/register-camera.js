@@ -9,6 +9,7 @@ window.formCache = function () {
         stream: null,
         streaming: false,
         submitting: false,
+        isLoading: false,
         face: null,
         detectionState: 'idle', // idle | searching | no_face | dark | ready | captured
         detectionMessage: null,
@@ -20,6 +21,7 @@ window.formCache = function () {
         minDetectionScore: 0.60,
 
         async init() {
+            console.log('formCache init - isLoading:', this.isLoading);
             const form = document.querySelector('form')
             const saved = JSON.parse(localStorage.getItem('register_cache') || '{}')
 

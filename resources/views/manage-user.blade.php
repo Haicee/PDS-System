@@ -7,10 +7,10 @@
             confirmType: '',
             confirmTitle: '',
             confirmBody: '',
-            deleteConfirmOpen: false,
-            deleteTarget: null,
-            deleteError: '',
-            deleting: false,
+            archiveConfirmOpen: false,
+            archiveTarget: null,
+            archiveError: '',
+            archiving: false,
 
             viewUserId: {{ request('view_user') ? (int) request('view_user') : 'null' }},
 
@@ -46,12 +46,6 @@
                 this.confirmTitle = '';
                 this.confirmBody = '';
             },
-            closeDeleteConfirm() {
-                this.deleteConfirmOpen = false;
-                this.deleteTarget = null;
-                this.deleteError = '';
-                this.deleting = false;
-            },
             requestConfirm(type) {
                 if (this.savingEmployee) return;
                 this.confirmTitle = 'Add New Employee';
@@ -65,35 +59,47 @@
                     this.submitEmployee();
                 }
             },
-            requestDelete(employee) {
-                this.deleteTarget = employee;
-                this.deleteError = '';
-                this.deleting = false;
-                this.deleteConfirmOpen = true;
+            requestArchive(employee) {
+                console.log('requestArchive called for:', employee);
+                this.archiveTarget = employee;
+                this.archiveError = '';
+                this.archiving = false;
+                this.archiveConfirmOpen = true;
             },
-            async performDelete() {
-                if (!this.deleteTarget || this.deleting) return;
-                this.deleting = true;
-                this.deleteError = '';
+            closeArchiveConfirm() {
+                this.archiveConfirmOpen = false;
+                this.archiveTarget = null;
+                this.archiveError = '';
+                this.archiving = false;
+            },
+            async performArchive() {
+                if (!this.archiveTarget || this.archiving) return;
+                this.archiving = true;
+                this.archiveError = '';
+
+                console.log('performArchive called for:', this.archiveTarget);
 
                 try {
-                    const res = await fetch('/manage-user/' + this.deleteTarget.id, {
-                        method: 'DELETE',
+                    const res = await fetch('/manage-user/' + this.archiveTarget.id + '/archive', {
+                        method: 'POST',
                         headers: {
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
                         }
                     });
+                    console.log('Response status:', res.status);
                     const data = await res.json().catch(() => null);
+                    console.log('Response data:', data);
                     if (!res.ok) {
-                        throw new Error(data?.message || 'Failed to delete employee.');
+                        throw new Error(data?.message || 'Failed to archive employee.');
                     }
-                    window.dispatchEvent(new CustomEvent('employee-deleted', { detail: { id: this.deleteTarget.id, email: this.deleteTarget.email } }));
-                    this.closeDeleteConfirm();
+                    window.dispatchEvent(new CustomEvent('employee-archived', { detail: { id: this.archiveTarget.id, email: this.archiveTarget.email } }));
+                    this.closeArchiveConfirm();
                 } catch (err) {
-                    this.deleteError = err.message || 'Failed to delete employee.';
+                    console.error('Archive error:', err);
+                    this.archiveError = err.message || 'Failed to archive employee.';
                 } finally {
-                    this.deleting = false;
+                    this.archiving = false;
                 }
             },
             submitEmployee() {
@@ -158,8 +164,7 @@
             }
         }"
         x-init="init()"
-        x-cloak
-        x-on:open-delete.window="requestDelete($event.detail)">
+        x-cloak>
         
 
         <div class="mx-auto px-2 sm:px-6 md:px-12 lg:px-20 space-y-8 flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)]">
@@ -168,7 +173,7 @@
                 <div class="flex-1 min-w-0">
                     <p class="text-xs sm:text-sm uppercase tracking-wide text-indigo-500 font-semibold">Team Directory</p>
                     <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">Manage Employees</h1>
-                    <p class="text-slate-500 text-xs sm:text-sm lg:text-base">Review account status, employee status, and contact details in one place.</p>
+                    <p class="text-slate-500 text-xs sm:text-sm lg:text-base">Review account status, employment status, and contact details in one place.</p>
                 </div>
                 <!-- Icon buttons for mobile/tablet -->
                 <div class="flex items-center gap-2 lg:hidden flex-shrink-0">
@@ -202,7 +207,15 @@
                 x-data="{ 
                     search: '',
                     filterStatus: '',
+                    @if(request('status') === 'permanent')
+                    filterType: 'Permanent Employee',
+                    @elseif(request('status') === 'contract')
+                    filterType: 'Contract of Service',
+                    @elseif(request('status') === 'joborder')
+                    filterType: 'Job Order',
+                    @else
                     filterType: '',
+                    @endif
                     sortKey: 'created_at',
                     sortDir: 'desc',
                     filtersOpen: false,
@@ -210,13 +223,23 @@
                     employees: @js($employees),
                     units: @js($units ?? []),
                     init() {
-                        window.addEventListener('employee-deleted', (e) => {
+                        window.addEventListener('employee-archived', (e) => {
                             const id = e.detail?.id;
                             const email = e.detail?.email;
                             if (id !== undefined && id !== null) {
                                 this.removeEmployeeById(id);
                             } else if (email) {
                                 this.removeEmployeeByEmail?.(email);
+                            }
+                        });
+                        window.addEventListener('employee-updated', (e) => {
+                            const user = e.detail?.user;
+                            if (user && user.is_archive) {
+                                // User was automatically archived due to status change
+                                window.dispatchEvent(new CustomEvent('employee-archived', { detail: { id: user.id, email: user.email } }));
+                            } else if (user && user.status === 'Active' && !user.is_archive) {
+                                // User was automatically unarchived due to status change
+                                // This case is handled by the normal update flow
                             }
                         });
                     },
@@ -306,14 +329,14 @@
                             <option value="Inactive">Inactive</option>
                         </select>
                         <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
-                            <option value="">Employee Status: All</option>
+                            <option value="">Employment Status: All</option>
                             <option value="Permanent Employee">Permanent</option>
                             <option value="Contract of Service">Contract of Service</option>
+                            <option value="Job Order">Job Order</option>
                         </select>
                         <select class="rounded-full border border-slate-200/90 bg-white px-4.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                             <option value="created_at">Sort: Date</option>
                             <option value="name">Sort: Name</option>
-                            <option value="unit">Sort: Division/Section/Unit/Office</option>
                             <option value="email">Sort: Email</option>
                             <option value="phone">Sort: Phone</option>
                         </select>
@@ -355,14 +378,14 @@
                                 <option value="Inactive">Inactive</option>
                             </select>
                             <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500" x-model="filterType">
-                                <option value="">Employee Status: All</option>
+                                <option value="">Employment Status: All</option>
                                 <option value="Permanent Employee">Permanent</option>
                                 <option value="Contract of Service">Contract of Service</option>
+                                <option value="Job Order">Job Order</option>
                             </select>
                             <select class="rounded-full border border-slate-200/90 bg-white px-3.5 sm:px-4.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500" x-model="sortKey">
                                 <option value="created_at">Sort: Date</option>
                                 <option value="name">Sort: Name</option>
-                                <option value="unit">Sort: Division/Section/Unit/Office</option>
                                 <option value="email">Sort: Email</option>
                                 <option value="phone">Sort: Phone</option>
                             </select>
@@ -419,6 +442,13 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 bg-white text-[11px] sm:text-xs text-slate-700">
+                                    <template x-if="filteredSorted().length === 0">
+                                        <tr>
+                                            <td colspan="7" class="px-4 sm:px-6 py-8 text-center text-slate-400 text-sm">
+                                                No employee registered yet.
+                                            </td>
+                                        </tr>
+                                    </template>
                                     <template x-for="employee in filteredSorted()" :key="employee.id">
                                         <tr class="hover:bg-slate-50"
                                             x-data="{
@@ -447,14 +477,11 @@
                                             <td class="px-4 sm:px-6 py-3 sm:py-4 text-slate-500 whitespace-normal break-words min-w-[14ch] sm:min-w-[18ch] md:min-w-[22ch] max-w-[32ch]" x-text="employee.location"></td>
                                             <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
                                                 <div class="inline-flex items-center gap-2 justify-center">
-                                                    <button type="button" class="inline-flex items-center rounded-full border border-rose-200 px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-rose-600 hover:bg-rose-50"
-                                                        x-on:click.prevent="$dispatch('open-delete', employee)" title="Delete">
+                                                    <button type="button" class="inline-flex items-center rounded-full border border-amber-200 px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-amber-600 hover:bg-amber-50"
+                                                        x-on:click.prevent="requestArchive(employee)" title="Archive">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                            <path d="M3 6h18" />
-                                                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                                            <path d="M10 11v6" />
-                                                            <path d="M14 11v6" />
-                                                            <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" />
+                                                            <path d="M21 8v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/>
+                                                            <rect x="1" y="3" width="22" height="5" rx="1" ry="1"/>
                                                         </svg>
                                                     </button>
                                                     <button type="button" class="inline-flex items-center rounded-full border border-indigo-200 px-3.5 sm:px-4 py-1.5 text-[10px] sm:text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50"
@@ -470,7 +497,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
             @foreach ($employees as $employee)
                 <x-view-user-modal :employee="$employee" :name="'employee-details-' . $employee['id']" :key="'employee-details-' . $employee['id']" width="2xl" :units="$units" />
@@ -549,21 +575,21 @@
                 </div>
             </div>
 
-            <!-- Delete Confirm Modal -->
-            <div x-show="deleteConfirmOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4"
-                x-transition.opacity @click.self="closeDeleteConfirm()">
+            <!-- Archive Confirm Modal -->
+            <div x-show="archiveConfirmOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4"
+                x-transition.opacity @click.self="closeArchiveConfirm()">
                 <div class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-slate-100" x-transition.scale>
                     <div class="px-5 py-4 border-b border-slate-200 flex items-start justify-between">
                         <div>
-                            <h2 class="text-xl font-semibold text-slate-900">Delete Employee</h2>
+                            <h2 class="text-xl font-semibold text-slate-900">Archive Employee</h2>
                             <br>
-                            <p class="text-sm text-slate-500">You are about to permanently remove <span class="font-semibold text-slate-900" x-text="deleteTarget?.name"></span>. This action cannot be undone.</p>
-                            <template x-if="deleteError">
-                                <p class="mt-2 text-sm text-rose-600" x-text="deleteError"></p>
+                            <p class="text-sm text-slate-500">You are about to archive <span class="font-semibold text-slate-900" x-text="archiveTarget?.name"></span>. The employee will be moved to the archive page.</p>
+                            <template x-if="archiveError">
+                                <p class="mt-2 text-sm text-rose-600" x-text="archiveError"></p>
                             </template>
                         </div>
                         <button type="button" class="rounded-full p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                            @click="closeDeleteConfirm()">
+                            @click="closeArchiveConfirm()">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M18 6 6 18" />
                                 <path d="m6 6 12 12" />
@@ -573,10 +599,10 @@
                     </div>
                     <div class="px-5 py-4 flex items-center justify-end gap-3">
                         <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-white"
-                            @click="closeDeleteConfirm()">Cancel</button>
-                        <button type="button" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                            :disabled="deleting" @click="performDelete()">
-                            <span x-text="deleting ? 'Processing...' : 'Delete'"></span>
+                            @click="closeArchiveConfirm()">Cancel</button>
+                        <button type="button" class="rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                            :disabled="archiving" @click="performArchive()">
+                            <span x-text="archiving ? 'Processing...' : 'Archive'"></span>
                         </button>
                     </div>
                 </div>
