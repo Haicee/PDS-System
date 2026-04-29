@@ -6,7 +6,7 @@
         <col style="width:10.4%;">
     </colgroup>
     <tr>
-        <td class="border h-12 text-center text-xl font-bold italic align-middle">
+        <td class="border h-12 text-center align-middle" style="font-size:30px !important; font-weight:700 !important; font-style:italic !important;">
             SIGNATURE
         </td>
         <td class="border" colspan="2" style="height: 80px;">
@@ -16,17 +16,17 @@
                 @endif
             </div>
         </td>
-        <td class="border text-center text-xl font-bold align-middle" colspan="2">
+        <td class="border text-center align-middle" colspan="2" style="font-size:30px !important; font-weight:700 !important; font-style:italic !important;">
             DATE
         </td>
 @include('pdsreview.partials.date-format-helper')
         <td colspan="3" class="border h-24">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text" style="font-size:40px !important;">
+          <div class="h-full w-full flex items-center justify-center text-center" style="font-size:25px !important; font-weight:400 !important;">
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
         </td>
     </tr>
 </table>
-<div class="text-base w-full keep-base" style="margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+<div class="text-base w-full keep-base" style="margin-top:10px; text-align:right; font-family:'Arial','sans-serif'; font-style:italic;">
     CS FORM 212 (Revised 2025), Page 3 of 5
 </div>

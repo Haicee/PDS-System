@@ -1,6 +1,14 @@
 <x-app-layout>
  <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
-<div id="autosaveOverlay" class="autosave-overlay hidden">Saving…</div>
+<div id="autosaveOverlay" class="autosave-overlay hidden">
+  <div id="autosaveOverlayInner" style="text-align:center">
+    <span id="autosaveOverlayMsg">Saving…</span>
+    <div id="autosaveSessionExpired" style="display:none;margin-top:12px">
+      <p style="color:#b91c1c;font-size:15px;margin-bottom:8px">Your session has expired. Please reload the page to continue.</p>
+      <button onclick="window.location.reload()" style="padding:8px 20px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:15px">Reload Page</button>
+    </div>
+  </div>
+</div>
 
 <!-- Custom Confirmation Modal -->
 <div id="confirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex justify-center items-center">
@@ -3730,8 +3738,22 @@ window.confirmModalCancelClick = function() {
         if (!response.ok) {
           console.error('Auto-save failed:', response.status, response.statusText);
           showOverlay(true);
-          if (response.status === 419 || response.status === 401) {
-            // Stop retrying when session/CSRF is invalid; user should refresh/login again
+            if (response.status === 419) {
+            // CSRF token stale — fetch a fresh one then retry once
+            return fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' })
+              .then(() => {
+                const newToken = document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='));
+                if (newToken) {
+                  const decoded = decodeURIComponent(newToken.split('=')[1]);
+                  const meta = document.querySelector('meta[name="csrf-token"]');
+                  if (meta) meta.setAttribute('content', decoded);
+                }
+                failureCount = 0;
+                send();
+              })
+              .catch(() => { throw new Error('Auto-save halted: auth/CSRF'); });
+          }
+          if (response.status === 401) {
             throw new Error('Auto-save halted: auth/CSRF');
           }
           failureCount += 1;
@@ -3761,7 +3783,14 @@ window.confirmModalCancelClick = function() {
       .catch(error => {
         console.error('Auto-save error:', error);
         showOverlay(true);
-        if (String(error).includes('auth/CSRF')) return; // already halted above
+        if (String(error).includes('auth/CSRF')) {
+          // Show actionable session-expired message instead of frozen overlay
+          const expiredDiv = document.getElementById('autosaveSessionExpired');
+          const msgSpan = document.getElementById('autosaveOverlayMsg');
+          if (expiredDiv) expiredDiv.style.display = 'block';
+          if (msgSpan) msgSpan.style.display = 'none';
+          return;
+        }
         failureCount += 1;
         const delay = Math.min(baseDelay * Math.pow(2, failureCount - 1), maxDelay);
         if (failureCount <= maxRetries) {

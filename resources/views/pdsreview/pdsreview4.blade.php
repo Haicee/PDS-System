@@ -111,7 +111,6 @@
         </div>
         <p class="mt-2">if yes, give details:</p>
         <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a" Disabled value="{{ $declaration->q34_a_details ?? '' }}">
-        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b" Disabled value="{{ $declaration->q34_b_details ?? '' }}">
       </td>
     </tr>
 
@@ -357,7 +356,7 @@
         // Reindex to zero-based keys so array-style access works for all saved references
         $refRows = ($references ?? collect())->values();
         $hasReferences = $refRows->filter(fn($ref) => !empty($ref->name) || !empty($ref->address) || !empty($ref->contact))->isNotEmpty();
-        $maxRef = max(7, $refRows->count());
+        $maxRef = max(3, $refRows->count());
       @endphp
       @for ($i = 0; $i < $maxRef; $i++)
       @php $ref = $hasReferences ? ($refRows[$i] ?? null) : null; @endphp

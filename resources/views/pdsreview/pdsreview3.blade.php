@@ -281,7 +281,17 @@
 
     </table>
 
-@foreach($extraTrainingTables ?? [] as $draftKey => $extraTable)
+@php
+    $dbTrTitles = ($training ?? collect())
+        ->map(fn($r) => strtoupper(trim((string)($r->title ?? ''))))
+        ->filter()->values();
+    $filteredExtraTables = collect($extraTrainingTables ?? [])->map(
+        fn($tbl) => collect($tbl)->filter(
+            fn($row) => $dbTrTitles->doesntContain(strtoupper(trim((string)($row->title ?? ''))))
+        )
+    )->filter(fn($t) => $t->isNotEmpty());
+@endphp
+@foreach($filteredExtraTables as $draftKey => $extraTable)
 <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
   <colgroup>
     <col style="width: 45.5%;">

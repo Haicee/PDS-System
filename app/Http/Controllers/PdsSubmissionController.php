@@ -44,7 +44,9 @@ class PdsSubmissionController extends Controller
         $photoPath = $this->fileService->storePhoto($request, $userId);
         $signaturePath = $this->fileService->storeSignature($request, $userId);
         $rowHasData = function (array $row): bool {
-            return collect($row)->some(fn ($v) => strlen(trim((string) $v)) > 0);
+            // Exclude meta fields that are always present — only check actual data columns
+            return collect(array_diff_key($row, ['user_id' => true, 'id' => true]))
+                ->some(fn ($v) => strlen(trim((string) $v)) > 0);
         };
 
         $ensureFirstRowNotBlank = function (array $fields, string $label) {
@@ -196,7 +198,37 @@ class PdsSubmissionController extends Controller
                 ];
             })->filter($rowHasData);
 
-            $allEdu = $edu->concat($extraEdu);
+            // Collect data from dynamic education tables (education_1, education_2, etc.)
+            $dynamicEdu = collect();
+            $allInputs = $req->all();
+            foreach ($allInputs as $key => $value) {
+                if (preg_match('/^education_(\d+)$/', $key, $matches)) {
+                    $tableData = $value;
+                    if (!is_array($tableData)) continue;
+
+                    // Each dynamic education table has rows for different levels
+                    foreach ($tableData as $level => $row) {
+                        if (!is_array($row)) continue;
+
+                        $hasData = collect($row)->some(fn ($v) => strlen(trim((string) ($v ?? ''))) > 0);
+                        if (!$hasData) continue;
+
+                        $dynamicEdu->push([
+                            'user_id' => $userId,
+                            'level' => $level,
+                            'school_name' => $row['school_name'] ?? null,
+                            'degree_course' => $row['basic_education'] ?? null,
+                            'from' => $row['from'] ?? null,
+                            'to' => $row['to'] ?? null,
+                            'highest_level' => $row['highest_level'] ?? null,
+                            'year_graduated' => $row['year_graduated'] ?? null,
+                            'academic_honors' => $row['scholarship_acadhonors'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            $allEdu = $edu->concat($extraEdu)->concat($dynamicEdu);
 
             if ($allEdu->isNotEmpty()) {
                 DB::table('pds_education_records')->insert($allEdu->values()->all());
@@ -412,6 +444,29 @@ class PdsSubmissionController extends Controller
                 );
 
                     PdsRejection::where('user_id', $userId)->delete();
+            }
+
+            // Clear training and extra education data from draft since it's now in DB
+            // This prevents duplication when form reloads and syncs from DB
+            $draft = PdsDraft::where('user_id', $userId)->first();
+            if ($draft && !empty($draft->data)) {
+                $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
+                // Remove all learning-related keys (main table and dynamic tables)
+                $trainingKeys = [
+                    'learning_title_of_ld', 'learning_from', 'learning_to',
+                    'learning_hours', 'learning_type_of_ld', 'learning_conducted_sponsored_by'
+                ];
+                foreach ($trainingKeys as $key) {
+                    unset($draftData[$key]);
+                }
+                // Remove all learning_N and education_N keys (dynamic tables)
+                foreach (array_keys($draftData) as $key) {
+                    if (preg_match('/^(learning|education)_\d+$/', $key)) {
+                        unset($draftData[$key]);
+                    }
+                }
+                $draft->data = $draftData;
+                $draft->save();
             }
         });
 
