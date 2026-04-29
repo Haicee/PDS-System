@@ -9,9 +9,11 @@
         </p>
     </header>
 
+    <!-- Offline mode: verification routes disabled. Original resend form retained for future use.
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
         @csrf
     </form>
+    -->
 
     <form id="profile-update-form" method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
         @csrf
@@ -31,6 +33,7 @@
                 <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" x-bind:readonly="!editable" />
                 <x-input-error class="mt-2" :messages="$errors->get('email')" />
 
+                <!-- Offline mode: verification routes disabled. Original prompt kept commented for future use.
                 @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                     <div>
                         <p class="text-sm mt-2 text-gray-800">
@@ -48,6 +51,7 @@
                         @endif
                     </div>
                 @endif
+                -->
             </div>    
 
             <div>

@@ -1,5 +1,7 @@
 <x-app-layout>
+ <!-- Offline mode: Tom Select CDN disabled.
  <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+ -->
 <div id="autosaveOverlay" class="autosave-overlay hidden">Saving…</div>
 
 <!-- Custom Confirmation Modal -->
@@ -73,7 +75,9 @@
         .autosave-overlay.hidden { display: none; }
         textarea.edu-row-error { background-color: #fee2e2 !important; outline: 2px solid #ef4444 !important; }
     </style>
+    <!-- Offline mode: Tom Select CDN disabled.
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    -->
    <script>
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('pds-form1');

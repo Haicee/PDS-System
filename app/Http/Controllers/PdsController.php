@@ -170,8 +170,8 @@ class PdsController extends Controller
         $row = DB::table('pds_signature_files')->where('user_id', $userId)->first();
 
         return [
-            $row->signature_file_path ?? null,
-            $row->photo_file_path ?? null,
+            ($row->signature_file_path ?? null) === 'NA' ? null : ($row->signature_file_path ?? null),
+            ($row->photo_file_path ?? null) === 'NA' ? null : ($row->photo_file_path ?? null),
         ];
     }
 }

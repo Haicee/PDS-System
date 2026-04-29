@@ -25,9 +25,11 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
+    /* Offline mode: OTP routes disabled.
     Route::get('otp', [OtpController::class, 'show'])->name('otp.show');
     Route::post('otp', [OtpController::class, 'verify'])->name('otp.verify');
     Route::post('otp/cancel', [OtpController::class, 'cancel'])->name('otp.cancel');
+    */
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
@@ -42,11 +44,14 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
+/* Offline mode: email verification routes disabled.
 Route::get('verify-email/{id}/{hash}', [VerifyEmailController::class, 'guestVerify'])
     ->middleware(['signed', 'throttle:6,1'])
     ->name('verification.verify');
+*/
 
 Route::middleware('auth')->group(function () {
+    /* Offline mode: email verification endpoints disabled.
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
@@ -62,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::get('email/verification-status', [EmailVerificationNotificationController::class, 'status'])
         ->middleware('throttle:6,1')
         ->name('verification.status');
+    */
 
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');

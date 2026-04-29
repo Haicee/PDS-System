@@ -346,8 +346,8 @@ class PdsSubmissionController extends Controller
             $duties = $req->input('duties', []);
 
             $photoPathToPersist = $photoPath ?? $existingPhotoPath;
-            $signaturePathToPersist = $signaturePath ?? ($existingSignaturePath ?? 'NA');
-            $thumbmarkPathToPersist = $existingThumbmarkPath ?? 'NA';
+            $signaturePathToPersist = $signaturePath ?? ($existingSignaturePath ?? null);
+            $thumbmarkPathToPersist = $existingThumbmarkPath ?? null;
 
             $workExperienceData = [];
             $maxRows = max(count($durations), count($positionTitles), count($officeUnits),

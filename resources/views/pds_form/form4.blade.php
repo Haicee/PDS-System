@@ -43,6 +43,7 @@
     textarea { border: none; outline: none; padding: 8px; width: 100%; font: inherit; resize: none; background: transparent; line-height: 1.3; display: block; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; word-break: break-word; min-height: 38px; height: auto; }
     textarea:focus { outline: none; box-shadow: none; }
   </style>
+  <!-- Offline mode: face capture stack disabled.
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
@@ -1274,6 +1275,7 @@
     // Also check periodically in case user navigates back from form1
     setInterval(syncFromForm1, 1000);
   </script>
+  -->
   
   <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
   <div class="pds-sheet">

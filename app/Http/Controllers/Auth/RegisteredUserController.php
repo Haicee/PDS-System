@@ -12,14 +12,14 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -107,6 +107,18 @@ class RegisteredUserController extends Controller
                     'profile' => $path,
                 ]);
 
+                // Offline mode: skip outbound email verification + admin email notifications. Original flow kept commented below.
+                Auth::login($user);
+
+                // ensure fresh pds session cache for new account
+                session()->forget(['pds', 'pds_owner']);
+                session(['pds_owner' => $user->id]);
+
+                return $user->role === 'employee'
+                    ? redirect('/employee')->with('clearRegisterCache', true)
+                    : redirect(route('dashboard', absolute: false))->with('clearRegisterCache', true);
+
+                /*
                 // Notify all admins about the new employee registration
                 $adminUsers = AdminUser::all();
                 $adminsFromUsersTable = User::where('role', 'admin')->get();
@@ -147,6 +159,7 @@ class RegisteredUserController extends Controller
                 return $user->role === 'employee'
                     ? redirect('/employee')->with('clearRegisterCache', true)
                     : redirect(route('dashboard', absolute: false))->with('clearRegisterCache', true);
+                */
             });
         } catch (\Throwable $e) {
             Storage::disk('public')->delete($path);

@@ -4,14 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\Otp;
 use App\Models\PdsDraft;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\View\View;
 
@@ -41,6 +37,11 @@ class AuthenticatedSessionController extends Controller
         // Track last login time
         $user->update(['last_login_at' => now()]);
 
+        // Offline mode: skip email verification + OTP. Keep original flow commented for future re-enable.
+        $redirect = $user?->role === 'employee' ? '/employee' : route('dashboard', absolute: false);
+        return redirect()->intended($redirect);
+
+        /*
         // Require verified email for users that implement it
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
             $user->sendEmailVerificationNotification();
@@ -75,6 +76,7 @@ class AuthenticatedSessionController extends Controller
         Auth::guard($guard)->logout();
 
         return redirect()->route('otp.show')->with('status', 'We sent a one-time passcode to your email.');
+        */
     }
 
     /**

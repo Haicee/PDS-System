@@ -192,7 +192,8 @@ class PdsStepController extends Controller
             ->where('user_id', $userId)
             ->value('signature_file_path');
 
-        if (!$signaturePath) {
+        if (!$signaturePath || $signaturePath === 'NA') {
+            $signaturePath = null;
             unset($data['signature_path'], $data['signature_data']);
         }
 
