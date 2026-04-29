@@ -83,10 +83,34 @@ class PdsPdfController extends Controller
         // Fetch education from database (authoritative source for review)
         $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
 
-        // Extra education tables (dynamic tables) only exist in drafts
-        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+        // Build extra education tables from DB data (split non-base levels into separate tables)
         $extraEduTables = collect();
-        if ($draft && !empty($draft->data)) {
+        if ($education->isNotEmpty()) {
+            $baseLevels = ['elementary', 'secondary', 'vocational', 'college', 'graduate_studies'];
+            $extraRows = $education->filter(fn ($row) => !in_array(strtolower($row->level), $baseLevels))->values();
+
+            // Create extra tables (5 rows per table)
+            $extraTableCount = ceil($extraRows->count() / 5);
+            for ($i = 0; $i < $extraTableCount; $i++) {
+                $tableRows = $extraRows->slice($i * 5, 5)->values();
+                $extraEduTables->push($tableRows->map(fn ($row) => [
+                    'level' => $row->level,
+                    'school_name' => $row->school_name,
+                    'degree_course' => $row->degree_course,
+                    'basic_education' => $row->degree_course,
+                    'from' => $row->from,
+                    'to' => $row->to,
+                    'highest_level' => $row->highest_level,
+                    'year_graduated' => $row->year_graduated,
+                    'academic_honors' => $row->academic_honors,
+                    'scholarship_acadhonors' => $row->academic_honors,
+                ]));
+            }
+        }
+
+        // Fallback: load from draft only when DB is empty
+        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
+        if ($draft && !empty($draft->data) && $education->isEmpty()) {
             $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
             $extraEduTables = $this->draftDataService->buildExtraEduTables($draftData);
         }
@@ -105,9 +129,10 @@ class PdsPdfController extends Controller
         // Fetch training from database (authoritative source for review)
         $training = DB::table('pds_training_programs')->where('user_id', $userId)->get();
 
-        // Extra training tables (dynamic tables) only exist in drafts
+        // Extra training tables from draft only loaded when DB is empty
+        // When DB has training rows, all extra-table rows are already merged there on submission
         $extraTrainingTables = collect();
-        if ($draft && !empty($draft->data)) {
+        if ($draft && !empty($draft->data) && $training->isEmpty()) {
             $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
             $extraTrainingTables = $this->draftDataService->buildExtraTrainingTables($draftData);
         }

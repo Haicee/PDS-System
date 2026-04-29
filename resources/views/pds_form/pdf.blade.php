@@ -201,8 +201,6 @@
         .text-4xl { font-size: 1.6rem; }
         .text-base { font-size: 1rem; }
         .text-lg { font-size: 1.05rem; }
-
-        /* Force uniform 3xl sizing for PDF/print while allowing opt-out via .keep-base */
         @media print {
             body,
             table,
@@ -223,7 +221,6 @@
                 font-size: 2rem !important; /* Even larger for print */
                 line-height: 1.3;
             }
-
             .keep-base {
                 font-size: 1rem !important;
                 line-height: 1.2;
@@ -242,17 +239,14 @@
               justify-content: center;
               align-items: flex-start;
           }
-
           .pdf-scale-wrapper {
               transform-origin: top left;
               width: 100%;
           }
-
           table {
               width: 100%;
               border-collapse: collapse;
           }
-
           /* Auto page-fit per table (PDF only) */
           .pdf-page {
               page-break-after: always;
@@ -283,8 +277,7 @@
               font-size: 18px;
               line-height: 1.15;
           }
-          body.pdf-mode table:not(.declarations-table) td,
-          body.pdf-mode table:not(.declarations-table)  {
+          body.pdf-mode table:not(.declarations-table) td {
               padding: 5px;
               font-size: 18px !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
@@ -292,7 +285,7 @@
               line-height: 1.15 !important;
           }
           body.pdf-mode table:not(.declarations-table) td *,
-          body.pdf-mode table:not(.declarations-table) *:not(.date-large-text):not(.remarks-content):not(.pds-title) {
+          body.pdf-mode table:not(.declarations-table) *:not(.date-large-text):not(.remarks-content):not(.pds-title):not(.form-header-text) {
               font-size: 18px !important;
               font-family: 'Arial Narrow','Arial',sans-serif !important;
               font-weight: 400 !important;
@@ -325,6 +318,14 @@
             margin-top: 0 !important;
             line-height: 1.1 !important;
             text-align: center !important;
+          }
+
+          /* Force bold for form header text (CS Form No.) */
+          body.pdf-mode .form-header-text,
+          body.pdf-mode table .form-header-text,
+          body.pdf-mode table td .form-header-text {
+            font-weight: 700 !important;
+            font-family: 'Calibri', 'Arial', sans-serif !important;
           }
 
           /* Header margin to create space below title */
@@ -379,25 +380,27 @@
 <td class="border-black" style="border:4px solid black; border-bottom:0;">
 <div class="p-0 font-serif text-sm" @if(!empty($pdfMode)) style="width:100%;max-width:100%;" @endif>
   <!-- HEADER -->
-  <header style="position:relative; width:100%; margin-bottom:0; min-height:50px;">
-    <span style="position:relative; z-index:1; font-family:'Arial',Arial,sans-serif; font-weight:600; font-size:15px; font-style:italic; line-height:1.3;">
-      CS Form No. 212<br>
-      <span style="font-family:'Arial Narrow',Arial,sans-serif; font-weight:300; font-size:12px;">Revised 2025</span>
+  <header style="position:relative; width:100%; margin-bottom:15px; min-height:55px;">
+    <span style="position:relative; z-index:1; font-family:'Calibri','Arial',sans-serif; font-size:15px; font-style:italic; line-height:1.3;">
+      <span class="form-header-text" style="font-family:'Arial Black','Arial',sans-serif; font-size:16px; font-weight:600 !important;">
+        <b style="font-weight:600 !important;">CS Form No. 212</b>
+      </span><br>
+      <span style="font-family:'Calibri','Arial',sans-serif; font-weight:300; font-size:12px;">Revised 2025</span>
     </span>
-    <h1 class="pds-title" style="position:absolute; top:0; left:0; right:0; margin:0; padding-top:6px; padding-bottom:8px; text-align:center; width:100%;">
+    <h1 class="pds-title" style="position:absolute; bottom:50px; top:15px; left:0; right:0; margin:0; padding-top:6px; padding-bottom:8px; text-align:center; width:100%;">
       PERSONAL DATA SHEET
     </h1>
   </header>
 
-  <p class=" font-['Arial','sans-serif'] text-base italic font-bold" style="margin:0; padding:0;">
-    WARNING: Any misrepresentation made in the Personal Data Sheet shall cause the filing of administrative/criminal case/s against the person concerned.
- <p class="font-['Arial','sans-serif'] text-xs text-s italic font-bold" style="margin:0; padding:0;">
-  READ THE ATTACHED GUIDE TO FILLING OUT THE PERSONAL DATA SHEET (PDS) BEFORE ACCOMPLISHING THE PDS FORM. <br>
-  Print legibly if accomplished through own handwriting. Tick appropriate boxes 
-  <span style="font-style:normal;">&#x2610;</span> and use separate sheet if necessary. 
-  Indicate <span class="font-bold">N/A</span> if not applicable. 
-  <span class="font-bold">DO NOT ABBREVIATE.</span>
-</p>
+  <p class="font-['Arial','sans-serif'] text-base italic font-bold" style="margin:0 0 5px 0; padding-top:20px; font-family:'Arial Black','Arial',sans-serif; font-weight:600 !important;">
+    <b style="font-weight:600 !important;">WARNING:</b> Any misrepresentation made in the Personal Data Sheet and the Work Experience Sheet shall cause the filing of administrative/criminal case/s against the person concerned.
+  </p>
+  <p class="font-['Arial','Arial',sans-serif] text-xs italic font-bold" style="margin:0; padding:0; font-family:'Arial Narrow','Arial',sans-serif; font-weight:600 !important;">
+    READ THE ATTACHED GUIDE TO FILLING OUT THE PERSONAL DATA SHEET (PDS) BEFORE ACCOMPLISHING THE PDS FORM. <br>
+  </p>
+  <p class="font-['Arial_Narrow','Arial',sans-serif]" style="margin:0; padding:0;">
+  Print legibly if accomplished through own handwriting. Tick appropriate boxes (<span style="font-style:normal;">&#x2610;</span>) and use separate sheet if necessary. Indicate <span class="font-bold">N/A</span> if not applicable.  <span style="font-family:'Arial Black','Arial',sans-serif; font-weight:600 !important;"><b style="font-weight:600 !important;">DO NOT ABBREVIATE.</b></span>
+  </p>
 </td>
 </table>
 
@@ -408,10 +411,10 @@
   <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow', Arial, sans-serif; font-size:18px; border:4px solid black; border-bottom:0;">
     <!-- FIXED GRID -->
     <colgroup>
-      <col style="width:8%">
-      <col style="width:9%">
-      <col style="width:10%">
-      <col style="width:12%">
+      <col style="width:14.7%">
+      <col style="width:20%">
+      <col style="width:25%">
+      <col style="width:27%">
     </colgroup>
 
     <!-- SECTION HEADER -->
@@ -445,7 +448,7 @@
 </td>
 
       <td class="bg-[#e7e7e7] align-top border" style="background-color:#e7e7e7;">
-        <span class="italic px-2 text-xs">NAME EXTENSION (JR., SR)</span>
+        <span class="px-2 text-xs">NAME EXTENSION (JR., SR)</span>
         <div class="ml-2">
            {{ $displayNA($personal->name_extension ?? '') }}
       </div>
@@ -507,7 +510,7 @@
         <tr>
           <td class="py-1">
         <div class="border-2 border-black flex justify-center items-center" 
-            style="min-height:30px; padding:6px 8px; margin-bottom:10px; font-size:25px !important;">
+            style="min-height:30px; padding:6px 8px; margin:0 70px 10px 70px; font-size:25px !important;">
           {{ $displayNA($personal->country ?? '') }}
         </div>
       </td>
@@ -538,19 +541,23 @@
   <td class="bg-[#e7e7e7] align-middle px-2 border" style="background-color:#e7e7e7; vertical-align:middle;">
     5. SEX AT BIRTH
   </td>
-  <td class="border" style="padding:4px; vertical-align:middle; text-align:center;">
-    <div style="display:grid; grid-template-columns: repeat(2, 1fr); column-gap:102px; justify-items:center;">
-      <label style="display:flex; align-items:center; gap:6px;">
-        <input class="checkbox-large" type="checkbox" value="male" disabled {{ $personal->sex == 'male' ? 'checked' : '' }}>
-        Male
-      </label>
-
-      <label style="display:flex; align-items:center; gap:6px; margin-right:30px;">
-        <input class="checkbox-large" type="checkbox" value="female" disabled {{ $personal->sex == 'female' ? 'checked' : '' }}>
-        Female
-      </label>
-
-    </div>
+  <td class="border" style="padding:4px; vertical-align:middle;">
+    <table style="width:100%; border-collapse:collapse;">
+      <tr>
+        <td style="width:50%; padding:2px 4px;">
+          <label style="display:flex; align-items:center; gap:6px;">
+            <input class="checkbox-large" type="checkbox" value="male" disabled {{ $personal->sex == 'male' ? 'checked' : '' }}>
+            Male
+          </label>
+        </td>
+        <td style="width:50%; padding:2px 4px;">
+          <label style="display:flex; align-items:center; gap:6px;">
+            <input class="checkbox-large" type="checkbox" value="female" disabled {{ $personal->sex == 'female' ? 'checked' : '' }}>
+            Female
+          </label>
+        </td>
+      </tr>
+    </table>
   </td>
 </tr>
 
@@ -558,37 +565,45 @@
    <td class="px-2" style="background-color:#e7e7e7; vertical-align:top; border:1px solid black;">
     6. CIVIL STATUS
 </td>
-    <td style="border:1px solid black; vertical-align:middle; text-align:center; padding:2px;">
-  <div style="display:flex; justify-content:center; align-items:center; padding:0;">
-    <div style="display:grid; grid-template-columns: repeat(2, 1fr); row-gap:20px; column-gap:80px; font-size:12px;">
-
-      <label style="display:flex; align-items:center; gap:4px;" class="text-2xl">
-        <input type="checkbox" name="civilstatus[]" value="single" class="checkbox-large" disabled {{ $personal->civil_status == 'single' ? 'checked' : '' }}>
-        Single
-      </label>
-
-      <label style="display:flex; align-items:center; gap:4px;" class="text-2xl">
-        <input type="checkbox" name="civilstatus[]" value="married" class="checkbox-large" disabled {{ $personal->civil_status == 'married' ? 'checked' : '' }}>
-        Married
-      </label>
-
-      <label style="display:flex; align-items:center; gap:4px;" class="text-2xl">
-        <input type="checkbox" name="civilstatus[]" value="widowed" class="checkbox-large" disabled {{ $personal->civil_status == 'widowed' ? 'checked' : '' }}>
-        Widowed
-      </label>
-
-      <label style="display:flex; align-items:center; gap:4px;"class="text-2xl">
-        <input type="checkbox" name="civilstatus[]" value="separated" class="checkbox-large" disabled {{ $personal->civil_status == 'separated' ? 'checked' : '' }}>
-        Separated
-      </label>
-
-      <label style="display:flex; align-items:center; gap:4px;"class="text-2xl">
-        <input type="checkbox" name="civilstatus[]" value="other/s" class="checkbox-large" disabled {{ $personal->civil_status == 'Other/s' ? 'checked' : '' }}>
-        Other/s:
-      </label>
-
-    </div>
-  </div>
+    <td style="border:1px solid black; vertical-align:middle; padding:2px;">
+  <table style="width:100%; border-collapse:collapse; line-height:1;">
+    <tr>
+      <td style="width:50%; padding:1px 4px !important;">
+        <label style="display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" name="civilstatus[]" value="single" class="checkbox-large" disabled {{ $personal->civil_status == 'single' ? 'checked' : '' }}>
+          Single
+        </label>
+      </td>
+      <td style="width:50%; padding:1px 4px !important;">
+        <label style="display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" name="civilstatus[]" value="married" class="checkbox-large" disabled {{ $personal->civil_status == 'married' ? 'checked' : '' }}>
+          Married
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td style="width:50%; padding:1px 4px !important;">
+        <label style="display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" name="civilstatus[]" value="widowed" class="checkbox-large" disabled {{ $personal->civil_status == 'widowed' ? 'checked' : '' }}>
+          Widowed
+        </label>
+      </td>
+      <td style="width:50%; padding:1px 4px !important;">
+        <label style="display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" name="civilstatus[]" value="separated" class="checkbox-large" disabled {{ $personal->civil_status == 'separated' ? 'checked' : '' }}>
+          Separated
+        </label>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:1px 4px !important;">
+        <label style="display:flex; align-items:center; gap:4px;">
+          <input type="checkbox" name="civilstatus[]" value="other/s" class="checkbox-large" disabled {{ $personal->civil_status == 'Other/s' ? 'checked' : '' }}>
+          Other/s:
+        </label>
+      </td>
+    </tr>
+  </table>
 </td>
 
 <td rowspan="3" colspan="2"
@@ -796,13 +811,18 @@
     @endphp
 
     
-    <tr>
       <td class="bg-[#e7e7e7] font-['Arial_Narrow','Arial',sans-serif] px-2 border h-8" style="background-color:#e7e7e7;">13. PhilSys Number (PSN):</td>
       <td class="border px-2 align-middle">
           {{ $displayNA($personal->philsys_no ?? '') }}
       </td>
-      <td class="px-2 align-middle border" style="background-color:#e7e7e7; width:35%;">19. TELEPHONE NO.</td>
-      <td class="border px-2 align-middle"  style="width:65%;">{{ $displayNA($contact->telephone_no ?? '') }}</td>
+      <td colspan="2" style="padding:0; border:1px solid black;">
+        <table style="width:100%; border-collapse:collapse; height:100%;">
+          <tr>
+            <td style="width:262px; background-color:#e7e7e7; padding:4px 8px; border-right:1px solid black;">19. TELEPHONE NO.</td>
+            <td style="padding:4px 8px;">{{ $displayNA($contact->telephone_no ?? '') }}</td>
+          </tr>
+        </table>
+      </td>
     </tr>
    
     <tr>
@@ -810,8 +830,14 @@
       <td class="border px-2 align-middle">
         {{ $displayNA($personal->tin_no ?? '') }}
       </td>
-      <td class="px-2 align-middle border" style="background-color:#e7e7e7; width:35%;">20. MOBILE NO.</td>
-      <td class="  px-2 align-middle border" style="width:65%;">{{ $displayNA($contact->mobile_no ?? '') }}</td>
+      <td colspan="2" style="padding:0; border:1px solid black;">
+        <table style="width:100%; border-collapse:collapse; height:100%;">
+          <tr>
+            <td style="width:262px; background-color:#e7e7e7; padding:4px 8px; border-right:1px solid black;">20. MOBILE NO.</td>
+            <td style="padding:4px 8px;">{{ $displayNA($contact->mobile_no ?? '') }}</td>
+          </tr>
+        </table>
+      </td>
     </tr>
 
     <tr>
@@ -819,8 +845,14 @@
       <td class="  px-2 align-middle">
          {{ $displayNA($personal->agency_employee_no ?? '') }}
       </td>
-      <td class="bg-[#e7e7e7] px-2 align-middle " style="background-color:#e7e7e7; width:35%; border:1px solid black; border-bottom:0;">21. E-MAIL ADDRESS (if any)</td>
-      <td class=" px-2 align-middle" style="width:65%;">{{ $displayNA($contact->email_address ?? '') }}</td>
+      <td colspan="2" style="padding:0; border:1px solid black; border-bottom:0;">
+        <table style="width:100%; border-collapse:collapse; height:100%;">
+          <tr>
+            <td style="width:262px; background-color:#e7e7e7; padding:4px 8px; border-right:1px solid black;">21. E-MAIL ADDRESS (if any)</td>
+            <td style="padding:4px 8px;">{{ $displayNA($contact->email_address ?? '') }}</td>
+          </tr>
+        </table>
+      </td>
     </tr>
 
   </table>
@@ -829,12 +861,12 @@
   {{-- II. FAMILY BACKGROUND --}}
 <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','sans-serif'; font-size:18px; border:4px solid black; border-bottom:0;" class="border-black border-b-0">
     <colgroup>
-      <col style="width:25%">
-      <col style="width:10%">
-      <col style="width:8%">
-      <col style="width:16%">
-      <col style="width:20%">
-      <col style="width:22%">
+      <col style="width:17%">
+      <col style="width:11%">
+      <col style="width:3%">
+      <col style="width:19%">
+      <col style="width:32%">
+      <col style="width:18%">
     </colgroup>
 
     <!-- SECTION HEADER -->
@@ -846,11 +878,11 @@
 
     <!-- SPOUSE + CHILD HEADER -->
     <tr>
-        <td style="background:#e7e7e7; padding:4px; vertical-align:middle;">22. SPOUSE'S SURNAME</td>
+        <td style="background:#e7e7e7; padding:6px 4px 4px 4px; vertical-align:middle;">22. SPOUSE'S SURNAME</td>
         <td colspan="3" style="border:1px solid black;">
             {{ $displayNA($spouse->surname ?? '') }}
         </td>
-        <td style="border:1px solid black; text-align:center;">23. NAME OF CHILDREN</td>
+        <td style="border:1px solid black; text-align:center; white-space:nowrap; font-size:15px;">23. NAME OF CHILDREN (Write full name and list all)</td>
         <td style="border:1px solid black; text-align:center;">DATE OF BIRTH (dd/mm/yyyy)</td>
     </tr>
 
@@ -858,9 +890,9 @@
 
     <!-- Spouse First Name + Extension -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:8px;">FIRST NAME</td>
+        <td style="background:#e7e7e7; padding-left:30px;">FIRST NAME</td>
         <td colspan="2" style="border:1px solid black;">{{ $displayNA($spouse->firstname ?? '') }}</td>
-              <td style="background:#e7e7e7; font-style:italic; padding:4px;">
+              <td style="background:#e7e7e7; padding:4px; border:1px solid black;">
         <span style="font-size:12px;">NAME EXTENSION (JR., SR)</span><br>
         <span style="font-size:20px; font-style:normal;">
           {{ $displayNA($spouse->name_extension ?? '') }}
@@ -873,7 +905,7 @@
 
     <!-- Spouse Middle Name -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
+        <td style="background:#e7e7e7; padding-left:30px;">MIDDLE NAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($spouse->middlename ?? '') }}
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -882,7 +914,7 @@
 
     <!-- Spouse Occupation -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px;">OCCUPATION</td>
+        <td style="background:#e7e7e7; padding-left:30px; border:1px solid black;">OCCUPATION</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($spouse->occupation ?? '') }}
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -891,7 +923,7 @@
 
     <!-- Spouse Employer -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px;">EMPLOYER/BUSINESS NAME</td>
+        <td style="background:#e7e7e7; padding-left:30px; border:1px solid black;">EMPLOYER/BUSINESS NAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($spouse->employer ?? '') }}
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -900,7 +932,7 @@
 
     <!-- Spouse Business Address -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px;">BUSINESS ADDRESS</td>
+        <td style="background:#e7e7e7; padding-left:30px; border:1px solid black;">BUSINESS ADDRESS</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($spouse->business_address ?? '') }}
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -909,7 +941,7 @@
 
     <!-- Spouse Telephone -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px;">TELEPHONE NO.</td>
+        <td style="background:#e7e7e7; padding-left:30px; border:1px solid black;">TELEPHONE NO.</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($spouse->telephone_no ?? '') }}
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -918,7 +950,7 @@
 
     <!-- Father -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px;">24. FATHER'S SURNAME</td>
+        <td style="background:#e7e7e7; padding:6px 4px 4px 4px;">24. FATHER'S SURNAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($father->surname ?? '') }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -926,9 +958,9 @@
     </tr>
 
     <tr>
-        <td style="background:#e7e7e7; padding-left:8px;">FIRST NAME</td>
+        <td style="background:#e7e7e7; padding-left:30px;">FIRST NAME</td>
         <td colspan="2" style="border:1px solid black;">{{ $displayNA($father->firstname ?? '') }}</td>
-        <td style="background:#e7e7e7; font-style:italic; padding:4px;">
+        <td style="background:#e7e7e7; padding:4px; border:1px solid black;">
         <span style="font-size:12px;">NAME EXTENSION (JR., SR)</span><br>
         <span style="font-size:20px; font-style:normal;">
           {{ $displayNA($father->name_extension ?? '') }}
@@ -940,7 +972,7 @@
     </tr>
 
     <tr>
-        <td style="background:#e7e7e7; padding-left:8px;">MIDDLE NAME</td>
+        <td style="background:#e7e7e7; padding-left:30px;">MIDDLE NAME</td>
         <td colspan="3" style="border:1px solid black;" class="border-b-0">{{ $displayNA($father->middlename ?? '') }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? ''}}</td>
@@ -949,14 +981,14 @@
 
     <!-- Mother -->
     <tr>
-        <td style="background:#e7e7e7; padding-left:4px; border:1px solid black; border-top:1px solid black;" colspan="4">25. MOTHER'S MAIDEN NAME</td>
+        <td style="background:#e7e7e7; padding:6px 4px 4px 4px; border:1px solid black; border-bottom:0;" colspan="4">25. MOTHER'S MAIDEN NAME</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
         @php $childIndex++; @endphp
     </tr>
 
     <tr>
-        <td style="background:#e7e7e7; padding-left:8px;">SURNAME</td>
+        <td style="background:#e7e7e7; padding-left:30px;">SURNAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($mother->surname ?? '') }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -964,7 +996,7 @@
     </tr>
 
     <tr>
-        <td style="background:#e7e7e7; padding-left:8px;">FIRST NAME</td>
+        <td style="background:#e7e7e7; padding-left:30px;">FIRST NAME</td>
         <td colspan="3" style="border:1px solid black;">{{ $displayNA($mother->firstname ?? '') }}</td>
         <td style="border:1px solid black; text-align:center;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center;">{{ format_pds_date($childDobs[$childIndex]) ?? ''}}</td>
@@ -972,7 +1004,7 @@
     </tr>
 
     <tr style="border-bottom:0;">
-        <td style="background:#e7e7e7; padding-left:8px; border-bottom:0;">MIDDLE NAME</td>
+        <td style="background:#e7e7e7; padding-left:30px; border-bottom:0;">MIDDLE NAME</td>
         <td colspan="3" style="border:1px solid black; border-bottom:0;" class="border-b-0">{{ $displayNA($mother->middlename ?? '') }}</td>
         <td style="border:1px solid black; text-align:center; border-bottom: 0;">{{ $childNames[$childIndex] ?? '' }}</td>
         <td style="border:1px solid black; text-align:center; border-bottom: 0;">{{ format_pds_date($childDobs[$childIndex]) ?? '' }}</td>
@@ -1096,7 +1128,7 @@
 
   <!-- DATA ROW -->
   <tr class="min-h-[20]" style="width: 20%;">
-    <td class="border text-center align-middle h-20">ELEMENTARY</td>
+    <td class="border align-middle h-20" style="padding-left:30px;">ELEMENTARY</td>
 
     <!-- EDITABLE CELL PATTERN -->
      <td
@@ -1144,7 +1176,7 @@
   </tr>
   @foreach($extraRows('ELEMENTARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">&nbsp;</td>
+      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1157,7 +1189,7 @@
 
 
    <tr class="min-h-[20]" style="width: 20%;">
-    <td class="border text-center align-middle h-20">SECONDARY</td>
+    <td class="border align-middle h-20" style="padding-left:30px;">SECONDARY</td>
 
     <!-- EDITABLE CELL PATTERN -->
      <td
@@ -1204,7 +1236,7 @@
   </tr>
   @foreach($extraRows('SECONDARY') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">&nbsp;</td>
+      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1216,7 +1248,7 @@
   @endforeach
 
    <tr class="min-h-[20]" style="width: 20%;">
-    <td class="border text-center align-middle h-20">VOCATIONAL / TRADE COURSE</td>
+    <td class="border align-middle h-20" style="padding-left:30px;">VOCATIONAL / TRADE COURSE</td>
 
     <!-- EDITABLE CELL PATTERN -->
     <td
@@ -1263,7 +1295,7 @@
   </tr>
   @foreach($extraRows('VOCATIONAL / TRADE COURSE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">&nbsp;</td>
+      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1275,7 +1307,7 @@
   @endforeach
 
    <tr class="min-h-[20]" style="width: 20%;">
-    <td class="border text-center align-middle h-20">COLLEGE</td>
+    <td class="border align-middle h-20" style="padding-left:30px;">COLLEGE</td>
 
     <!-- EDITABLE CELL PATTERN -->
     <td
@@ -1322,7 +1354,7 @@
   </tr>
   @foreach($extraRows('COLLEGE') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">&nbsp;</td>
+      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1334,7 +1366,7 @@
   @endforeach
 
   <tr class="min-h-[20]" style="width: 20%;">
-    <td class="border text-center align-middle h-20">GRADUATE STUDIES</td>
+    <td class="border align-middle h-20" style="padding-left:30px;">GRADUATE STUDIES</td>
 
     <!-- EDITABLE CELL PATTERN -->
    <td
@@ -1381,7 +1413,7 @@
   </tr>
   @foreach($extraRows('GRADUATE STUDIES') as $rec)
     <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border text-center align-middle h-20">&nbsp;</td>
+      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
       <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
@@ -1472,7 +1504,7 @@
     <col style="width:17.5%">
   </colgroup>
   <tr>
-    <td class="border h-12 text-center text-xl font-bold italic align-middle" style="border-top:0;">
+    <td class="border h-12 text-center align-middle" style="border-top:0; font-size:30px !important; font-weight:700 !important; font-style:italic !important;">
       SIGNATURE
     </td>
 
@@ -1484,19 +1516,18 @@
     </div>
 </td>
 
-    <td class="border text-center text-xl font-bold align-middle" colspan="2" style="border-top:0;">
+    <td class="border text-center align-middle" colspan="2" style="border-top:0; font-size:30px !important; font-weight:700 !important; font-style:italic !important;">
       DATE
     </td>
 @include('pdsreview.partials.date-format-helper')
     <td colspan="3"
           class="border h-24" style="border-top:0;">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text" style="font-size:40px !important;">
+          <div class="h-full w-full flex items-center justify-center text-center" style="font-size:25px !important; font-weight:400 !important;">
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
       </td>
 </table>
-
-<div class="w-full text-base keep-base" style="text-align:right; font-family:'Arial_Narrow','sans-serif'; margin-top:10px;">
+<div class="w-full text-base keep-base" style="text-align:right; font-family:'Arial','sans-serif'; font-style:italic; margin-top:10px;">
     CS FORM 212 (Revised 2025), Page 1 of 5
 </div>
 {{-- Close outer wrapper / flex column --}}
@@ -1513,7 +1544,6 @@
 <table class="section-table border-b-0"
        style="width:100%; border-collapse:collapse; table-layout:fixed;
                font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0;">
-
     <colgroup>
         <col style="width:50%;">
         <col style="width:10%;">
@@ -1531,7 +1561,6 @@
             IV. CIVIL SERVICE ELIGIBILITY
         </th>
     </tr>
-
     <tr style="background:#e7e7e7; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
         <th  rowspan="2" style="width:80%; border:1px solid black;">
             27. CES/CSEE/CAREER SERVICE/RA 1080 (BOARD/BAR)/UNDER SPECIAL LAWS/CATEGORY II/IV ELIGIBILITY and ELIGIBILITIES FOR UNIFORMED PERSONNEL
@@ -1541,7 +1570,6 @@
         <th rowspan="2" style="border:1px solid black;">PLACE OF EXAMINATION / CONFERMENT</th>
         <th colspan="2" style="border:1px solid black;">LICENSE <br>(if applicable)</th>
     </tr>
-
     <tr style="background:#e7e7e7; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">
         <th style="border:1px solid black;">NUMBER</th>
         <th style="border:1px solid black;">VALID UNTIL</th>
@@ -1632,7 +1660,7 @@
         <col style="width:15%;">
     </colgroup>
     <tr>
-        <td class="border h-12 text-center text-xl font-bold italic align-middle">
+        <td class="border h-12 text-center align-middle" style="font-size:30px !important; font-weight:700 !important; font-style:italic !important;">
             SIGNATURE
         </td>
 
@@ -1644,19 +1672,19 @@
             </div>
         </td>
 
-        <td class="border text-center text-xl font-bold align-middle" colspan="2">
+        <td class="border text-center align-middle" colspan="2" style="font-size:30px !important; font-weight:700 !important; font-style:italic !important;">
             DATE
         </td>
 @include('pdsreview.partials.date-format-helper')
          <td colspan="3"
           class="border h-24">
-          <div class="h-full w-full flex items-center justify-center text-lg text-center date-large-text" style="font-size:40px !important;">
+          <div class="h-full w-full flex items-center justify-center text-center" style="font-size:25px !important; font-weight:400 !important;">
             {{ format_pds_date($declaration->date_accomplished) ?? '—' }}
           </div>
       </td>
     </tr>
 </table>  
-      <div class="text-base w-full keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+      <div class="text-base w-full keep-base" style="margin-top:10px; text-align:right; font-family:'Arial','sans-serif'; font-style:italic;">
     CS FORM 212 (Revised 2025), Page 2 of 5
 </div>
 </div>
@@ -1743,11 +1771,7 @@
     @endfor
   </div>
 </div>
-
 </table>
-
-    
-
 @php
     $allTrainingRows = ($training ?? ($learning ?? collect()))->values();
     // Merge extra draft tables (sorted by key) into one flat list
@@ -1803,9 +1827,7 @@
     @endfor
   </tbody>
 </table>
-
 </div>{{-- close page-3 block --}}
-
 {{-- Other Info + Signature: flows naturally after training, using available space --}}
 @include('pds_form.partials.other_info_block')
 <div style="page-break-inside: avoid;">
@@ -1814,58 +1836,53 @@
 <div style="page-break-before: always;"></div>
   <div class="w-full font-serif text-sm">
   <div class="pds-sheet w-full" style="max-width:100%;">
-
    <table class="section-table declarations-table" style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border-bottom:0; font-size:20px !important;">
-    <!-- ======================= 34 ======================= -->
 <tr>
-  <td style="border:1px solid black; width:66%; vertical-align:top; padding:10px;">
+  <td style="border:1px solid black; width:66%; vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
     34. Are you related by consanguinity or affinity to the appointing or recommending authority, or to the
     chief of bureau or office or to the person who has immediate supervision over you in the Office,
     Bureau or Department where you will be appointed?
-    <div style="margin-left:40px;">a. within the third degree?</div>
-    <div style="margin-left:40px; margin-top:5px;">b. within the fourth degree (for Local Government Unit – Career Employees)?</div>
+    <div style="margin-left:30px; font-size:20px !important;">a. within the third degree?</div>
+     <div style="margin-left:30px; font-size:20px !important;">b. within the fourth degree (for Local Government Unit – Career Employees)?</div>
   </td>
 
-  <td style="border:1px solid black; width:34%; vertical-align:top; padding:10px;">
-
-    <!-- 34A -->
-    <div style="display:flex; align-items:center;  gap:10px; margin-top:40px;">
-      <label style="display:flex; align-items:center; gap:2px; margin:0;">
-        <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-bottom:6px;" disabled @checked(($declaration->q34_a ?? '') === 'YES')>
-        YES
-      </label>
-      <label style="display:flex; align-items:center; gap:2px; margin:0;">
-        <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-bottom:6px;" disabled @checked(($declaration->q34_a ?? '') === 'NO')>
-        NO
-      </label>
-    </div>
-
-    <!-- 34B -->
-    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-      <label style="display:flex; align-items:center; gap:2px; margin:0;">
-        <input type="checkbox" class="checkbox-large" style="width:13px; height:13px;" disabled @checked(($declaration->q34_b ?? '') === 'YES')>
-        YES
-      </label>
-      <label style="display:flex; align-items:center; gap:2px; margin:0;">
-        <input type="checkbox" class="checkbox-large" style="width:13px; height:13px;" disabled @checked(($declaration->q34_b ?? '') === 'NO')>
-        NO
-      </label>
-    </div>
-
-    <div style="margin-top:8px;">if yes, give details:</div>
-
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
-      Disabled value="{{ $declaration->q34_a_details ?? '' }}">
-
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black; margin-top:5px;"
-      Disabled value="{{ $declaration->q34_b_details ?? '' }}">
+  <td style="border:1px solid black; width:34%; vertical-align:top; padding:10px; padding-top:78px !important;">
+    <table style="width:100%; border-collapse:collapse;">
+      <!-- 34A row -->
+      <tr>
+        <td style="padding:2px 0 !important;">
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_a ?? '') === 'YES')>
+          YES
+          &nbsp;&nbsp;
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_a ?? '') === 'NO')>
+          NO
+        </td>
+      </tr>
+      <!-- 34B row -->
+      <tr>
+        <td style="padding:2px 0 !important;">
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_b ?? '') === 'YES')>
+          YES
+          &nbsp;&nbsp;
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_b ?? '') === 'NO')>
+          NO
+        </td>
+      </tr>
+      <!-- if YES give details -->
+      <tr>
+        <td style="padding:2px 0 !important;">
+          <div>if YES, give details:</div>
+          <input type="text" style="width:100%; border:none; border-bottom:1px solid black;" disabled value="{{ $declaration->q34_a_details ?? '' }}">
+        </td>
+      </tr>
+    </table>
   </td>
 </tr>
 
 
 <!-- ======================= 35A ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
+  <td style="vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
     35. a. Have you ever been found guilty of any administrative offense?
   </td>
 
@@ -1893,7 +1910,7 @@
   </tr>
 </table>
 
-    <div style="margin-top:8px;">if yes, give details:</div>
+    <div style="margin-top:8px;">if YES, give details:</div>
 
     <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
       Disabled value="{{ $declaration->q35_a_details ?? '' }}">
@@ -1903,8 +1920,8 @@
 
 <!-- ======================= 35B ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
-    <div style="margin-left:30px;">b. Have you been criminally charged before any court?</div>
+   <td style="vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
+    <div style="margin-left:30px; font-size:20px !important;">b. Have you been criminally charged before any court?</div>
   </td>
 
   <td style="border:1px solid black; vertical-align:top; padding:10px;">
@@ -1931,17 +1948,17 @@
   </tr>
 </table>
 
-    <div style="margin-top:8px;">if yes, give details:</div>
+    <div style="margin-top:8px;">if YES, give details:</div>
 
-    <div style="margin-top:5px;">
-      Date Filed:
-      <input type="text" style="border:none; border-bottom:1px solid black; width:100%;"
+    <div style="margin-top:5px; display:flex; align-items:center; gap:5px;">
+      <span>Date Filed:</span>
+      <input type="text" style="border:none; border-bottom:1px solid black; flex:1;"
         Disabled value="{{ $declaration->q35_b_details_date ?? '' }}">
     </div>
 
-    <div style="margin-top:5px;">
-      Status of Case/s:
-      <input type="text" style="border:none; border-bottom:1px solid black; width:100%;"
+    <div style="margin-top:5px; display:flex; align-items:center; gap:5px;">
+      <span>Status of Case/s:</span>
+      <input type="text" style="border:none; border-bottom:1px solid black; flex:1;"
         Disabled value="{{ $declaration->q35_b_details_status ?? '' }}">
     </div>
 
@@ -1951,7 +1968,7 @@
 
 <!-- ======================= 36 ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
+  <td style="border:1px solid black; vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
     36. Have you ever been convicted of any crime or violation of any law, decree, ordinance or regulation by any court or tribunal?
   </td>
 
@@ -1979,7 +1996,7 @@
   </tr>
 </table>
 
-    <div style="margin-top:8px;">if yes, give details:</div>
+    <div style="margin-top:8px;">if YES, give details:</div>
 
     <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
       Disabled value="{{ $declaration->q36_details ?? '' }}">
@@ -1989,7 +2006,7 @@
 
 <!-- ======================= 37 ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
+  <td style="border:1px solid black; vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
     37. Have you ever been separated from the service in any of the following modes: resignation, retirement, dropped from the rolls, dismissal, termination, end of term, finished contract or phased out (abolition) in the public or private sector?
   </td>
 
@@ -2017,7 +2034,7 @@
   </tr>
 </table>
 
-    <div style="margin-top:8px;">if yes, give details:</div>
+    <div style="margin-top:8px;">if YES, give details:</div>
 
     <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
       Disabled value="{{ $declaration->q37_details ?? '' }}">
@@ -2027,7 +2044,7 @@
 
 <!-- ======================= 38A ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
+  <td style="vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
     38. a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?
   </td>
 
@@ -2055,18 +2072,19 @@
   </tr>
 </table>
 
-    <div style="margin-top:8px;">if yes, give details:</div>
-
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
-      Disabled value="{{ $declaration->q38_a_details ?? '' }}">
+    <div style="margin-top:8px; display:flex; align-items:center; gap:5px;">
+      <span>if YES, give details:</span>
+      <input type="text" style="border:none; border-bottom:1px solid black; flex:1;"
+        Disabled value="{{ $declaration->q38_a_details ?? '' }}">
+    </div>
   </td>
 </tr>
 
 
 <!-- ======================= 38B ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
-    <div style="margin-left:30px;">
+  <td style="vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
+    <div style="margin-left:30px; font-size:20px !important;">
       b. Have you resigned from the government service during the three (3)-month period before the last election to promote/actively campaign for a national or local candidate?
     </div>
   </td>
@@ -2095,10 +2113,11 @@
   </tr>
 </table>
 
-    <div style="margin-top:8px;">if yes, give details:</div>
-
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
-      Disabled value="{{ $declaration->q38_b_details ?? '' }}">
+    <div style="margin-top:8px; display:flex; align-items:center; gap:5px;">
+      <span>if YES, give details:</span>
+      <input type="text" style="border:none; border-bottom:1px solid black; flex:1;"
+        Disabled value="{{ $declaration->q38_b_details ?? '' }}">
+    </div>
   </td>
 </tr>
 
@@ -2106,7 +2125,7 @@
 
 <!-- ======================= 39 ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
+  <td style="border:1px solid black; vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
     39. Have you acquired the status of an immigrant or permanent resident of another country?
   </td>
 
@@ -2134,108 +2153,88 @@
   </tr>
 </table>
 
-    <div style="margin-top:8px;">if yes, give details:</div>
-
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
-      Disabled value="{{ $declaration->q39_details ?? '' }}">
+    <div style="margin-top:8px; display:flex; align-items:center; gap:5px;">
+      <span>if YES, give details (country):</span>
+      <input type="text" style="border:none; border-bottom:1px solid black; flex:1;"
+        Disabled value="{{ $declaration->q39_details ?? '' }}">
+    </div>
   </td>
 </tr>
 
 
 <!-- ======================= 40 ======================= -->
 <tr>
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
-    40. Pursuant to RA 8371, RA 7277 (as amended), and RA 11861:
+  <td style="border:1px solid black; vertical-align:top; padding:10px; font-size:20px !important; background:#e7e7e7;">
+    40. Pursuant to: (a) Indigenous People's Act (RA 8371); (b) Magna Carta for Disabled Persons (RA 7277, as amended); and (c) Expanded Solo Parents Welfare Act (RA 11861), please answer the following items:
 
-    <div style="margin-left:30px; margin-top:8px;">a. Are you a member of any indigenous group?</div>
-    <div style="margin-left:30px; margin-top:20px;">b. Are you a person with disability?</div>
-    <div style="margin-left:30px; margin-top:20px;">c. Are you a solo parent?</div>
+    <div style="margin-left:25px; margin-top:8px; font-size:20px !important;">a. Are you a member of any indigenous group?</div>
+    <div style="margin-left:25px; margin-top:35px; font-size:20px !important;">b. Are you a person with disability?</div>
+    <div style="margin-left:25px; margin-top:35px; font-size:20px !important;">c. Are you a solo parent?</div>
   </td>
 
-  <td style="border:1px solid black; vertical-align:top; padding:10px;">
+  <td style="border:1px solid black; vertical-align:top; padding:10px; padding-top:62px !important;">
+    <table style="width:100%; border-collapse:collapse;">
+      <!-- 40A -->
+      <tr>
+        <td style="padding:2px 0;">
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q40_a ?? '') === 'YES')>
+          YES &nbsp;&nbsp;
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q40_a ?? '') === 'NO')>
+          NO
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:2px 0 8px;">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span>If YES, please specify:</span>
+            <input type="text" style="border:none; border-bottom:1px solid black; flex:1;" disabled value="{{ $declaration->q40_a_details ?? '' }}">
+          </div>
+        </td>
+      </tr>
 
-    <!-- 40A -->
-    <table style="width:auto; border-collapse:collapse; margin-top:10px;">
-  <tr>
-    <td style="padding:0;">
-      <input type="checkbox"
-      class="checkbox-large"
-             style="width:13px; height:13px; margin-right:4px;"
-             disabled
-             @checked(($declaration->q40_a ?? '') === 'YES')>
-      YES
-    </td>
+      <!-- 40B -->
+      <tr>
+        <td style="padding:2px 0;">
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q40_b ?? '') === 'YES')>
+          YES &nbsp;&nbsp;
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q40_b ?? '') === 'NO')>
+          NO
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:2px 0 8px;">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span>If YES, please specify ID No:</span>
+            <input type="text" style="border:none; border-bottom:1px solid black; flex:1;" disabled value="{{ $declaration->q40_b_details ?? '' }}">
+          </div>
+        </td>
+      </tr>
 
-    <td style="padding:0 0 0 15px;">
-      <input type="checkbox"
-         class="checkbox-large"
-             style="width:13px; height:13px; margin-right:4px;"
-             disabled
-             @checked(($declaration->q40_a ?? '') === 'NO')>
-      NO
-    </td>
-  </tr>
-</table>
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black; margin-bottom:10px;"
-      Disabled value="{{ $declaration->q40_a_details ?? '' }}">
-
-    <!-- 40B -->
-    <table style="width:auto; border-collapse:collapse;">
-  <tr>
-    <td style="padding:0;">
-      <input type="checkbox"
-      class="checkbox-large"
-             style="width:13px; height:13px; margin-right:4px;"
-             disabled
-             @checked(($declaration->q40_b ?? '') === 'YES')>
-      YES
-    </td>
-
-    <td style="padding:0 0 0 15px;">
-      <input type="checkbox"
-         class="checkbox-large"
-             style="width:13px; height:13px; margin-right:4px;"
-             disabled
-             @checked(($declaration->q40_b ?? '') === 'NO')>
-      NO
-    </td>
-  </tr>
-</table>
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black; margin-bottom:10px;"
-      Disabled value="{{ $declaration->q40_b_details ?? '' }}">
-
-    <!-- 40C -->
-    <table style="width:auto; border-collapse:collapse;">
-  <tr>
-    <td style="padding:0;">
-      <input type="checkbox"
-      class="checkbox-large"
-             style="width:13px; height:13px; margin-right:4px;"
-             disabled
-             @checked(($declaration->q40_c ?? '') === 'YES')>
-      YES
-    </td>
-
-    <td style="padding:0 0 0 15px;">
-      <input type="checkbox"
-         class="checkbox-large"
-             style="width:13px; height:13px; margin-right:4px;"
-             disabled
-             @checked(($declaration->q40_c ?? '') === 'NO')>
-      NO
-    </td>
-  </tr>
-</table>
-    <input type="text" style="width:100%; border:none; border-bottom:1px solid black;"
-      Disabled value="{{ $declaration->q40_c_details ?? '' }}">
-
+      <!-- 40C -->
+      <tr>
+        <td style="padding:2px 0;">
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q40_c ?? '') === 'YES')>
+          YES &nbsp;&nbsp;
+          <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q40_c ?? '') === 'NO')>
+          NO
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:2px 0;">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span>If YES, please specify ID No:</span>
+            <input type="text" style="border:none; border-bottom:1px solid black; flex:1;" disabled value="{{ $declaration->q40_c_details ?? '' }}">
+          </div>
+        </td>
+      </tr>
+    </table>
   </td>
 </tr>
     </table> 
 
     <table class="section-table w-full h-full font-['Arial_Narrow','Arial',sans-serif]" style="border-collapse:collapse;">
       <tr>
-        <td colspan="3" style="border-right:0; border:2px solid black;">
+        <td colspan="3" style="border-right:0; border:2px solid black; background:#e7e7e7;">
           <span class="ml-2">41. REFERENCES </span><span class="font-semibold">(Person not related by consanguinity or affinity to applicant / appointee)</span>
         </td>
         <td rowspan="11"
@@ -2247,32 +2246,34 @@
         border-left:0;
     ">
 
-    <div style="margin-top:20mm;">
+    <div style="display:flex; flex-direction:column; height:100%; padding:6px 0; justify-content:space-between;">
 
         <!-- PASSPORT PHOTO -->
-        <div style="margin-bottom:3mm;">
+        <div style="margin-bottom:3mm; padding-top:0.8cm">
 
             <div style="
-                width:40mm;
-                height:50mm;
-                border:2px solid black;
+                width:55mm;
+                height:65mm;
+                border:3px solid black;
                 margin:0 auto;
                 position:relative;
                 overflow:hidden;
                 font-size:10px;
-                font-style:italic;
                 text-align:center;
                 display:flex;
                 align-items:center;
                 justify-content:center;
             ">
+            
 
                 @if($photoUrl)
                   <img src="{{ $photoUrl }}"
                        style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"
                        alt="Photo">
                 @else
-            
+                  <span style="font-size:9px; text-align:center; padding:4px; line-height:1.4;">
+                    Passport-sized unfiltered digital picture taken within the last 6 months<br>4.5 cm. X 3.5 cm
+                  </span>
                 @endif
 
             </div>
@@ -2285,7 +2286,7 @@
 
 
         <!-- THUMB MARK -->
-        <div style="margin-top:30mm;">
+        <div style="margin-top:auto; padding-bottom:0.5cm;">
 
             <div style="
                 width:65mm;
@@ -2315,9 +2316,8 @@
                     border-top:1px solid black;
                     text-align:center;
                     font-size:10px;
-                    font-style:italic;
                     padding:2mm 0;
-                    background:white;
+                    background-color:#e7e7e7;
                 ">
                     Right Thumbmark
                 </div>
@@ -2326,7 +2326,7 @@
     </div>
 </td>
       </tr>
-      <tr class="border border-black">
+      <tr class="border border-black" style="background:#e7e7e7;">
         <th class="border font-light w-24 border-black">NAME</th>
         <th class="border font-light border-black">OFFICE / RESIDENTIAL ADDRESS </th>
         <th class="border font-light w-52 border-black">CONTACT NO. AND / OR EMAIL</th>
@@ -2334,7 +2334,7 @@
       @php
         // Reindex to zero-based keys so array-style access works for all saved references
         $refRows = ($references ?? collect())->values();
-        $maxRef = max(7, $refRows->count());
+        $maxRef = max(3, $refRows->count());
       @endphp
       @for ($i = 0; $i < $maxRef; $i++)
       @php $ref = $refRows[$i] ?? null; @endphp
@@ -2351,7 +2351,7 @@
       </tr>
       @endfor
       <tr class="border justify-center">
-        <td colspan="3" class="text-justify px-2 h-20 font-semibold border-2 text-base">
+        <td colspan="3" class="text-justify px-2 h-20 font-semibold border-2 text-base" style="background-color:#e7e7e7;">
           42. I declare under oath that I have personally accomplished this Personal Data Sheet which is a true, correct, and complete statement pursuant to the provisions of pertinent laws, rules, and regulations of the Republic of the Philippines. I authorize the agency head/authorized representative to verify/validate the contents stated herein. I  agree that any misrepresentation made in this document and its attachments shall cause the filing of administrative/criminal case/s against me.
         </td>
       </tr>
@@ -2361,7 +2361,7 @@
     <!-- HEADER -->
     <tr style="height:2.5cm;">
         <td colspan="2"
-            style="border:1px solid black; padding:6px; font-weight:bold;" class="text-base">
+            style="border:1px solid black; padding:6px; font-weight:bold; background-color:#e7e7e7;" class="text-base">
             Government Issued ID (i.e. Passport, GSIS, SSS, PRC, Driver's License, etc.)<br>
             <span style="font-style:italic; font-weight:normal;">
                 PLEASE INDICATE ID Number and Date of Issuance
@@ -2371,31 +2371,22 @@
 
     <!-- ROW 1 -->
     <tr style="height:1.4cm;" class="text-base">
-        <td style="border:1px solid black; padding:6px; vertical-align:middle; width:40%;">
-            Government Issued ID:
-        </td>
-        <td style="border:1px solid black; padding:6px;" class="text-base">
-            {{ $idInfo->gov_id ?? '' }}
+        <td colspan="2" style="padding:6px; border-bottom:1px solid black;">
+            <span style="white-space:nowrap;">Government Issued ID:</span> {{ $idInfo->gov_id ?? '' }}
         </td>
     </tr>
 
     <!-- ROW 2 -->
     <tr style="height:1.4cm;" class="text-base">
-        <td style="border:1px solid black; padding:6px; vertical-align:middle;" class="text-base"> 
-            ID/License/Passport No.:
-        </td>
-        <td style="border:1px solid black; padding:6px;" class="text-base">
-            {{ $idInfo->passport_licence_id ?? '' }}
+        <td colspan="2" style="padding:6px; border-bottom:1px solid black;">
+            <span style="white-space:nowrap;">ID/License/Passport No:</span> {{ $idInfo->passport_licence_id ?? '' }}
         </td>
     </tr>
 
     <!-- ROW 3 -->
     <tr style="height:1.4cm;" class="text-base">
-        <td style="border:1px solid black; padding:6px; vertical-align:middle;" class="text-base">
-            Date/Place of Issuance:
-        </td>
-        <td style="border:1px solid black; padding:6px;" class="text-base">
-            {{ $idInfo->date_place_issuance ?? '' }}
+        <td colspan="2" style="padding:6px;">
+            <span style="white-space:nowrap;">Date/Place of Issuance:</span> {{ $idInfo->date_place_issuance ?? '' }}
         </td>
     </tr>
 
@@ -2413,7 +2404,7 @@
     </div>
 </td>
             <tr>
-              <td class="border border-black text-center py-1 text-base">Signature (Sign inside the box)</td>
+              <td class="border border-black text-center py-1 text-base" style="background-color:#e7e7e7;">Signature (Sign inside the box)</td>
             </tr>
            <tr>
   <td>
@@ -2425,7 +2416,7 @@
   </td>
 </tr>
             <tr>
-              <td class="border border-black  text-center py-1  text-base">Date Accomplished</td>
+              <td class="border border-black  text-center py-1  text-base" style="background-color:#e7e7e7;">Date Accomplished</td>
             </tr>
           </table>
         </td>
@@ -2441,18 +2432,18 @@
         <td class="p-1 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-2">
             <tr>
-  <td class="border-black text-center align-middle italic text-red-600 relative" style="height:4rem;">
+  <td class="border-black text-center align-middle italic text-red-600 relative" style="height:8rem;">
     @if($signatureUrl)
       <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:3rem;">
     @endif
   </td>
 </tr>
-            <tr><td class="border-black border text-center py-1 font-semibold text-base">Person Administering Oath</td></tr>
+            <tr><td class="border-black border text-center py-1 font-semibold text-base" style="background-color:#e7e7e7;">Person Administering Oath</td></tr>
           </table>
         </td>
       </tr>
     </table>
-     <div class="w-full text-base keep-base" style=" margin-top: 10px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+     <div class="w-full text-base keep-base" style="margin-top:10px; text-align:right; font-family:'Arial','sans-serif'; font-style:italic;">
     CS FORM 212 (Revised 2025), Page 4 of 5
 </div>
   </div>
@@ -2604,7 +2595,7 @@
       <div style="font-size:20px; margin-top:4px;">DATE</div>
     </div>
   </div>
-  <div class="w-full text-lg keep-base" style="margin-top:8px; text-align:right; font-family:'Arial_Narrow','sans-serif';">
+  <div class="w-full text-lg keep-base" style="margin-top:8px; text-align:right; font-family:'Arial','sans-serif'; font-style:italic;">
     CS FORM 212 (Revised 2025), Page 5 of 5
   </div>
 </div>

@@ -183,6 +183,11 @@ class PdsStepController extends Controller
         $draft = PdsDraft::where('user_id', $userId)->first();
         $data  = $draft->data ?? [];
 
+        // For form 1, sync education data from database to populate tables
+        if ($step === 1) {
+            $data = $this->syncEducationDataFromDb($userId, $data);
+        }
+
         // For form 3, sync training data from database to populate dynamic tables
         if ($step === 3) {
             $data = $this->syncTrainingDataFromDb($userId, $data);
@@ -213,7 +218,7 @@ class PdsStepController extends Controller
      */
     private function syncTrainingDataFromDb(int $userId, array $data): array
     {
-        // If draft already has training data (main or dynamic tables), use it
+        // If draft already has training data (main or dynamic tables), use it (preserve unsaved changes)
         $hasDraftTraining = !empty($data['learning_title_of_ld'])
             || collect($data)->keys()->contains(fn ($k) => preg_match('/^learning_\d+$/', $k));
 
@@ -257,6 +262,76 @@ class PdsStepController extends Controller
                 'type_of_ld' => $tableRows->pluck('type_of_ld')->toArray(),
                 'conducted_sponsored_by' => $tableRows->pluck('conducted_by')->toArray(),
             ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Sync education data from pds_education_records table to draft format.
+     * Only populates if draft is missing education data (preserves draft data as primary source).
+     */
+    private function syncEducationDataFromDb(int $userId, array $data): array
+    {
+        // If draft already has education data, use it (preserve unsaved changes)
+        $hasDraftEducation = !empty($data['education'])
+            || collect($data)->keys()->contains(fn ($k) => preg_match('/^education_\d+$/', $k));
+
+        if ($hasDraftEducation) {
+            return $data;
+        }
+
+        // Only fall back to DB if draft has no education data at all
+        $eduRows = DB::table('pds_education_records')
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->get();
+
+        if ($eduRows->isEmpty()) {
+            return $data;
+        }
+
+        // Base levels for main education table
+        $baseLevels = ['elementary', 'secondary', 'vocational', 'college', 'graduate_studies'];
+
+        // Separate base education from extra education
+        $mainEdu = $eduRows->filter(fn ($row) => in_array(strtolower($row->level), $baseLevels));
+        $extraEdu = $eduRows->filter(fn ($row) => !in_array(strtolower($row->level), $baseLevels));
+
+        // Populate main education table
+        foreach ($baseLevels as $level) {
+            $row = $mainEdu->first(fn ($r) => strtolower($r->level) === $level);
+            if ($row) {
+                $data['education'][$level] = [
+                    'school_name' => $row->school_name,
+                    'basic_education' => $row->degree_course,
+                    'from' => $row->from,
+                    'to' => $row->to,
+                    'highest_level' => $row->highest_level,
+                    'year_graduated' => $row->year_graduated,
+                    'scholarship_acadhonors' => $row->academic_honors,
+                ];
+            }
+        }
+
+        // Create dynamic tables for extra education (5 rows per table)
+        $extraTableCount = ceil($extraEdu->count() / 5);
+        for ($i = 0; $i < $extraTableCount; $i++) {
+            $tableRows = $extraEdu->slice($i * 5, 5)->values();
+            $tableNum = $i + 1;
+
+            foreach ($tableRows as $idx => $row) {
+                $levelKey = $baseLevels[$idx] ?? 'extra_' . $idx;
+                $data["education_{$tableNum}"][$levelKey] = [
+                    'school_name' => $row->school_name,
+                    'basic_education' => $row->degree_course,
+                    'from' => $row->from,
+                    'to' => $row->to,
+                    'highest_level' => $row->highest_level,
+                    'year_graduated' => $row->year_graduated,
+                    'scholarship_acadhonors' => $row->academic_honors,
+                ];
+            }
         }
 
         return $data;

@@ -817,18 +817,37 @@
       const seenNames = new Set();
       document.querySelectorAll('input[type="checkbox"][name]').forEach(box => {
         const name = box.getAttribute('name');
-        if (!name || seenNames.has(name)) return;
+        console.log('Processing checkbox:', name, 'value:', box.value);
+        if (!name || seenNames.has(name)) {
+          console.log('  -> Skipped: no name or already seen');
+          return;
+        }
         const boxes = Array.from(document.querySelectorAll(`input[type="checkbox"][name="${name}"]`));
-        if (boxes.length < 2) return;
+        console.log('  -> Found', boxes.length, 'checkboxes for', name);
+        if (boxes.length < 2) {
+          console.log('  -> Skipped: less than 2 checkboxes');
+          return;
+        }
         seenNames.add(name);
 
         const scopedDetails = Array.from(document.querySelectorAll(`input[type="text"][data-detail-for="${name}"], textarea[data-detail-for="${name}"]`));
+        console.log('  -> scopedDetails for', name, ':', scopedDetails.length);
         const details = scopedDetails.length ? scopedDetails : (() => {
           const td = box.closest('td');
-          return td ? Array.from(td.querySelectorAll('input[type="text"], textarea')).filter(el => !boxes.includes(el)) : [];
+          console.log('  -> closest td for', name, ':', !!td);
+          // Exclude elements that have data-detail-for pointing to a different group
+          return td ? Array.from(td.querySelectorAll('input[type="text"], textarea')).filter(el => {
+            if (boxes.includes(el)) return false;
+            const detailFor = el.getAttribute('data-detail-for');
+            // If element has data-detail-for and it's not for this group, exclude it
+            if (detailFor && detailFor !== name) return false;
+            return true;
+          }) : [];
         })();
+        console.log('  -> final details count for', name, ':', details.length, 'details:', details.map(d => d.name || d.getAttribute('data-detail-for')));
 
         conditionalGroups.push({ name, boxes, details, detailCache: {}, detailDisabledState: {} });
+        console.log('  -> Added to conditionalGroups:', name);
 
         boxes.forEach(activeBox => {
           activeBox.addEventListener('change', () => {
@@ -837,14 +856,44 @@
             }
             validateRequired();
             refreshSequential();
+            // Update Q34 details when either q34_a or q34_b changes
+            if (name === 'q34_a' || name === 'q34_b') {
+              updateQ34Details();
+            }
           });
         });
       });
 
       const groupMap = new Map(conditionalGroups.map(g => [g.name, g]));
+      console.log('groupMap keys:', Array.from(groupMap.keys()));
       const sequentialOrder = [
-        'q34_a','q34_b','q35_a','q35_b','q36','q37','q38_a','q38_b','q39','q40_a','q40_b','q40_c'
+        'q35_a','q35_b','q36','q37','q38_a','q38_b','q39','q40_a','q40_b','q40_c'
       ];
+
+      // Q34 has two sub-questions (a and b) that should be answered independently
+      // The details field should be enabled if EITHER is YES
+      const updateQ34Details = () => {
+        const q34aGroup = groupMap.get('q34_a');
+        const q34bGroup = groupMap.get('q34_b');
+        console.log('updateQ34Details called', { q34aGroup: !!q34aGroup, q34bGroup: !!q34bGroup });
+        if (!q34aGroup || !q34bGroup) return;
+
+        // Find YES checkbox by value attribute (don't assume order)
+        const aYesBox = q34aGroup.boxes.find(b => b.value === 'YES');
+        const bYesBox = q34bGroup.boxes.find(b => b.value === 'YES');
+        const aYes = aYesBox?.checked || false;
+        const bYes = bYesBox?.checked || false;
+        const anyYes = aYes || bYes;
+        console.log('Q34 state:', { aYes, bYes, anyYes, detailsCount: q34aGroup.details.length });
+
+        q34aGroup.details.forEach(el => {
+          console.log('Setting disabled to:', !anyYes, 'for element:', el.name);
+          el.disabled = !anyYes;
+          el.classList.toggle('bg-gray-200', !anyYes);
+          el.classList.toggle('text-gray-500', !anyYes);
+          el.classList.toggle('cursor-not-allowed', !anyYes);
+        });
+      };
 
       const setGroupEnabled = (name, enabled) => {
         const group = groupMap.get(name);
@@ -924,8 +973,39 @@
           const yesChecked = yesBox && yesBox.checked;
           const noChecked = noBox && noBox.checked;
 
+          // Skip default detail handling for q34_a - handled by updateQ34Details()
+          if (group.name === 'q34_a') {
+            console.log('validateRequired: skipping q34_a detail handling');
+            // Check if either q34_a or q34_b is YES
+            const q34bGroup = groupMap.get('q34_b');
+            const aYesBox = group.boxes.find(b => b.value === 'YES');
+            const bYesBox = q34bGroup?.boxes.find(b => b.value === 'YES');
+            const anyYes = (aYesBox?.checked || false) || (bYesBox?.checked || false);
+            console.log('validateRequired q34 check:', { aYes: aYesBox?.checked, bYes: bYesBox?.checked, anyYes });
+
+            // Only check if details are missing when any YES is selected
+            if (!firstMissing && anyYes) {
+              const detailMissingEl = group.details.find(el => {
+                console.log('Checking detail:', el.name, 'disabled:', el.disabled);
+                if (el.disabled || el.readOnly || el.offsetParent === null) return false;
+                return !isFilled(el);
+              });
+              if (detailMissingEl) {
+                firstMissing = detailMissingEl;
+              }
+            }
+            continue;
+          }
+
+          // Skip if group has no details (like q34_b which shares details with q34_a)
+          if (group.details.length === 0) {
+            console.log('Skipping group with no details:', group.name);
+            continue;
+          }
+          console.log('Default detail handling for:', group.name, 'yesChecked:', yesChecked, 'noChecked:', noChecked);
           group.details.forEach(el => {
             const disable = noChecked || (!yesChecked && !noChecked);
+            console.log('  ->', el.name, 'setting disabled to:', disable);
             el.disabled = disable;
             el.classList.toggle('bg-gray-200', disable);
             el.classList.toggle('text-gray-500', disable);
@@ -989,6 +1069,7 @@
       document.addEventListener('input', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
       document.addEventListener('change', () => { refreshRows(); refreshSequential(); validateRequired(); }, true);
       validateRequired();
+      updateQ34Details();
 
       if (nextBtn) {
         nextBtn.addEventListener('click', (e) => {
@@ -1197,6 +1278,7 @@
         refreshRows();
         refreshSequential();
         validateRequired();
+        updateQ34Details();
         saveCache();
       };
 
@@ -1306,7 +1388,6 @@
         </div>
         <p class="mt-2">if yes, give details:</p>
         <input type="text" class="mb-2 w-full" name="q34_a_details" data-detail-for="q34_a">
-        <input type="text" class="mb-2 w-full" name="q34_b_details" data-detail-for="q34_b">
       </td>
     </tr>
 
@@ -1572,7 +1653,7 @@
         <th class="border font-light border-black">OFFICE / RESIDENTIAL ADDRESS </th>
         <th class="border font-light w-52 border-r-2 border-black">CONTACT NO. AND / OR EMAIL</th>
       </tr>
-      @for ($i = 0; $i < 7; $i++)
+      @for ($i = 0; $i < 3; $i++)
       <tr class="border border-r-0 border-l-3 border-black align-top">
         <td class="border border-black align-top p-0 w-60">
           <textarea name="reference_name[]" class="align-middle text-center ref-field w-full border-none outline-none p-2 text-xs resize-none" rows="1" placeholder=""></textarea>
