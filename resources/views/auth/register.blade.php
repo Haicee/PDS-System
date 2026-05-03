@@ -127,33 +127,17 @@
                     
                 </div>
 
-                <div class="grid gap-6 md:grid-cols-2">
-                    <!-- Type --> 
-                    <div>
-                        <label for="type" class="text-md font-medium text-slate-700">Employment Status</label>
-                        <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-search-icon lucide-user-round-search"><circle cx="10" cy="8" r="5"/><path d="M2 21a8 8 0 0 1 10.434-7.62"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.9-1.9"/></svg>  
-                            <select id="type" name="type" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>
-                                <option value="Permanent Employee" {{ old('type', 'Permanent Employee') === 'Permanent Employee' ? 'selected' : '' }}>Permanent Employee</option>
-                                <option value="Contract of Service" {{ old('type') === 'Contract of Service' ? 'selected' : '' }}>Contract of Service</option>
-                                <option value="Job Order" {{ old('type') === 'Job Order' ? 'selected' : '' }}>Job Order</option>
-                            </select>
-                        </div>
-                        <x-input-error :messages="$errors->get('type')" class="mt-2" />
+                <!-- Gender -->
+                <div>
+                    <label for="gender" class="text-md font-medium text-slate-700">Sex</label>
+                    <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+                        <select id="gender" name="gender" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>
+                            <option value="Male" {{ old('gender') === 'Male' ? 'selected' : '' }}>Male</option>
+                            <option value="Female" {{ old('gender') === 'Female' ? 'selected' : '' }}>Female</option>
+                        </select>
                     </div>
-
-                    <!-- Gender -->
-                    <div>
-                        <label for="gender" class="text-md font-medium text-slate-700">Sex</label>
-                        <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
-                            <select id="gender" name="gender" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 focus:ring-0" required>
-                                <option value="Male" {{ old('gender') === 'Male' ? 'selected' : '' }}>Male</option>
-                                <option value="Female" {{ old('gender') === 'Female' ? 'selected' : '' }}>Female</option>
-                            </select>
-                        </div>
-                        <x-input-error :messages="$errors->get('gender')" class="mt-2" />
-                    </div>
+                    <x-input-error :messages="$errors->get('gender')" class="mt-2" />
                 </div>
 
                 <!-- Password -->

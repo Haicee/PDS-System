@@ -83,20 +83,20 @@
             <div class="mb-4 space-y-2">
                 <img src="{{ asset('images/bfar-logo.png') }}" alt="BFAR" class="block mx-auto h-16 w-auto object-contain drop-shadow-md sm:h-18 lg:h-24">
                 <h2 class="text-center text-3xl font-semibold text-slate-900">Sign in to BFAR XII Portal</h2>
-                <p class="text-center text-sm text-slate-500">Use your official BFAR email account to continue.</p>
+                <p class="text-center text-sm text-slate-500">Use your registered full name to continue.</p>
             </div>
 
             <form id="login-form" class="space-y-6" method="POST" action="{{ route('login', [], false) }}" @submit.prevent="handleLogin">
                 @csrf
 
-                <!-- Email Address -->
+                <!-- Full name -->
                 <div>
-                    <label for="email" class="text-md font-medium text-slate-700">{{ __('Email') }}</label>
+                    <label for="login" class="text-md font-medium text-slate-700">Full name</label>
                     <div class="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white/20 px-4 py-3 ring-offset-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
-                        <svg class="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l7.89 5.26c.68.45 1.54.45 2.22 0L21 8"/><path d="M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg>
-                        <input id="email" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" placeholder="name@email.com" />
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+                        <input id="login" class="ml-3 w-full border-0 bg-transparent text-base text-slate-900 placeholder-slate-400 focus:ring-0 uppercase" type="text" name="login" :value="old('login')" required autofocus autocomplete="username" placeholder="E.G., DIMALIEN, SAIDALI U." />
                     </div>
-                    <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('login')" class="mt-2" />
                 </div>
 
                 <!-- Password -->

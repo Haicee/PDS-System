@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ManageUserController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Models\RegistrationUser;
 use App\Http\Controllers\PdsController;
 use App\Http\Controllers\EmployeeController;
@@ -158,15 +159,17 @@ Route::get('/admin/activity', [AdminActivityController::class, 'index'])
 Route::post('/registration-users', function (Request $request) {
     $validated = $request->validate([
         'full_name' => ['required', 'string', 'max:255', 'unique:registration_users,full_name'],
+        'type' => ['required', Rule::in(['Permanent Employee', 'Contract of Service', 'Job Order'])],
     ]);
 
     $employee = RegistrationUser::create([
         'full_name' => $validated['full_name'],
+        'type' => $validated['type'] ?? null,
     ]);
 
     return response()->json([
         'message' => 'Employee added successfully.',
-        'employee' => $employee->only(['id', 'full_name', 'created_at']),
+        'employee' => $employee->only(['id', 'full_name', 'type', 'created_at']),
     ], 201);
 })->middleware(['auth:admin'])->name('registration-users.store');
 

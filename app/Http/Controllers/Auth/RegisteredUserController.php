@@ -65,7 +65,6 @@ class RegisteredUserController extends Controller
             'phone' => ['required', 'digits:11'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'type' => ['required', 'in:Permanent Employee,Contract of Service,Job Order'],
             'location_assigned' => ['required', 'string', 'max:255'],
             'profile_photo' => ['required', 'image', 'max:3072'],
         ]);
@@ -87,7 +86,7 @@ class RegisteredUserController extends Controller
         $path = $request->file('profile_photo')->store('profiles', 'public');
 
         try {
-            return DB::transaction(function () use ($request, $role, $status, $path) {
+            return DB::transaction(function () use ($request, $role, $status, $path, $approved) {
                 $user = User::create([
                     'name' => $request->name,
                     'gender' => $request->gender,
@@ -95,7 +94,7 @@ class RegisteredUserController extends Controller
                     'phone' => $request->phone,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
-                    'type' => $request->type,
+                    'type' => $approved->type,
                     'status' => $status,
                     'location_assigned' => $request->location_assigned,
                     'role' => $role,

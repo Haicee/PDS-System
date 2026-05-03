@@ -16,6 +16,7 @@
 
             newEmployeeName: '',
             newEmployeeUnit: '',
+            newEmployeeType: '',
             savingEmployee: false,
             employeeError: '',
             employeeFieldErrors: {},
@@ -34,6 +35,7 @@
                 this.employeeFieldErrors = {};
                 this.newEmployeeName = '';
                 this.newEmployeeUnit = '';
+                this.newEmployeeType = '';
                 this.savingEmployee = false;
                 this.addEmployeeOpen = true;
             },
@@ -118,6 +120,7 @@
                     body: JSON.stringify({
                         full_name: this.newEmployeeName,
                         unit: this.newEmployeeUnit,
+                        type: this.newEmployeeType || null,
                     })
                 })
                 .then(async (res) => {
@@ -153,6 +156,7 @@
                     this.addEmployeeOpen = false;
                     this.newEmployeeName = '';
                     this.newEmployeeUnit = '';
+                    this.newEmployeeType = '';
                     this.employeeFieldErrors = {};
                 })
                 .catch(err => {
@@ -530,6 +534,20 @@
                                 <p class="text-sm text-rose-600" >The name has already been taken.</p>
                             </template>
                         </div>
+
+                        <div class="space-y-2">
+                            <label for="new-person-type" class="text-sm font-medium text-slate-700">Employment Status</label>
+                            <select id="new-person-type" x-model="newEmployeeType" required
+                                class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
+                                <option value="" disabled>Select Status</option>
+                                <option value="Permanent Employee">Permanent Employee</option>
+                                <option value="Contract of Service">Contract of Service</option>
+                                <option value="Job Order">Job Order</option>
+                            </select>
+                            <template x-if="employeeFieldErrors?.type">
+                                <p class="text-sm text-rose-600" x-text="employeeFieldErrors.type?.[0] || 'Invalid employment status.'"></p>
+                            </template>
+                        </div>
                     </div>
 
                     <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-slate-100">
@@ -537,10 +555,10 @@
                             @click="closeEmployee()">Cancel</button>
                         <button type="button"
                             class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                            :disabled="!newEmployeeName.trim() || savingEmployee"
+                            :disabled="!newEmployeeName.trim() || !newEmployeeType || savingEmployee"
                             @click="requestConfirm('employee')">
-                            <span x-show="!savingEmployee">Save</span>
-                            <span x-show="savingEmployee">Saving...</span>
+                            <span x-show="!savingEmployee">Add Employee</span>
+                            <span x-show="savingEmployee">Adding...</span>
                         </button>
                     </div>
                 </div>

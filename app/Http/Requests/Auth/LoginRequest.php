@@ -27,7 +27,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'login' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -41,22 +41,31 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $credentials = $this->only('email', 'password');
         $remember = $this->boolean('remember');
-        $email = $this->input('email');
+        $login = trim($this->input('login'));
+        $normalizedLogin = $login;
+        $password = $this->input('password');
+        $isEmail = filter_var($login, FILTER_VALIDATE_EMAIL) !== false;
 
-        // Check if email exists in either admin_users or users table
-        $emailExists = $this->checkEmailExists($email);
+        // Build possible credential sets
+        $adminCredentials = $isEmail
+            ? ['email' => strtolower($login), 'password' => $password]
+            : null;
 
-        if (!$emailExists) {
+        $userCredentials = ['name' => $login, 'password' => $password];
+
+        // Validate existence: allow admin by email or name; user by name
+        $loginExists = $this->checkLoginExists($normalizedLogin, $isEmail);
+
+        if (!$loginExists) {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
-                'email' => 'This email address is not registered in our system.',
+                'login' => 'This account is not registered in our system.',
             ]);
         }
 
         // Try admin first and ensure role is allowed
-        if (Auth::guard('admin')->attempt($credentials, $remember)) {
+        if ($adminCredentials && Auth::guard('admin')->attempt($adminCredentials, $remember)) {
             $admin = Auth::guard('admin')->user();
             $allowedAdminRoles = ['main admin', 'admin user'];
 
@@ -65,7 +74,7 @@ class LoginRequest extends FormRequest
                 Auth::guard('admin')->logout();
                 RateLimiter::hit($this->throttleKey());
                 throw ValidationException::withMessages([
-                    'email' => 'Your account is inactive. Please contact the administrator.',
+                    'login' => 'Your account is inactive. Please contact the administrator.',
                 ]);
             }
 
@@ -79,7 +88,7 @@ class LoginRequest extends FormRequest
         }
 
         // Then fallback to normal users and ensure role is employee
-        if (Auth::guard('web')->attempt($credentials, $remember)) {
+        if (Auth::guard('web')->attempt($userCredentials, $remember)) {
             $user = Auth::guard('web')->user();
             
             // Check if account is active
@@ -87,7 +96,7 @@ class LoginRequest extends FormRequest
                 Auth::guard('web')->logout();
                 RateLimiter::hit($this->throttleKey());
                 throw ValidationException::withMessages([
-                    'email' => 'Your account is inactive. Please contact the administrator.',
+                    'login' => 'Your account is inactive. Please contact the administrator.',
                 ]);
             }
             
@@ -102,25 +111,26 @@ class LoginRequest extends FormRequest
 
         RateLimiter::hit($this->throttleKey());
 
-        // Email exists but authentication failed - must be wrong password or wrong role
+        // Account exists but authentication failed - must be wrong password or wrong role
         throw ValidationException::withMessages([
             'password' => 'The password you entered is incorrect.',
         ]);
     }
 
     /**
-     * Check if email exists in either admin_users or users table
+     * Check if login (name or email for admin; name for user) exists in either admin_users or users table
      */
-    private function checkEmailExists($email): bool
+    private function checkLoginExists($login, bool $isEmail): bool
     {
-        // Check in admin_users table
-        $adminExists = \DB::table('admin_users')
-            ->where('email', $email)
-            ->exists();
+        $adminExists = false;
+        if ($isEmail) {
+            $adminExists = \DB::table('admin_users')
+                ->whereRaw('LOWER(email) = LOWER(?)', [$login])
+                ->exists();
+        }
 
-        // Check in users table  
         $userExists = \DB::table('users')
-            ->where('email', $email)
+            ->whereRaw('LOWER(name) = LOWER(?)', [$login])
             ->exists();
 
         return $adminExists || $userExists;
@@ -142,7 +152,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.',
+            'login' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.',
         ]);
     }
 
@@ -151,6 +161,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('login')).'|'.$this->ip());
     }
 }

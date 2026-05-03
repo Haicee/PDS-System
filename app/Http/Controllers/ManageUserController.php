@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\ProfileEditRequest;
+use App\Models\RegistrationUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -156,6 +157,12 @@ class ManageUserController extends Controller
 
         $user->fill($data);
         $user->save();
+
+        // Keep employment status in sync with masterlist by full name (id not used there)
+        if (($original['type'] ?? null) !== $data['type']) {
+            RegistrationUser::whereRaw('LOWER(full_name) = LOWER(?)', [$user->name])
+                ->update(['type' => $data['type']]);
+        }
 
         $shouldArchive = false;
         if (isset($data['status']) && $data['status'] === 'Inactive' && $original['status'] !== 'Inactive') {
