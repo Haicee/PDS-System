@@ -685,8 +685,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tableIndices.size === 0) return;
 
-        // merged is used for populating field values (localStorage preferred over server)
-        const merged = Object.assign({}, flat, localData);
+        // Server data is authoritative for education_N keys — localStorage may be stale
+        const merged = Object.assign({}, localData, flat);
 
         // Only restore indices that have at least one non-empty value in merged data.
         const indicesWithData = new Set();
@@ -703,14 +703,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (raw) JSON.parse(raw).forEach(i => removedIndices.add(i));
         } catch(e) {}
 
-        // Seed flat-only indices into localStorage so future saves preserve them
-        // BUT skip indices the user has explicitly removed
+        // Seed server data into localStorage (server is authoritative, skip removed)
         flatEducationKeys.forEach(key => {
             const m = key.match(/^education_(\d+)\[/);
             if (m && removedIndices.has(parseInt(m[1], 10))) return;
-            if (!(key in localData)) {
-                localData[key] = flat[key];
-            }
+            localData[key] = flat[key];
         });
         try { localStorage.setItem(storageKey, JSON.stringify(localData)); } catch(e) {}
 
@@ -3722,6 +3719,9 @@ window.confirmModalCancelClick = function() {
         return;
       }
       const formData = new FormData(form);
+      // Always use the latest CSRF token from meta (may have been refreshed after 419)
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+      formData.set('_token', csrfToken);
       appendSingleSelectGroups(formData);
       appendEmptyEducationExtras(formData);
       appendRemovedEducationIndices(formData);
@@ -3729,33 +3729,53 @@ window.confirmModalCancelClick = function() {
       fetch('{{ route('pds.autosave', [], false) }}', {
         method: 'POST',
         headers: {
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          'X-CSRF-TOKEN': csrfToken
         },
         credentials: 'same-origin',
         body: formData
       })
       .then(response => {
+        if (response.status === 419 && failureCount === 0) {
+          // CSRF mismatch — try to fetch a fresh token once
+          console.warn('CSRF token stale, refreshing…');
+          failureCount = 1;
+          return fetch(window.location.href, { credentials: 'same-origin' })
+            .then(r => r.text())
+            .then(html => {
+              const match = html.match(/meta\s+name="csrf-token"\s+content="([^"]+)"/);
+              if (match) {
+                const fresh = match[1];
+                document.querySelector('meta[name="csrf-token"]').setAttribute('content', fresh);
+                const hidden = document.querySelector('input[name="_token"]');
+                if (hidden) hidden.value = fresh;
+                console.log('CSRF token refreshed, retrying autosave…');
+                failureCount = 0;
+                send();
+              } else {
+                throw new Error('Could not parse fresh CSRF token');
+              }
+            })
+            .catch(() => {
+              showOverlay(true);
+              const expiredDiv = document.getElementById('autosaveSessionExpired');
+              const msgSpan = document.getElementById('autosaveOverlayMsg');
+              if (expiredDiv) expiredDiv.style.display = 'block';
+              if (msgSpan) msgSpan.style.display = 'none';
+            });
+        }
+        if (response.status === 401 || response.status === 419) {
+          // Session truly expired — show overlay and stop
+          console.error('Auto-save failed:', response.status, '— session expired');
+          showOverlay(true);
+          const expiredDiv = document.getElementById('autosaveSessionExpired');
+          const msgSpan = document.getElementById('autosaveOverlayMsg');
+          if (expiredDiv) expiredDiv.style.display = 'block';
+          if (msgSpan) msgSpan.style.display = 'none';
+          throw new Error('Auto-save halted: auth/CSRF');
+        }
         if (!response.ok) {
           console.error('Auto-save failed:', response.status, response.statusText);
           showOverlay(true);
-            if (response.status === 419) {
-            // CSRF token stale — fetch a fresh one then retry once
-            return fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' })
-              .then(() => {
-                const newToken = document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='));
-                if (newToken) {
-                  const decoded = decodeURIComponent(newToken.split('=')[1]);
-                  const meta = document.querySelector('meta[name="csrf-token"]');
-                  if (meta) meta.setAttribute('content', decoded);
-                }
-                failureCount = 0;
-                send();
-              })
-              .catch(() => { throw new Error('Auto-save halted: auth/CSRF'); });
-          }
-          if (response.status === 401) {
-            throw new Error('Auto-save halted: auth/CSRF');
-          }
           failureCount += 1;
           const delay = Math.min(baseDelay * Math.pow(2, failureCount - 1), maxDelay);
           if (failureCount <= maxRetries) {

@@ -22,8 +22,16 @@ window.formCache = function () {
 
         async init() {
             console.log('formCache init - isLoading:', this.isLoading);
+
+            // Add cleanup listener for page unload
+            window.addEventListener('beforeunload', () => this.cleanup());
+            document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
+
             const form = document.querySelector('form')
             const saved = JSON.parse(localStorage.getItem('register_cache') || '{}')
+
+            // Clean up old localStorage entries (older than 24 hours)
+            this.cleanupOldCache()
 
             // Wait for face-api global to exist (loaded via CDN in Blade)
             await this.waitForFaceApi()
@@ -294,6 +302,40 @@ window.formCache = function () {
             const cache = JSON.parse(localStorage.getItem('register_cache') || '{}')
             delete cache.profile_photo_base64
             localStorage.setItem('register_cache', JSON.stringify(cache))
+        },
+
+        cleanup() {
+            this.stopCamera()
+            this.stopDetectionLoop()
+            // Release any remaining resources
+            this.face = null
+            this.preview = null
+        },
+
+        handleVisibilityChange() {
+            if (document.hidden) {
+                // Pause detection when tab is hidden to save resources
+                this.stopDetectionLoop()
+            } else if (this.streaming) {
+                // Resume detection when tab becomes visible
+                this.startDetectionLoop()
+            }
+        },
+
+        cleanupOldCache() {
+            try {
+                const cache = JSON.parse(localStorage.getItem('register_cache') || '{}')
+                if (cache._timestamp && Date.now() - cache._timestamp > 24 * 60 * 60 * 1000) {
+                    // Clear cache older than 24 hours
+                    localStorage.removeItem('register_cache')
+                } else {
+                    // Update timestamp
+                    cache._timestamp = Date.now()
+                    localStorage.setItem('register_cache', JSON.stringify(cache))
+                }
+            } catch (e) {
+                console.warn('Cache cleanup failed:', e)
+            }
         }
     }
 }

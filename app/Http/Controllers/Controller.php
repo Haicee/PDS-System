@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdminUser;
 use App\Models\User;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Storage;
 
@@ -67,9 +68,18 @@ abstract class Controller
 
     protected function notifyAdmins(object $notification): void
     {
-        $adminUsers    = AdminUser::all();
-        $roleAdmins    = User::where('role', 'admin')->get();
-        $recipients    = $adminUsers->concat($roleAdmins);
+        $recipientIds = Cache::remember('admin_recipient_ids', 300, function () {
+            $adminIds = AdminUser::pluck('id')->map(fn ($id) => 'admin:' . $id)->all();
+            $roleIds  = User::where('role', 'admin')->pluck('id')->map(fn ($id) => 'user:' . $id)->all();
+            return array_merge($adminIds, $roleIds);
+        });
+
+        $recipients = collect();
+        foreach ($recipientIds as $composite) {
+            [$type, $id] = explode(':', $composite, 2);
+            $model = $type === 'admin' ? AdminUser::find($id) : User::find($id);
+            if ($model) $recipients->push($model);
+        }
 
         if ($recipients->isNotEmpty()) {
             NotificationFacade::send($recipients, $notification);

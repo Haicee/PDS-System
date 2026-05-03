@@ -7,12 +7,16 @@ use App\Models\PdsSubmission;
 use App\Notifications\PdsStatusUpdated;
 use App\Services\ActivityLogger;
 use App\Services\ExportService;
+use App\Repositories\PdsRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 
 class PdsReviewController extends Controller
 {
-    public function __construct(private ExportService $exportService) {}
+    public function __construct(
+        private ExportService $exportService,
+        private PdsRepository $repository,
+    ) {}
 
     public function index(Request $request)
     {
@@ -116,6 +120,11 @@ class PdsReviewController extends Controller
             ],
             ['pds_status' => $submission->status, 'pds_id' => $submission->id]
         );
+
+        // Clear PDS cache so employee sees fresh data
+        if ($submission->user_id) {
+            $this->repository->clearCache($submission->user_id);
+        }
 
         return response()->json([
             'success' => true,

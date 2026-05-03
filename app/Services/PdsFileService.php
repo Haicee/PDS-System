@@ -117,11 +117,13 @@ class PdsFileService
 
     private function deleteOldUserPhotos(int $userId, string $exceptPath): void
     {
-        $files = Storage::disk(self::DISK)->files(self::PHOTO_DIR);
-        foreach ($files as $file) {
-            if (str_starts_with(basename($file), "photo_{$userId}_") && $file !== $exceptPath) {
-                Storage::disk(self::DISK)->delete($file);
-            }
+        // Use database to find old photos instead of scanning directory
+        $oldPhotoPath = DB::table('pds_signature_files')
+            ->where('user_id', $userId)
+            ->value('photo_file_path');
+
+        if ($oldPhotoPath && $oldPhotoPath !== $exceptPath && Storage::disk(self::DISK)->exists($oldPhotoPath)) {
+            Storage::disk(self::DISK)->delete($oldPhotoPath);
         }
     }
 }

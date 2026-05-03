@@ -1030,7 +1030,10 @@
           return $map[$key] ?? strtoupper($level);
       };
 
-      $normalizedEdu = $education->map(function($rec) use ($normalizeLevel) {
+      // Only use source='main' rows for the main education table
+      $mainEducation = $education->filter(fn($rec) => (is_object($rec) ? ($rec->source ?? 'main') : ($rec['source'] ?? 'main')) === 'main');
+
+      $normalizedEdu = $mainEducation->map(function($rec) use ($normalizeLevel) {
           if (is_array($rec)) {
               $rec['level'] = $normalizeLevel($rec['level'] ?? '');
               return $rec;
@@ -1174,18 +1177,6 @@
             {{ $eduHonors('elementary') }}
       </td>
   </tr>
-  @foreach($extraRows('ELEMENTARY') as $rec)
-    <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'to') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'highest_level') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'year_graduated') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
-    </tr>
-  @endforeach
 
 
    <tr class="min-h-[20]" style="width: 20%;">
@@ -1234,18 +1225,6 @@
             {{ $eduHonors('secondary') }}
       </td>
   </tr>
-  @foreach($extraRows('SECONDARY') as $rec)
-    <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'to') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'highest_level') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'year_graduated') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
-    </tr>
-  @endforeach
 
    <tr class="min-h-[20]" style="width: 20%;">
     <td class="border align-middle h-20" style="padding-left:30px;">VOCATIONAL / TRADE COURSE</td>
@@ -1293,18 +1272,6 @@
             {{ $eduHonors('vocational') }}
       </td>
   </tr>
-  @foreach($extraRows('VOCATIONAL / TRADE COURSE') as $rec)
-    <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'to') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'highest_level') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'year_graduated') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
-    </tr>
-  @endforeach
 
    <tr class="min-h-[20]" style="width: 20%;">
     <td class="border align-middle h-20" style="padding-left:30px;">COLLEGE</td>
@@ -1352,18 +1319,6 @@
             {{ $eduHonors('college') }}
       </td>
   </tr>
-  @foreach($extraRows('COLLEGE') as $rec)
-    <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'to') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'highest_level') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'year_graduated') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
-    </tr>
-  @endforeach
 
   <tr class="min-h-[20]" style="width: 20%;">
     <td class="border align-middle h-20" style="padding-left:30px;">GRADUATE STUDIES</td>
@@ -1411,31 +1366,95 @@
             {{ $eduHonors('graduate_studies') }}
       </td>
   </tr>
-  @foreach($extraRows('GRADUATE STUDIES') as $rec)
-    <tr class="min-h-[20]" style="width: 20%;">
-      <td class="border align-middle h-20" style="padding-left:30px;">&nbsp;</td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'to') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'highest_level') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'year_graduated') }}</div></td>
-      <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
-    </tr>
-  @endforeach
 
  
 
 </table>
 
-@if(($extraEduTables ?? collect())->isNotEmpty())
+@php
+  // Collect all extra rows from base levels into separate page-breaking tables
+  $baseLevelsWithExtras = [];
+  $allLevelExtras = [];
+  foreach (['ELEMENTARY', 'SECONDARY', 'VOCATIONAL / TRADE COURSE', 'COLLEGE', 'GRADUATE STUDIES'] as $levelName) {
+      $rows = $extraRows($levelName);
+      if ($rows && $rows->isNotEmpty()) {
+          foreach ($rows as $rec) {
+              $allLevelExtras[] = [
+                  'level' => $levelName,
+                  'rec' => $rec
+              ];
+          }
+      }
+  }
+  // Split into chunks of 5 for separate tables
+  $baseLevelExtraTables = collect($allLevelExtras)->chunk(5);
+@endphp
+
+@php
+  $hasExtraTables = (($extraEduTables ?? collect())->isNotEmpty()) || $baseLevelExtraTables->isNotEmpty();
+@endphp
+
+@if($hasExtraTables)
 {{-- Close the main outer wrapper early; extra tables go in their own full-page block below --}}
     </table>
   </div>
 </div>
 <style>@media screen{.edu-main-last{border-bottom:0!important;}}</style>
-<div style="display:flex; flex-direction:column; height:100vh; box-sizing:border-box;">
+<div style="display:flex; flex-direction:column; height:100vh; box-sizing:border-box; page-break-before: always;">
 @endif
+
+{{-- First show base level extras (rows 2+ of Elementary, Secondary, etc.) --}}
+@foreach($baseLevelExtraTables as $tableChunk)
+<table class="w-full border-collapse table-fixed text-base" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; page-break-inside:avoid; margin-bottom: 0;">
+  <colgroup>
+    <col style="width:27%">
+    <col style="width:30%">
+    <col style="width:33%">
+    <col style="width:10%">
+    <col style="width:10%">
+    <col style="width:17%">
+    <col style="width:15%">
+    <col style="width:17.5%">
+  </colgroup>
+  <tr>
+    <td colspan="8" class="font-bold italic text-3xl px-2" style="background-color:#8a8a8a; color:#fff; border:4px solid black;">
+      III. EDUCATIONAL BACKGROUND
+    </td>
+  </tr>
+  <tr>
+    <th class="border" rowspan="2" style="font-weight:normal;"><div style="text-align: left;"><span style="margin-right:70px;">26.</span> <span>LEVEL</span></div></th>
+    <th class="border" rowspan="2" style="font-weight:normal;">NAME OF SCHOOL<br>(Write in Full)</th>
+    <th class="border" rowspan="2" style="font-weight:normal;">BASIC EDUCATION / DEGREE / COURSE<br>(Write in full)</th>
+    <th class="border text-center" colspan="2" style="font-weight:normal;">PERIOD OF ATTENDANCE</th>
+    <th class="border" rowspan="2" style="font-weight:normal;">HIGHEST LEVEL/<br>UNITS EARNED<br><span style="font-size:0.85em;">(if not graduated)</span></th>
+    <th class="border" rowspan="2" style="font-weight:normal;">YEAR GRADUATED</th>
+    <th class="border" rowspan="2" style="font-weight:normal;">SCHOLARSHIP / ACADEMIC<br>HONORS RECEIVED</th>
+  </tr>
+  <tr>
+    <th class="border text-center" style="font-weight:normal;">FROM</th>
+    <th class="border text-center" style="font-weight:normal;">TO</th>
+  </tr>
+  @foreach($tableChunk as $rowIdx => $item)
+  @php
+    $rec = $item['rec'];
+    $levelName = $item['level'];
+    $firstDataRow = ($loop->index === 0);
+  @endphp
+  <tr style="width:20%;">
+    <td class="border text-center align-middle h-20" style="font-weight: bold;">{{ $levelName }}</td>
+    <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'school_name') }}</div></td>
+    <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'degree_course') ?: $getField($rec,'basic_education') }}</div></td>
+    <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'from') }}</div></td>
+    <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'to') }}</div></td>
+    <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'highest_level') }}</div></td>
+    <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'year_graduated') }}</div></td>
+    <td class="border h-10"><div class="edu-cell h-full w-full text-center">{{ $getField($rec,'academic_honors') ?: $getField($rec,'scholarship_acadhonors') }}</div></td>
+  </tr>
+  @endforeach
+</table>
+@endforeach
+
+{{-- Then show extraEduTables (non-base levels from DB or draft) --}}
 @foreach($extraEduTables ?? [] as $extraTable)
 <table class="w-full border-collapse table-fixed text-base" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; {{ $loop->first ? '' : 'border-top:0;' }} page-break-inside:avoid;">
   <colgroup>
@@ -1473,9 +1492,12 @@
     })->values();
   @endphp
   @foreach($filteredRows as $rowIdx => $row)
-  @php $firstDataRow = ($rowIdx === 0); @endphp
+  @php
+    $firstDataRow = ($rowIdx === 0);
+    $extraRowLevel = $normalizeLevel($row['level'] ?? '');
+  @endphp
   <tr style="width:20%;">
-    <td class="border text-center align-middle h-20" @if($firstDataRow) style="border-top:0;" @endif>{{ $row['level'] }}</td>
+    <td class="border text-center align-middle h-20" @if($firstDataRow) style="border-top:0;" @endif>{{ $extraRowLevel }}</td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['school_name'] }}</div></td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ $row['degree_course'] ?: $row['basic_education'] }}</div></td>
     <td class="border h-10" @if($firstDataRow) style="border-top:0;" @endif><div class="edu-cell h-full w-full text-center">{{ format_pds_date($row['from']) }}</div></td>
@@ -1489,7 +1511,7 @@
 @endforeach
 
 {{-- Signature pushed to bottom via margin-top:auto inside flex column --}}
-@if(($extraEduTables ?? collect())->isNotEmpty())
+@if($hasExtraTables)
 <div style="margin-top:auto;">
 @endif
 <table class="w-full border-collapse table-fixed text-base" style="font-family:'Arial Narrow','sans-serif'; border:4px solid black; border-top:0;">
@@ -1531,7 +1553,7 @@
     CS FORM 212 (Revised 2025), Page 1 of 5
 </div>
 {{-- Close outer wrapper / flex column --}}
-@if(($extraEduTables ?? collect())->isEmpty())
+@if(!$hasExtraTables)
     </table>
   </div>
 </div>
@@ -1773,17 +1795,19 @@
 </div>
 </table>
 @php
-    $allTrainingRows = ($training ?? ($learning ?? collect()))->values();
-    // Merge extra draft tables (sorted by key) into one flat list
-    $extraFlat = collect();
-    foreach (collect($extraTrainingTables ?? [])->sortKeys() as $_et) {
-        foreach (collect($_et) as $_er) { $extraFlat->push($_er); }
-    }
-    $allTrainingRows = $allTrainingRows->merge($extraFlat)->values();
-    $maxTrainingRows = max(30, $allTrainingRows->count()); // Fixed 30 rows for training
+    // Main table shows all training rows continuously
+    $mainTrainingRows = ($training ?? collect())->values();
+    // Extra training tables - chunk into 45 rows per page
+    $extraTrainingAll = collect($extraTrainingTables ?? [])->flatten(1)->filter(function($row) {
+        return !empty($row->title);
+    })->values();
+    // Chunk into 45 rows per page
+    $extraTrainingPages = $extraTrainingAll->chunk(45)->values();
+    $hasExtraTraining = $extraTrainingPages->isNotEmpty();
+    $maxMainTrainingRows = max(21, $mainTrainingRows->count());
 @endphp
 
-{{-- Single continuous L&D table — thead repeats on each page automatically --}}
+{{-- Main L&D table — all rows continuously --}}
 <table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; border-bottom:0;">
   <colgroup>
     <col style="width:30%;">
@@ -1812,9 +1836,9 @@
     </tr>
   </thead>
   <tbody>
-    @for ($i = 0; $i < $maxTrainingRows; $i++)
+    @for ($i = 0; $i < $maxMainTrainingRows; $i++)
       @php
-          $trow = $allTrainingRows[$i] ?? null;
+          $trow = $mainTrainingRows[$i] ?? null;
       @endphp
     <tr>
       <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ($i === 0 ? 'NA' : ' ') }}</td>
@@ -1827,12 +1851,72 @@
     @endfor
   </tbody>
 </table>
-</div>{{-- close page-3 block --}}
-{{-- Other Info + Signature: flows naturally after training, using available space --}}
+
+{{-- Other Info --}}
 @include('pds_form.partials.other_info_block')
+
+{{-- Signature only if NO added training --}}
+@if(!$hasExtraTraining)
 <div style="page-break-inside: avoid;">
   @include('pds_form.partials.signature_block')
 </div>
+@endif
+</div>{{-- close page-3 block --}}
+
+{{-- Extra training tables - 30 rows per page with signature at bottom of last page --}}
+@if($hasExtraTraining)
+@foreach($extraTrainingPages as $pageIndex => $pageRows)
+<div style="page-break-before: always; display:flex; flex-direction:column; min-height:100vh; box-sizing:border-box;">
+<table style="width:100%; border-collapse:collapse; font-family:'Arial Narrow','Arial',sans-serif; border:4px solid black; page-break-inside:avoid; margin-bottom: 20px;">
+  <colgroup>
+    <col style="width:30%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:10%;">
+    <col style="width:18%;">
+    <col style="width:22%;">
+  </colgroup>
+  <thead>
+    <tr>
+      <th colspan="6" style="background:#8a8a8a; color:#fff; font-style:italic; font-size:18px; text-align:left; padding:6px; border:4px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+        VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED (Continued)
+      </th>
+    </tr>
+    <tr>
+      <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">30. TITLE OF LEARNING AND DEVELOPMENT INTERVENTIONS/TRAINING PROGRAMS</th>
+      <th colspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">INCLUSIVE DATES OF ATTENDANCE</th>
+      <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">NUMBER OF HOURS</th>
+      <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">Type of L&D <br><span style="font-weight:normal;">(Managerial/ Supervisory/ Technical / etc)</span></th>
+      <th rowspan="2" style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">CONDUCTED/SPONSORED BY</th>
+    </tr>
+    <tr>
+      <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">FROM</th>
+      <th style="background:#e7e7e7; border:1px solid black; -webkit-print-color-adjust:exact; print-color-adjust:exact;" class="text-xl">TO</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach($pageRows as $trow)
+    <tr>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->title ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->from ?? null) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ format_pds_date($trow->to ?? null) ?: ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ isset($trow->hours) && $trow->hours !== '' && $trow->hours !== null && $trow->hours !== 'NA' ? $trow->hours . ' Hours' : ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->type_of_ld ?? ' ' }}</td>
+      <td style="border:1px solid black; text-align:center;">{{ $trow->conducted_by ?? ' ' }}</td>
+    </tr>
+    @endforeach
+  </tbody>
+</table>
+
+{{-- Signature anchored at bottom of LAST added training page only --}}
+@if($loop->last)
+<div style="margin-top: auto; page-break-inside: avoid;">
+  @include('pds_form.partials.signature_block')
+</div>
+@endif
+</div>
+@endforeach
+@endif
 <div style="page-break-before: always;"></div>
   <div class="w-full font-serif text-sm">
   <div class="pds-sheet w-full" style="max-width:100%;">
@@ -1847,35 +1931,34 @@
   </td>
 
   <td style="border:1px solid black; width:34%; vertical-align:top; padding:10px; padding-top:78px !important;">
-    <table style="width:100%; border-collapse:collapse;">
-      <!-- 34A row -->
+    <!-- 34A -->
+    <table style="width:auto; border-collapse:collapse;">
       <tr>
-        <td style="padding:2px 0 !important;">
+        <td style="padding:0;">
           <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_a ?? '') === 'YES')>
           YES
-          &nbsp;&nbsp;
+        </td>
+        <td style="padding:0 0 0 15px;">
           <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_a ?? '') === 'NO')>
           NO
         </td>
       </tr>
-      <!-- 34B row -->
+    </table>
+    <!-- 34B -->
+    <table style="width:auto; border-collapse:collapse; margin-top:4px;">
       <tr>
-        <td style="padding:2px 0 !important;">
+        <td style="padding:0;">
           <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_b ?? '') === 'YES')>
           YES
-          &nbsp;&nbsp;
+        </td>
+        <td style="padding:0 0 0 15px;">
           <input type="checkbox" class="checkbox-large" style="width:13px; height:13px; margin-right:4px;" disabled @checked(($declaration->q34_b ?? '') === 'NO')>
           NO
         </td>
       </tr>
-      <!-- if YES give details -->
-      <tr>
-        <td style="padding:2px 0 !important;">
-          <div>if YES, give details:</div>
-          <input type="text" style="width:100%; border:none; border-bottom:1px solid black;" disabled value="{{ $declaration->q34_a_details ?? '' }}">
-        </td>
-      </tr>
     </table>
+    <div style="margin-top:8px;">if YES, give details:</div>
+    <input type="text" style="width:100%; border:none; border-bottom:1px solid black;" disabled value="{{ $declaration->q34_a_details ?? '' }}">
   </td>
 </tr>
 
@@ -2432,9 +2515,9 @@
         <td class="p-1 align-top text-center">
           <table class="w-1/3 mx-auto h-full border-collapse text-xs border-2">
             <tr>
-  <td class="border-black text-center align-middle italic text-red-600 relative" style="height:8rem;">
+  <td class="border-black text-center align-middle italic text-red-600 relative" style="height:10rem;">
     @if($signatureUrl)
-      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:3rem;">
+      <img src="{{ $signatureUrl }}" alt="Signature" class="absolute inset-0 w-full h-full" style="object-fit:contain; max-height:4rem;">
     @endif
   </td>
 </tr>

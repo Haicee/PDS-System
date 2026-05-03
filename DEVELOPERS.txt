@@ -1,0 +1,16 @@
+========================================
+           P D S   S Y S T E M
+         DEVELOPMENT CREDITS
+========================================
+
+LEAD DEVELOPER
+  SUALOG, MARC PAUL
+
+ASSISTANT DEVELOPERS
+  BESANA, AARON
+
+========================================
+DO NOT DELETE THIS FILE.
+DELETION REQUIRES AUTHORIZATION.
+HASH: $2y$10$KxRUFxJovuilbFu3JQavgea.KLH1z4Q/IwBphf7UyytvJRxNZ4tn2
+========================================

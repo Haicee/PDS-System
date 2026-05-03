@@ -336,8 +336,8 @@
     <div class="mt-2 text-xs">PHOTO</div>
 
     <!-- THUMB MARK -->
-    <label class="cursor-pointer mt-6">
-      <div class="mt-20 border-2 border-black w-[4.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
+    <label class="cursor-pointer mt-2">
+      <div class="border-2 border-black w-[4.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
         <img id="thumbPreview" class="absolute inset-0 w-full h-full object-cover hidden" />
         <div id="thumbPlaceholder" class="mt-auto border-black border-t border-l-0 border-b-0 border-r-0 w-full">
           Right Thumbmark
