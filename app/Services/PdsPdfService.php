@@ -145,6 +145,7 @@ class PdsPdfService
             ->margins(10, 10, 10, 10)
             ->scale(0.56)
             ->emulateMedia('print')
+            ->waitForFunction('document.readyState === "complete"')
             ->showBackground()
             ->setOption('printBackground', true)
             ->timeout(60)
