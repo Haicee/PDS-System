@@ -71,6 +71,7 @@ Route::middleware(['auth:admin', 'verified'])->group(function () {
     Route::get('/pds-form/latest', [App\Http\Controllers\PdsReviewController::class, 'latest'])->name('pds.form.latest');
     Route::post('/pds-form/{id}/status', [App\Http\Controllers\PdsReviewController::class, 'updateStatus'])->name('pds.updateStatus');
     Route::get('/pds-form/export', [App\Http\Controllers\PdsReviewController::class, 'export'])->name('pds.export');
+    Route::get('/pds-form/export-details', [App\Http\Controllers\PdsReviewController::class, 'exportDetails'])->name('pds.export.details');
     Route::get('/pds-form/{key}/download', [App\Http\Controllers\PdsReviewController::class, 'downloadDocx'])->name('pds.download');
 });
 

@@ -3,70 +3,98 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
         // Add indexes to all pds tables for user_id lookups
-        Schema::table('pds_family_members', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_family_members', 'pds_family_members_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_family_members_user_id_idx');
+        });
+        $this->createIndexIfMissing('pds_family_members', 'pds_family_members_user_type_idx', function (Blueprint $table) {
             $table->index(['user_id', 'type'], 'pds_family_members_user_type_idx');
         });
 
-        Schema::table('pds_education_records', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_education_records', 'pds_education_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_education_user_id_idx');
+        });
+        $this->createIndexIfMissing('pds_education_records', 'pds_education_user_level_idx', function (Blueprint $table) {
             $table->index(['user_id', 'level'], 'pds_education_user_level_idx');
         });
 
-        Schema::table('pds_training_programs', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_training_programs', 'pds_training_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_training_user_id_idx');
+        });
+        $this->createIndexIfMissing('pds_training_programs', 'pds_training_user_source_idx', function (Blueprint $table) {
             $table->index(['user_id', 'source'], 'pds_training_user_source_idx');
+        });
+        $this->createIndexIfMissing('pds_training_programs', 'pds_training_user_id_order_idx', function (Blueprint $table) {
             $table->index(['user_id', 'id'], 'pds_training_user_id_order_idx');
         });
 
-        Schema::table('pds_work_experiences', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_work_experiences', 'pds_work_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_work_user_id_idx');
+        });
+        $this->createIndexIfMissing('pds_work_experiences', 'pds_work_user_from_idx', function (Blueprint $table) {
             $table->index(['user_id', 'from'], 'pds_work_user_from_idx');
         });
 
-        Schema::table('pds_voluntary_work', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_voluntary_work', 'pds_voluntary_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_voluntary_user_id_idx');
-            $table->index(['user_id', 'from'], 'pds_voluntary_user_from_idx');
         });
 
-        Schema::table('pds_eligibilities', function (Blueprint $table) {
+        // Composite index with text column: use prefix for MySQL/MariaDB
+        $driver = DB::connection()->getDriverName();
+        if (!$this->indexExists('pds_voluntary_work', 'pds_voluntary_user_from_idx')) {
+            if (in_array($driver, ['mysql', 'mariadb'])) {
+                DB::statement('CREATE INDEX pds_voluntary_user_from_idx ON pds_voluntary_work (user_id, `from`(191))');
+            } else {
+                Schema::table('pds_voluntary_work', function (Blueprint $table) {
+                    $table->index(['user_id', 'from'], 'pds_voluntary_user_from_idx');
+                });
+            }
+        }
+
+        $this->createIndexIfMissing('pds_eligibilities', 'pds_eligibility_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_eligibility_user_id_idx');
         });
 
-        Schema::table('pds_other_info', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_other_info', 'pds_other_info_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_other_info_user_id_idx');
+        });
+        $this->createIndexIfMissing('pds_other_info', 'pds_other_info_user_cat_idx', function (Blueprint $table) {
             $table->index(['user_id', 'category'], 'pds_other_info_user_cat_idx');
         });
 
-        Schema::table('pds_references', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_references', 'pds_references_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_references_user_id_idx');
         });
 
-        Schema::table('pds_form5_remarks', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_form5_remarks', 'pds_form5_remarks_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_form5_remarks_user_id_idx');
+        });
+        $this->createIndexIfMissing('pds_form5_remarks', 'pds_form5_remarks_user_id_order_idx', function (Blueprint $table) {
             $table->index(['user_id', 'id'], 'pds_form5_remarks_user_id_order_idx');
         });
 
-        Schema::table('pds_drafts', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_drafts', 'pds_drafts_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_drafts_user_id_idx');
         });
 
-        Schema::table('pds_submissions', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_submissions', 'pds_submissions_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_submissions_user_id_idx');
+        });
+        $this->createIndexIfMissing('pds_submissions', 'pds_submissions_status_submitted_idx', function (Blueprint $table) {
             $table->index(['status', 'submitted'], 'pds_submissions_status_submitted_idx');
         });
 
-        Schema::table('pds_rejections', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_rejections', 'pds_rejections_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_rejections_user_id_idx');
         });
 
-        Schema::table('pds_signature_files', function (Blueprint $table) {
+        $this->createIndexIfMissing('pds_signature_files', 'pds_signature_files_user_id_idx', function (Blueprint $table) {
             $table->index('user_id', 'pds_signature_files_user_id_idx');
         });
     }
@@ -96,8 +124,16 @@ return new class extends Migration
 
         Schema::table('pds_voluntary_work', function (Blueprint $table) {
             $table->dropIndex('pds_voluntary_user_id_idx');
-            $table->dropIndex('pds_voluntary_user_from_idx');
         });
+
+        $driver = DB::connection()->getDriverName();
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            DB::statement('DROP INDEX IF EXISTS pds_voluntary_user_from_idx ON pds_voluntary_work');
+        } else {
+            Schema::table('pds_voluntary_work', function (Blueprint $table) {
+                $table->dropIndex('pds_voluntary_user_from_idx');
+            });
+        }
 
         Schema::table('pds_eligibilities', function (Blueprint $table) {
             $table->dropIndex('pds_eligibility_user_id_idx');
@@ -133,5 +169,39 @@ return new class extends Migration
         Schema::table('pds_signature_files', function (Blueprint $table) {
             $table->dropIndex('pds_signature_files_user_id_idx');
         });
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            $database = DB::getDatabaseName();
+            $count = DB::table('information_schema.statistics')
+                ->where('table_schema', $database)
+                ->where('table_name', $table)
+                ->where('index_name', $index)
+                ->count();
+
+            return $count > 0;
+        }
+
+        if ($driver === 'pgsql') {
+            $count = DB::table('pg_indexes')
+                ->where('tablename', $table)
+                ->where('indexname', $index)
+                ->count();
+
+            return $count > 0;
+        }
+
+        return false;
+    }
+
+    private function createIndexIfMissing(string $table, string $index, callable $callback): void
+    {
+        if (! $this->indexExists($table, $index)) {
+            Schema::table($table, $callback);
+        }
     }
 };

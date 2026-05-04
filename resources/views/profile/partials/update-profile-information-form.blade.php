@@ -10,7 +10,7 @@
     </header>
 
     <!-- Offline mode: verification routes disabled. Original resend form retained for future use.
-    <form id="send-verification" method="post" action="{{ route('verification.send') }}">
+    <form id="send-verification" method="post" action="{{-- route('verification.send') --}}">
         @csrf
     </form>
     -->

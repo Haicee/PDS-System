@@ -25,6 +25,15 @@ class ExportService
         );
     }
 
+    public function buildPdsDetailsXlsx(array $columns, array $rows, array $colWidths): string
+    {
+        return $this->buildXlsx(
+            'PDS Details',
+            $this->pdsDetailsStylesXml(),
+            $this->pdsDetailsSheetXml($columns, $rows, $colWidths)
+        );
+    }
+
     private function buildXlsx(string $sheetName, string $stylesXml, string $sheetXml): string
     {
         $tmp = $this->openZip($zip);
@@ -297,5 +306,83 @@ XML;
             . $colsXml
             . '<sheetData>' . implode('', $sheetRows) . '</sheetData>'
             . '</worksheet>';
+    }
+
+    private function pdsDetailsStylesXml(): string
+    {
+        return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2">
+    <font><sz val="11"/><color theme="1"/><name val="Calibri"/></font>
+    <font><sz val="11"/><color rgb="FF000000"/><name val="Calibri"/><b/></font>
+  </fonts>
+  <fills count="3">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFB4C7E7"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="2">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border>
+      <left style="thin"><color rgb="FF000000"/></left>
+      <right style="thin"><color rgb="FF000000"/></right>
+      <top style="thin"><color rgb="FF000000"/></top>
+      <bottom style="thin"><color rgb="FF000000"/></bottom>
+      <diagonal/>
+    </border>
+  </borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="3">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFill="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>
+XML;
+    }
+
+    private function pdsDetailsSheetXml(array $columns, array $rows, array $colWidths): string
+    {
+        $colsXml = $this->colsXml($colWidths);
+        $sheetRows = [$this->pdsDetailsHeaderRowXml($columns)];
+        $rowIndex = 1;
+        $totalColumns = count($columns);
+
+        foreach ($rows as $row) {
+            $rowIndex++;
+            $cells = '';
+            $values = array_values($row);
+            for ($colIndex = 0; $colIndex < $totalColumns; $colIndex++) {
+                $value = (string) ($values[$colIndex] ?? '');
+                $ref = $this->columnLetter($colIndex) . $rowIndex;
+                $cells .= '<c r="' . $ref . '" t="inlineStr" s="2"><is><t xml:space="preserve">' . htmlspecialchars($value, ENT_XML1) . '</t></is></c>';
+            }
+            $sheetRows[] = '<row r="' . $rowIndex . '">' . $cells . '</row>';
+        }
+
+        return $this->wrapSheet($colsXml, $sheetRows);
+    }
+
+    private function pdsDetailsHeaderRowXml(array $columns): string
+    {
+        $cells = '';
+        foreach ($columns as $colIndex => $value) {
+            $ref = $this->columnLetter($colIndex) . '1';
+            $cells .= '<c r="' . $ref . '" t="inlineStr" s="1"><is><t>' . htmlspecialchars($value, ENT_XML1) . '</t></is></c>';
+        }
+        return '<row r="1" ht="42" customHeight="1">' . $cells . '</row>';
+    }
+
+    private function columnLetter(int $index): string
+    {
+        $letters = '';
+        $n = $index;
+        do {
+            $letters = chr(65 + ($n % 26)) . $letters;
+            $n = intdiv($n, 26) - 1;
+        } while ($n >= 0);
+        return $letters;
     }
 }

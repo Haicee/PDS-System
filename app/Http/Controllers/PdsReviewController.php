@@ -8,8 +8,11 @@ use App\Notifications\PdsStatusUpdated;
 use App\Services\ActivityLogger;
 use App\Services\ExportService;
 use App\Repositories\PdsRepository;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 
 class PdsReviewController extends Controller
 {
@@ -155,6 +158,47 @@ class PdsReviewController extends Controller
         ]);
     }
 
+    public function exportDetails(): \Illuminate\Http\Response
+    {
+        if (! class_exists(\ZipArchive::class)) {
+            abort(500, 'ZipArchive PHP extension is required to export XLSX. Please enable php_zip.');
+        }
+
+        $columns = [
+            'Surname',
+            'First Name',
+            'Middle Name',
+            'Name Extension (e.g Jr. Sr. III)',
+            'Civil Status',
+            'Gender',
+            'Birthdate MM/DD/YYYY',
+            'Birthday Month/Day/Year',
+            'AGE AS OF TODAY',
+            'Eligibility',
+            'Cellphone No.',
+            'Email Address',
+            'Educational Attainment',
+            'SCHOOL GRADUATED',
+            'Residential Address',
+            'Permanent Address',
+            'Place Of Birth',
+            'PhilHealth',
+            'Pag-Ibig',
+            'TIN No.',
+            'UMID ID No.',
+        ];
+
+        $colWidths = [18, 18, 18, 14, 14, 10, 18, 22, 10, 30, 18, 26, 22, 28, 40, 40, 24, 18, 18, 18, 18];
+
+        $rows = $this->pdsDetailsRows();
+        $xlsx = $this->exportService->buildPdsDetailsXlsx($columns, $rows, $colWidths);
+
+        return response($xlsx, 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="BFAR_PDS_Details_' . date('Y-m-d') . '.xlsx"',
+        ]);
+    }
+
     public function downloadDocx(string $key): \Illuminate\Http\Response
     {
         if (! class_exists(\ZipArchive::class)) {
@@ -173,6 +217,224 @@ class PdsReviewController extends Controller
             'Content-Type'        => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'Content-Disposition' => 'attachment; filename="PDS_' . $safeName . '_' . date('Y-m-d') . '.docx"',
         ]);
+    }
+
+    private function pdsDetailsRows(): array
+    {
+        // Collect user_ids from all users who have submitted a PDS.
+        $userIds = PdsSubmission::query()
+            ->whereNotNull('user_id')
+            ->pluck('user_id')
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($userIds)) {
+            return [];
+        }
+
+        $personalInfos = DB::table('pds_personal_infos')
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->keyBy('user_id');
+
+        $addresses = DB::table('pds_addresses')
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->keyBy('user_id');
+
+        $contacts = DB::table('pds_contact_infos')
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->keyBy('user_id');
+
+        // Eligibilities grouped by user_id
+        $eligibilities = DB::table('pds_eligibilities')
+            ->whereIn('user_id', $userIds)
+            ->whereNotNull('eligibility')
+            ->where('eligibility', '!=', '')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('user_id');
+
+        // Education records grouped by user_id (main source only)
+        $educationQuery = DB::table('pds_education_records')
+            ->whereIn('user_id', $userIds);
+
+        // Only restrict by 'main' source if the column exists (it's added by a later migration)
+        if (Schema::hasColumn('pds_education_records', 'source')) {
+            $educationQuery->where(function ($q) {
+                $q->where('source', 'main')->orWhereNull('source');
+            });
+        }
+
+        $educations = $educationQuery->orderBy('id')->get()->groupBy('user_id');
+
+        // Use latest submission's "name" as sort order
+        $submissionsByUser = PdsSubmission::query()
+            ->whereIn('user_id', $userIds)
+            ->orderByDesc('submitted')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('user_id');
+
+        $rows = [];
+
+        foreach ($userIds as $userId) {
+            $pi        = $personalInfos->get($userId);
+            $addr      = $addresses->get($userId);
+            $contact   = $contacts->get($userId);
+            $eligList  = $eligibilities->get($userId, collect());
+            $eduList   = $educations->get($userId, collect());
+            $submission = $submissionsByUser->get($userId, collect())->first();
+
+            [$latestLevel, $latestSchool] = $this->latestEducationalAttainment($eduList);
+
+            [$birthMmDdYyyy, $birthLong, $age] = $this->formatBirthdate($pi->date_of_birth ?? null);
+
+            $eligibilityStr = $eligList
+                ->pluck('eligibility')
+                ->filter(fn ($v) => filled($v))
+                ->unique()
+                ->values()
+                ->implode("\n");
+
+            $residential = $this->formatAddress($addr, 'present');
+            $permanent   = $this->formatAddress($addr, 'permanent');
+
+            $rows[] = [
+                $pi->surname        ?? '',
+                $pi->firstname      ?? '',
+                $pi->middlename     ?? '',
+                $pi->name_extension ?? '',
+                $pi->civil_status   ?? '',
+                $pi->sex            ?? '',
+                $birthMmDdYyyy,
+                $birthLong,
+                $age,
+                $eligibilityStr,
+                $contact->mobile_no      ?? '',
+                $contact->email_address  ?? '',
+                $latestLevel,
+                $latestSchool,
+                $residential,
+                $permanent,
+                $pi->place_of_birth ?? '',
+                $pi->philhealth_no  ?? '',
+                $pi->pagibig_no     ?? '',
+                $pi->tin_no         ?? '',
+                $pi->umid_no        ?? '',
+            ];
+        }
+
+        // Sort alphabetically by surname for stable, predictable ordering
+        usort($rows, fn ($a, $b) => strcasecmp((string) $a[0], (string) $b[0]));
+
+        return $rows;
+    }
+
+    /**
+     * Determine the highest educational level with data and return [label, school_name].
+     */
+    private function latestEducationalAttainment($educationRecords): array
+    {
+        // Highest to lowest
+        $priority = ['graduate_studies', 'college', 'vocational', 'secondary', 'elementary'];
+
+        $labels = [
+            'graduate_studies' => 'Graduate Studies',
+            'college'          => 'College',
+            'vocational'       => 'Vocational / Trade Course',
+            'secondary'        => 'Secondary',
+            'elementary'       => 'Elementary',
+        ];
+
+        // Index records by level (keep first meaningful match per level)
+        $byLevel = [];
+        foreach ($educationRecords as $rec) {
+            $level = strtolower(trim((string) ($rec->level ?? '')));
+            if ($level === '') {
+                continue;
+            }
+            // Only count a level as present if there is at least a school_name or degree_course
+            $hasContent = filled($rec->school_name ?? null)
+                || filled($rec->degree_course ?? null)
+                || filled($rec->year_graduated ?? null)
+                || filled($rec->from ?? null)
+                || filled($rec->to ?? null);
+
+            if (! $hasContent) {
+                continue;
+            }
+
+            // Keep the most recent (later `to` or greater year) per level
+            if (! isset($byLevel[$level]) || $this->eduRecordIsLater($rec, $byLevel[$level])) {
+                $byLevel[$level] = $rec;
+            }
+        }
+
+        foreach ($priority as $level) {
+            if (isset($byLevel[$level])) {
+                $rec = $byLevel[$level];
+                return [
+                    $labels[$level] ?? ucfirst($level),
+                    (string) ($rec->school_name ?? ''),
+                ];
+            }
+        }
+
+        return ['', ''];
+    }
+
+    private function eduRecordIsLater($a, $b): bool
+    {
+        $ay = (int) preg_replace('/\D/', '', (string) ($a->to ?? $a->year_graduated ?? '0')) ?: 0;
+        $by = (int) preg_replace('/\D/', '', (string) ($b->to ?? $b->year_graduated ?? '0')) ?: 0;
+        return $ay > $by;
+    }
+
+    /**
+     * Parse date_of_birth string and return [mm/dd/yyyy, "Month d, Y", age].
+     */
+    private function formatBirthdate(?string $dob): array
+    {
+        if (! filled($dob)) {
+            return ['', '', ''];
+        }
+
+        try {
+            $date = Carbon::parse($dob);
+        } catch (\Throwable $e) {
+            return [(string) $dob, (string) $dob, ''];
+        }
+
+        return [
+            $date->format('m/d/Y'),
+            $date->format('F d, Y'),
+            (string) $date->age,
+        ];
+    }
+
+    private function formatAddress(?object $addr, string $prefix): string
+    {
+        if (! $addr) {
+            return '';
+        }
+
+        $parts = [
+            $addr->{$prefix . '_house_block_lot'}        ?? null,
+            $addr->{$prefix . '_street'}                 ?? null,
+            $addr->{$prefix . '_subdivision_village'}    ?? null,
+            $addr->{$prefix . '_barangay'}               ?? null,
+            $addr->{$prefix . '_city_municipality'}      ?? null,
+            $addr->{$prefix . '_province'}               ?? null,
+            $addr->{$prefix . '_zip_code'}               ?? null,
+        ];
+
+        return collect($parts)
+            ->map(fn ($v) => trim((string) $v))
+            ->filter(fn ($v) => $v !== '')
+            ->implode(', ');
     }
 
     private function rawSubmissions(): array
