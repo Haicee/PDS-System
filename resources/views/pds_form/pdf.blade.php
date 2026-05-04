@@ -2914,7 +2914,7 @@
 <table class="section-table remarks-table w-full font-['Arial_Narrow','Arial',sans-serif]" style="border-collapse:collapse;">
 
 <tr>
-  <th class="font-semibold italic bg-[#8a8a8a] text-white border border-black border-b-2" style="font-size:26px !important; font-weight:700 !important;">
+  <th style="background:#8a8a8a; color:white !important; font-weight:700 !important; font-size:35px !important;" class="font-semibold italic border border-black border-b-2">
     WORK EXPERIENCE SHEET
   </th>
 </tr>
@@ -2922,7 +2922,7 @@
 <tbody id="remarks-rows">
 
 <tr>
-<td class="border-t-2 p-3 text-3xl italic border-b-2 border-black">
+<td class="border-t-2 p-3 text-3xl italic border-b-2 border-black" style="background:#e7e7e7;">
   <div class="p-1 font-semibold" style="font-size:22px !important;">Instructions:</div>
   <div style="margin-left:18px; font-size:22px !important;">1. Include only the work experiences relevant to the position being applied to.</div>
   <div style="margin-left:18px; margin-top:6px; font-size:22px !important;">2. The duration should include start and finish dates, if known, month in abbreviated form, if known, and year in full. For the current position, use the word Present, e.g., 1998-Present. Work experience should be listed from most recent first.</div>
@@ -3005,7 +3005,7 @@
 <td class="border-2 border-black relative align-top">
   <div
     class="remarks-content border-none w-full p-5 text-xl"
-    style="white-space:pre-line; box-sizing:border-box; page-break-inside:auto; overflow:visible; font-size:28px; line-height:1.3;"
+    style="white-space:pre-line; box-sizing:border-box; page-break-inside:auto; overflow:visible; font-size:35px; line-height:1.3;"
   >@if($hasData){!! $remarkHtml !!}@endif</div>
 </td>
 </tr>
