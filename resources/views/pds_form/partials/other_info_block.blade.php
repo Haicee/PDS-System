@@ -26,7 +26,7 @@
         $skills = $otherCollection->where('category', 'skills')->pluck('description')->values(); // keep all rows, don't filter
         $recognition = $otherCollection->where('category', 'recognition')->pluck('description')->values(); // keep all rows, don't filter
         $assoc = $otherCollection->where('category', 'association')->pluck('description')->values(); // keep all rows, don't filter
-        $maxOther = 10; // Fixed 10 rows for other information
+        $maxOther = 7; // Fixed 10 rows for other information
     @endphp
     @for ($i = 0; $i < $maxOther; $i++)
     <tr>

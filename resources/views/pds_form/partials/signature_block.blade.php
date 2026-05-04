@@ -27,6 +27,3 @@
         </td>
     </tr>
 </table>
-<div class="text-base w-full keep-base" style="margin-top:10px; text-align:right; font-family:'Arial','sans-serif'; font-style:italic;">
-    CS FORM 212 (Revised 2025), Page 3 of 5
-</div>

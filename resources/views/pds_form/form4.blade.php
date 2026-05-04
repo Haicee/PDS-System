@@ -47,6 +47,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  -->
   <script>
     // PHOTO capture helpers with face detection gating
     let photoStream;
@@ -1357,7 +1358,6 @@
     // Also check periodically in case user navigates back from form1
     setInterval(syncFromForm1, 1000);
   </script>
-  -->
   
   <div class="max-w-6xl mx-auto p-4 font-serif text-sm pds-responsive">
   <div class="pds-sheet">
@@ -1618,13 +1618,13 @@
           <div class="absolute w-[70%] h-[70%] rounded-full border-4 border-dashed border-rose-500 shadow-[0_0_0_2px_rgba(244,63,94,0.25)] guide-circle"></div>
         </div>
       </div>
-
+<!--
       <p id="photoStatus" class="text-xs text-center text-rose-600 font-semibold min-h-[18px]"></p>
 
         <div class="flex flex-col items-center gap-2 text-xs w-full">
           <button type="button" id="photoStartBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow" onclick="startPhotoCamera()">Open camera</button>
           <button type="button" id="photoCaptureBtn" class="px-3 py-1 bg-emerald-600 text-white rounded shadow hidden disabled:opacity-60" onclick="capturePhoto()" disabled>Capture</button>
-        <!-- Upload option -->
+     
         <label class="px-3 py-1 bg-indigo-600 text-white rounded shadow cursor-pointer">
           Upload photo
           <input id="photoFile" type="file" name="photo" accept="image/*" class="hidden" onchange="previewPhotoFromFile(this.files[0])">
@@ -1634,7 +1634,7 @@
 
       <div class="mt-1 text-xs">PHOTO</div>
     </div>
-
+              -->
     <!-- THUMB MARK -->
     <label class="cursor-pointer mt-2">
       <div class="border-2 border-black w-[4.5cm] h-[4.5cm] flex items-center justify-center text-xs italic text-center relative overflow-hidden">
