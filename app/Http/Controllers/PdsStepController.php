@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PdsDraft;
 use App\Models\PdsRejection;
 use App\Models\PdsSubmission;
+use App\Repositories\PdsRepository;
 use App\Services\PdsFileService;
 use App\Services\PdsPersistenceService;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,7 @@ class PdsStepController extends Controller
     public function __construct(
         private PdsFileService $fileService,
         private PdsPersistenceService $persistenceService,
+        private PdsRepository $repository,
     ) {}
 
     public function saveStep(Request $request, int $step)
@@ -78,6 +80,7 @@ class PdsStepController extends Controller
 
         if ($step === 1) {
             $this->persistenceService->persistForm1($userId, $draft->data);
+            $this->repository->clearCache($userId);
         }
 
         $nextRoute = match ($step) {
@@ -111,20 +114,91 @@ class PdsStepController extends Controller
             $data['signature_path'] = $signaturePath;
         }
 
-        $draft        = PdsDraft::firstOrCreate(['user_id' => $userId]);
-        $existingData = $draft->data ?? [];
+        // Use database lock to prevent race conditions
+        $draft = DB::transaction(function () use ($userId, $data, $eduRemoved) {
+            $draft = PdsDraft::lockForUpdate()->firstOrCreate(['user_id' => $userId]);
+            $existingData = $draft->data ?? [];
 
-        foreach ($eduRemoved as $idx) {
-            unset($existingData['education_' . intval($idx)]);
-        }
+            foreach ($eduRemoved as $idx) {
+                unset($existingData['education_' . intval($idx)]);
+            }
 
-        $draft->data = $this->replaceArrays($existingData, $data);
-        $draft->save();
-        session(['pds' => $draft->data, 'pds_owner' => $userId]);
+            $draft->data = $this->replaceArrays($existingData, $data);
+            $draft->save();
+
+            return $draft;
+        });
+
+        // Store compressed/compressed session data
+        $compressedData = $this->compressSessionData($draft->data);
+        session(['pds' => $compressedData, 'pds_owner' => $userId]);
 
         Log::info('Auto-save successful', ['user_id' => $userId, 'data_keys' => array_keys($data)]);
 
         return response()->json(['status' => 'ok', 'saved_keys' => array_keys($data)]);
+    }
+
+    /**
+     * Compress session data to reduce memory usage.
+     */
+    private function compressSessionData(array $data): array
+    {
+        // Remove empty padded values from dynamic tables to reduce size
+        // Only compress learning_N (flat column arrays); education_N uses nested
+        // associative structure {level: {field: value}} which removeEmptyRows can't handle.
+        foreach ($data as $key => $value) {
+            if (preg_match('/^learning_\d+$/', $key) && is_array($value)) {
+                $data[$key] = $this->removeEmptyRows($value);
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Remove empty rows from table data.
+     */
+    private function removeEmptyRows(array $tableData): array
+    {
+        if (!isset($tableData[array_keys($tableData)[0]])) {
+            return $tableData;
+        }
+
+        $keys = array_keys($tableData);
+        $rowCount = count($tableData[$keys[0]] ?? []);
+        $nonEmptyIndices = [];
+
+        for ($i = 0; $i < $rowCount; $i++) {
+            $hasData = false;
+            foreach ($keys as $key) {
+                $val = $tableData[$key][$i] ?? null;
+                if ($val !== null && $val !== '') {
+                    $hasData = true;
+                    break;
+                }
+            }
+            if ($hasData) {
+                $nonEmptyIndices[] = $i;
+            }
+        }
+
+        // Keep at least some empty rows for UI (10 for training, 2 for education)
+        $minRows = isset($tableData['title_of_ld']) ? 10 : 2;
+        while (count($nonEmptyIndices) < $minRows && count($nonEmptyIndices) < $rowCount) {
+            $nonEmptyIndices[] = count($nonEmptyIndices);
+        }
+
+        $result = [];
+        foreach ($keys as $key) {
+            $result[$key] = array_intersect_key(
+                $tableData[$key],
+                array_flip($nonEmptyIndices)
+            );
+            // Re-index array
+            $result[$key] = array_values($result[$key]);
+        }
+
+        return $result;
     }
 
     public function deleteDraftKey(Request $request)
@@ -144,7 +218,7 @@ class PdsStepController extends Controller
             unset($draftData[$key]);
             $draft->data = $draftData;
             $draft->save();
-            session(['pds' => $draft->data, 'pds_owner' => $userId]);
+            session(['pds' => $this->compressSessionData($draft->data), 'pds_owner' => $userId]);
         }
         return response()->json(['status' => 'ok', 'deleted' => $key]);
     }
@@ -193,6 +267,11 @@ class PdsStepController extends Controller
             $data = $this->syncTrainingDataFromDb($userId, $data);
         }
 
+        // For form 5, sync work experience data from database
+        if ($step === 5) {
+            $data = $this->syncForm5DataFromDb($userId, $data);
+        }
+
         $signaturePath = DB::table('pds_signature_files')
             ->where('user_id', $userId)
             ->value('signature_file_path');
@@ -203,7 +282,7 @@ class PdsStepController extends Controller
         }
 
         if (!empty($data)) {
-            session(['pds' => $data, 'pds_owner' => $userId]);
+            session(['pds' => $this->compressSessionData($data), 'pds_owner' => $userId]);
         }
 
         $highlightedSections = PdsRejection::where('user_id', $userId)
@@ -214,19 +293,12 @@ class PdsStepController extends Controller
 
     /**
      * Sync training data from pds_training_programs table to draft format.
-     * Only populates if draft is missing training data (preserves draft data as primary source).
+     * ALWAYS rebuilds from DB to ensure consistency (e.g., after rejection).
+     * Stale learning_N keys are removed from draft before rebuilding.
      */
     private function syncTrainingDataFromDb(int $userId, array $data): array
     {
-        // If draft already has training data (main or dynamic tables), use it (preserve unsaved changes)
-        $hasDraftTraining = !empty($data['learning_title_of_ld'])
-            || collect($data)->keys()->contains(fn ($k) => preg_match('/^learning_\d+$/', $k));
-
-        if ($hasDraftTraining) {
-            return $data;
-        }
-
-        // Only fall back to DB if draft has no training data at all
+        // Always fetch from DB — this is the authoritative source
         $trainingRows = DB::table('pds_training_programs')
             ->where('user_id', $userId)
             ->orderBy('id')
@@ -236,32 +308,54 @@ class PdsStepController extends Controller
             return $data;
         }
 
-        // Main table holds up to 27 rows
-        $mainTableRows = $trainingRows->take(27);
-        $extraRows = $trainingRows->slice(27);
+        // Remove stale draft training keys before rebuilding
+        unset($data['learning_title_of_ld'], $data['learning_from'], $data['learning_to']);
+        unset($data['learning_hours'], $data['learning_type_of_ld'], $data['learning_conducted_sponsored_by']);
+        foreach (array_keys($data) as $key) {
+            if (preg_match('/^learning_\d+$/', $key)) {
+                unset($data[$key]);
+            }
+        }
+
+        // Use source column to properly separate main and added training
+        $mainTableRows = $trainingRows->filter(fn($row) => ($row->source ?? 'main') === 'main')->values();
+        $extraRows = $trainingRows->filter(fn($row) => ($row->source ?? '') === 'added')->values();
 
         // Populate main table arrays
-        $data['learning_title_of_ld'] = $mainTableRows->pluck('title')->toArray();
-        $data['learning_from'] = $mainTableRows->pluck('from')->toArray();
-        $data['learning_to'] = $mainTableRows->pluck('to')->toArray();
-        $data['learning_hours'] = $mainTableRows->pluck('hours')->toArray();
-        $data['learning_type_of_ld'] = $mainTableRows->pluck('type_of_ld')->toArray();
-        $data['learning_conducted_sponsored_by'] = $mainTableRows->pluck('conducted_by')->toArray();
+        $mainTitles = $mainTableRows->pluck('title')->filter(fn($v) => !empty($v))->toArray();
+        if (!empty($mainTitles)) {
+            $data['learning_title_of_ld'] = $mainTableRows->pluck('title')->toArray();
+            $data['learning_from'] = $mainTableRows->pluck('from')->toArray();
+            $data['learning_to'] = $mainTableRows->pluck('to')->toArray();
+            $data['learning_hours'] = $mainTableRows->pluck('hours')->toArray();
+            $data['learning_type_of_ld'] = $mainTableRows->pluck('type_of_ld')->toArray();
+            $data['learning_conducted_sponsored_by'] = $mainTableRows->pluck('conducted_by')->toArray();
+        }
 
-        // Create dynamic tables for overflow (5 rows per table)
-        $extraTableCount = ceil($extraRows->count() / 5);
-        for ($i = 0; $i < $extraTableCount; $i++) {
-            $tableRows = $extraRows->slice($i * 5, 5)->values();
-            $tableNum = $i + 1;
+        // Create dynamic tables for added training (45 rows per table - matching form3 addLearningTable)
+        // Store only actual data rows — the JS form will pad when rendering
+        if ($extraRows->isNotEmpty()) {
+            $extraTableCount = ceil($extraRows->count() / 45);
+            for ($i = 0; $i < $extraTableCount; $i++) {
+                $tableRows = $extraRows->slice($i * 45, 45)->values();
+                $tableNum = $i + 1;
 
-            $data["learning_{$tableNum}"] = [
-                'title_of_ld' => $tableRows->pluck('title')->toArray(),
-                'from' => $tableRows->pluck('from')->toArray(),
-                'to' => $tableRows->pluck('to')->toArray(),
-                'hours' => $tableRows->pluck('hours')->toArray(),
-                'type_of_ld' => $tableRows->pluck('type_of_ld')->toArray(),
-                'conducted_sponsored_by' => $tableRows->pluck('conducted_by')->toArray(),
-            ];
+                $data["learning_{$tableNum}"] = [
+                    'title_of_ld' => $tableRows->pluck('title')->toArray(),
+                    'from' => $tableRows->pluck('from')->toArray(),
+                    'to' => $tableRows->pluck('to')->toArray(),
+                    'hours' => $tableRows->pluck('hours')->toArray(),
+                    'type_of_ld' => $tableRows->pluck('type_of_ld')->toArray(),
+                    'conducted_sponsored_by' => $tableRows->pluck('conducted_by')->toArray(),
+                ];
+            }
+        }
+
+        // Only persist if data actually changed
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        if ($draft && $draft->data !== $data) {
+            $draft->data = $data;
+            $draft->save();
         }
 
         return $data;
@@ -269,19 +363,12 @@ class PdsStepController extends Controller
 
     /**
      * Sync education data from pds_education_records table to draft format.
-     * Only populates if draft is missing education data (preserves draft data as primary source).
+     * ALWAYS rebuilds from DB to ensure consistency (e.g., after rejection).
+     * Stale education_N keys are removed from draft before rebuilding.
      */
     private function syncEducationDataFromDb(int $userId, array $data): array
     {
-        // If draft already has education data, use it (preserve unsaved changes)
-        $hasDraftEducation = !empty($data['education'])
-            || collect($data)->keys()->contains(fn ($k) => preg_match('/^education_\d+$/', $k));
-
-        if ($hasDraftEducation) {
-            return $data;
-        }
-
-        // Only fall back to DB if draft has no education data at all
+        // Always fetch from DB — this is the authoritative source
         $eduRows = DB::table('pds_education_records')
             ->where('user_id', $userId)
             ->orderBy('id')
@@ -291,12 +378,20 @@ class PdsStepController extends Controller
             return $data;
         }
 
+        // Remove stale draft education keys before rebuilding
+        unset($data['education']);
+        foreach (array_keys($data) as $key) {
+            if (preg_match('/^education_\d+$/', $key)) {
+                unset($data[$key]);
+            }
+        }
+
         // Base levels for main education table
         $baseLevels = ['elementary', 'secondary', 'vocational', 'college', 'graduate_studies'];
 
-        // Separate base education from extra education
-        $mainEdu = $eduRows->filter(fn ($row) => in_array(strtolower($row->level), $baseLevels));
-        $extraEdu = $eduRows->filter(fn ($row) => !in_array(strtolower($row->level), $baseLevels));
+        // Separate using source column (main vs added)
+        $mainEdu = $eduRows->filter(fn ($row) => ($row->source ?? 'main') === 'main')->values();
+        $extraEdu = $eduRows->filter(fn ($row) => ($row->source ?? 'main') === 'added')->values();
 
         // Populate main education table
         foreach ($baseLevels as $level) {
@@ -315,23 +410,102 @@ class PdsStepController extends Controller
         }
 
         // Create dynamic tables for extra education (5 rows per table)
-        $extraTableCount = ceil($extraEdu->count() / 5);
-        for ($i = 0; $i < $extraTableCount; $i++) {
-            $tableRows = $extraEdu->slice($i * 5, 5)->values();
-            $tableNum = $i + 1;
+        // Each table has rows keyed by baseLevels (elementary, secondary, etc.)
+        if ($extraEdu->isNotEmpty()) {
+            $extraTableCount = ceil($extraEdu->count() / 5);
+            for ($i = 0; $i < $extraTableCount; $i++) {
+                $tableRows = $extraEdu->slice($i * 5, 5)->values();
+                $tableNum = $i + 1;
 
-            foreach ($tableRows as $idx => $row) {
-                $levelKey = $baseLevels[$idx] ?? 'extra_' . $idx;
-                $data["education_{$tableNum}"][$levelKey] = [
-                    'school_name' => $row->school_name,
-                    'basic_education' => $row->degree_course,
-                    'from' => $row->from,
-                    'to' => $row->to,
-                    'highest_level' => $row->highest_level,
-                    'year_graduated' => $row->year_graduated,
-                    'scholarship_acadhonors' => $row->academic_honors,
-                ];
+                foreach ($tableRows as $idx => $row) {
+                    // Use the row's actual level as key (matches form structure)
+                    $levelKey = strtolower($row->level ?? ($baseLevels[$idx] ?? 'extra_' . $idx));
+                    $data["education_{$tableNum}"][$levelKey] = [
+                        'school_name' => $row->school_name,
+                        'basic_education' => $row->degree_course,
+                        'from' => $row->from,
+                        'to' => $row->to,
+                        'highest_level' => $row->highest_level,
+                        'year_graduated' => $row->year_graduated,
+                        'scholarship_acadhonors' => $row->academic_honors,
+                    ];
+                }
             }
+        }
+
+        // Only persist if data actually changed
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        if ($draft && $draft->data !== $data) {
+            $draft->data = $data;
+            $draft->save();
+        }
+
+        return $data;
+    }
+
+    /**
+     * Sync form5 work experience data from pds_form5_remarks table to draft format.
+     * ALWAYS rebuilds from DB to ensure consistency (e.g., after rejection).
+     */
+    private function syncForm5DataFromDb(int $userId, array $data): array
+    {
+        // If draft already has form5 work-experience data (from autosave), preserve it.
+        // Only rebuild from DB when draft is missing these keys entirely
+        // (e.g., first load, or after admin cleared the draft post-rejection).
+        $hasDraftForm5 = !empty($data['duration']) || !empty($data['position_title'])
+                      || !empty($data['office_unit']);
+
+        if ($hasDraftForm5) {
+            return $data;
+        }
+
+        $remarks = DB::table('pds_form5_remarks')
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->get();
+
+        if ($remarks->isEmpty()) {
+            return $data;
+        }
+
+        $data['duration'] = $remarks->pluck('duration')->toArray();
+        $data['position_title'] = $remarks->pluck('position_title')->toArray();
+        $data['office_unit'] = $remarks->pluck('office_unit')->toArray();
+        $data['immediate_supervisor'] = $remarks->pluck('immediate_supervisor')->toArray();
+        $data['agency_location'] = $remarks->pluck('agency_location')->toArray();
+        $data['duties'] = $remarks->pluck('duties')->toArray();
+
+        // Rebuild accomplishments_indexed (per-row buckets)
+        $accomplishmentsIndexed = [];
+        foreach ($remarks as $remark) {
+            $acc = $remark->accomplishments;
+            if (is_string($acc)) {
+                $acc = json_decode($acc, true);
+            }
+            $accomplishmentsIndexed[] = is_array($acc) ? array_values($acc) : [];
+        }
+        $data['accomplishments_indexed'] = $accomplishmentsIndexed;
+
+        // Flatten all accomplishments for the accomplishments[] field
+        $allAccomplishments = [];
+        foreach ($accomplishmentsIndexed as $bucket) {
+            foreach ($bucket as $item) {
+                $allAccomplishments[] = $item;
+            }
+        }
+        $data['accomplishments'] = $allAccomplishments;
+
+        // Persist date5 if present on first remark
+        $first = $remarks->first();
+        if (!empty($first->date5) && empty($data['date5'])) {
+            $data['date5'] = $first->date5;
+        }
+
+        // Persist rebuilt data to draft
+        $draft = PdsDraft::where('user_id', $userId)->first();
+        if ($draft && $draft->data !== $data) {
+            $draft->data = $data;
+            $draft->save();
         }
 
         return $data;
@@ -376,6 +550,7 @@ class PdsStepController extends Controller
         // Remove education_N / learning_N keys only when incoming explicitly sends that key with all-empty values.
         // If a key is simply absent from incoming, it means the table wasn't in the DOM at save time
         // (e.g. page-load autosave fires before the restore recreates the table), so preserve it.
+        $emptied = [];
         foreach ($incoming as $key => $value) {
             if (preg_match('/^(education|learning)_\d+$/', $key) && is_array($value)) {
                 $allEmpty = true;
@@ -384,11 +559,13 @@ class PdsStepController extends Controller
                 });
                 if ($allEmpty) {
                     unset($existing[$key]);
+                    $emptied[$key] = true;
                 }
             }
         }
 
         foreach ($incoming as $key => $value) {
+            if (isset($emptied[$key])) continue;
             $existing[$key] = $value;
         }
 
@@ -411,7 +588,7 @@ class PdsStepController extends Controller
         $draft->data = $this->replaceArrays($existingData, $data);
         $draft->save();
 
-        session(['pds' => $draft->data, 'pds_owner' => $userId]);
+        session(['pds' => $this->compressSessionData($draft->data), 'pds_owner' => $userId]);
 
         return $draft;
     }

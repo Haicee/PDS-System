@@ -16,12 +16,14 @@ use App\Models\PdsDraft;
 use App\Models\PdsForm5Remark;
 use App\Services\PdsFileService;
 use App\Services\PdsPersistenceService;
+use App\Repositories\PdsRepository;
 
 class PdsSubmissionController extends Controller
 {
     public function __construct(
         private PdsFileService $fileService,
         private PdsPersistenceService $persistenceService,
+        private PdsRepository $repository,
     ) {}
 
     public function store(Request $request)
@@ -40,12 +42,11 @@ class PdsSubmissionController extends Controller
 
         $request->merge($merged);
 
-        session(['pds' => $merged]);
         $photoPath = $this->fileService->storePhoto($request, $userId);
         $signaturePath = $this->fileService->storeSignature($request, $userId);
         $rowHasData = function (array $row): bool {
             // Exclude meta fields that are always present — only check actual data columns
-            return collect(array_diff_key($row, ['user_id' => true, 'id' => true]))
+            return collect(array_diff_key($row, ['user_id' => true, 'id' => true, 'source' => true]))
                 ->some(fn ($v) => strlen(trim((string) $v)) > 0);
         };
 
@@ -108,9 +109,12 @@ class PdsSubmissionController extends Controller
 
         $alreadySubmitted = PdsSubmission::where('user_id', $userId)->exists();
 
-        DB::transaction(function () use ($request, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath, $existingPhotoPath, $existingSignaturePath, $existingThumbmarkPath, $draftData) {
+        // Collect allInputs once outside transaction to avoid repeated $req->all()
+        $allInputs = $request->all();
+
+        DB::transaction(function () use ($allInputs, $request, $userId, $rowHasData, $validateNa, $signaturePath, $photoPath, $existingPhotoPath, $existingSignaturePath, $existingThumbmarkPath, $draftData) {
             $req = $request;
-            $this->persistenceService->persistForm1($userId, $req->all());
+            $this->persistenceService->persistForm1($userId, $allInputs);
 
             DB::table('pds_declarations')->updateOrInsert(
                 ['user_id' => $userId],
@@ -144,12 +148,14 @@ class PdsSubmissionController extends Controller
                 ]
             );
 
+            // --- Education (batch delete + insert) ---
             DB::table('pds_education_records')->where('user_id', $userId)->delete();
             $eduArray = collect($req->input('education', []));
 
             $edu = $eduArray->map(function ($row, $level) use ($userId) {
                 return [
                     'user_id' => $userId,
+                    'source' => 'main',
                     'level' => $level,
                     'school_name' => $row['school_name'] ?? null,
                     'degree_course' => $row['basic_education'] ?? null,
@@ -175,39 +181,15 @@ class PdsSubmissionController extends Controller
                 $edu = collect([$edu->first()]);
             }
 
-            $extraLevels  = $this->draftFallback($req, $draftData, 'education_extra_level');
-            $extraSchools = $this->draftFallback($req, $draftData, 'education_extra_school_name');
-            $extraBasics  = $this->draftFallback($req, $draftData, 'education_extra_basic_education');
-            $extraFrom    = $this->draftFallback($req, $draftData, 'education_extra_from');
-            $extraTo      = $this->draftFallback($req, $draftData, 'education_extra_to');
-            $extraHighest = $this->draftFallback($req, $draftData, 'education_extra_highest_level');
-            $extraYear    = $this->draftFallback($req, $draftData, 'education_extra_year_graduated');
-            $extraHonors  = $this->draftFallback($req, $draftData, 'education_extra_scholarship_acadhonors');
-
-            $extraEdu = collect($extraLevels)->map(function ($level, $i) use ($userId, $extraSchools, $extraBasics, $extraFrom, $extraTo, $extraHighest, $extraYear, $extraHonors) {
-                return [
-                    'user_id' => $userId,
-                    'level' => $level ?? null,
-                    'school_name' => $extraSchools[$i] ?? null,
-                    'degree_course' => $extraBasics[$i] ?? null,
-                    'from' => $extraFrom[$i] ?? null,
-                    'to' => $extraTo[$i] ?? null,
-                    'highest_level' => $extraHighest[$i] ?? null,
-                    'year_graduated' => $extraYear[$i] ?? null,
-                    'academic_honors' => $extraHonors[$i] ?? null,
-                ];
-            })->filter($rowHasData);
-
-            // Collect data from dynamic education tables (education_1, education_2, etc.)
+            // Collect dynamic education (education_1, education_2, etc.) from allInputs
             $dynamicEdu = collect();
-            $allInputs = $req->all();
+            $hasDynamicEdu = false;
             foreach ($allInputs as $key => $value) {
-                if (preg_match('/^education_(\d+)$/', $key, $matches)) {
-                    $tableData = $value;
-                    if (!is_array($tableData)) continue;
+                if (preg_match('/^education_(\d+)$/', $key)) {
+                    if (!is_array($value)) continue;
+                    $hasDynamicEdu = true;
 
-                    // Each dynamic education table has rows for different levels
-                    foreach ($tableData as $level => $row) {
+                    foreach ($value as $level => $row) {
                         if (!is_array($row)) continue;
 
                         $hasData = collect($row)->some(fn ($v) => strlen(trim((string) ($v ?? ''))) > 0);
@@ -215,6 +197,7 @@ class PdsSubmissionController extends Controller
 
                         $dynamicEdu->push([
                             'user_id' => $userId,
+                            'source' => 'added',
                             'level' => $level,
                             'school_name' => $row['school_name'] ?? null,
                             'degree_course' => $row['basic_education'] ?? null,
@@ -228,12 +211,43 @@ class PdsSubmissionController extends Controller
                 }
             }
 
+            // Only use legacy education_extra_* path if no education_N dynamic keys exist
+            $extraEdu = collect();
+            if (!$hasDynamicEdu) {
+                $extraLevels  = $this->draftFallback($req, $draftData, 'education_extra_level');
+                $extraSchools = $this->draftFallback($req, $draftData, 'education_extra_school_name');
+                $extraBasics  = $this->draftFallback($req, $draftData, 'education_extra_basic_education');
+                $extraFrom    = $this->draftFallback($req, $draftData, 'education_extra_from');
+                $extraTo      = $this->draftFallback($req, $draftData, 'education_extra_to');
+                $extraHighest = $this->draftFallback($req, $draftData, 'education_extra_highest_level');
+                $extraYear    = $this->draftFallback($req, $draftData, 'education_extra_year_graduated');
+                $extraHonors  = $this->draftFallback($req, $draftData, 'education_extra_scholarship_acadhonors');
+
+                $extraEdu = collect($extraLevels)->map(function ($level, $i) use ($userId, $extraSchools, $extraBasics, $extraFrom, $extraTo, $extraHighest, $extraYear, $extraHonors) {
+                    return [
+                        'user_id' => $userId,
+                        'source' => 'added',
+                        'level' => $level ?? null,
+                        'school_name' => $extraSchools[$i] ?? null,
+                        'degree_course' => $extraBasics[$i] ?? null,
+                        'from' => $extraFrom[$i] ?? null,
+                        'to' => $extraTo[$i] ?? null,
+                        'highest_level' => $extraHighest[$i] ?? null,
+                        'year_graduated' => $extraYear[$i] ?? null,
+                        'academic_honors' => $extraHonors[$i] ?? null,
+                    ];
+                })->filter($rowHasData);
+            }
+
             $allEdu = $edu->concat($extraEdu)->concat($dynamicEdu);
 
             if ($allEdu->isNotEmpty()) {
-                DB::table('pds_education_records')->insert($allEdu->values()->all());
+                foreach ($allEdu->values()->chunk(500) as $chunk) {
+                    DB::table('pds_education_records')->insert($chunk->all());
+                }
             }
 
+            // --- Eligibilities (batch delete + insert) ---
             $elig = collect($req->input('eligibility', []))->map(function ($val, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -245,13 +259,15 @@ class PdsSubmissionController extends Controller
                     'validity' => $req->input("validity.$i"),
                 ];
             })->filter($rowHasData)->values();
+            DB::table('pds_eligibilities')->where('user_id', $userId)->delete();
             if ($elig->isNotEmpty()) {
                 $validateNa([$req->input('eligibility', [])], 'Eligibilities');
-                $this->syncTableRows('pds_eligibilities', $elig, $userId);
-            } else {
-                DB::table('pds_eligibilities')->where('user_id', $userId)->delete();
+                foreach ($elig->chunk(500) as $chunk) {
+                    DB::table('pds_eligibilities')->insert($chunk->all());
+                }
             }
 
+            // --- Work Experience (batch delete + insert) ---
             $work = collect($req->input('work_from', []))->map(function ($from, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -263,12 +279,14 @@ class PdsSubmissionController extends Controller
                     'govt_service' => $req->input("work_govt_service.$i"),
                 ];
             })->filter($rowHasData)->values();
+            DB::table('pds_work_experiences')->where('user_id', $userId)->delete();
             if ($work->isNotEmpty()) {
-                $this->syncTableRows('pds_work_experiences', $work, $userId);
-            } else {
-                DB::table('pds_work_experiences')->where('user_id', $userId)->delete();
+                foreach ($work->chunk(500) as $chunk) {
+                    DB::table('pds_work_experiences')->insert($chunk->all());
+                }
             }
 
+            // --- Voluntary Work (batch delete + insert) ---
             $vol = collect($req->input('voluntary_organization', []))->map(function ($org, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -280,17 +298,19 @@ class PdsSubmissionController extends Controller
                     'position' => $req->input("voluntary_position_nature_of_work.$i"),
                 ];
             })->filter($rowHasData)->values();
+            DB::table('pds_voluntary_work')->where('user_id', $userId)->delete();
             if ($vol->isNotEmpty()) {
                 $validateNa([$req->input('voluntary_organization', [])], 'Voluntary work');
-                $this->syncTableRows('pds_voluntary_work', $vol, $userId);
-            } else {
-                DB::table('pds_voluntary_work')->where('user_id', $userId)->delete();
+                foreach ($vol->chunk(500) as $chunk) {
+                    DB::table('pds_voluntary_work')->insert($chunk->all());
+                }
             }
 
-            // Collect main training table data
+            // --- Training (batch delete + insert, no nested transaction) ---
             $mainTrain = collect($req->input('learning_title_of_ld', []))->map(function ($title, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
+                    'source' => 'main',
                     'title' => $title,
                     'from' => $req->input("learning_from.$i"),
                     'to' => $req->input("learning_to.$i"),
@@ -300,53 +320,59 @@ class PdsSubmissionController extends Controller
                 ];
             })->filter($rowHasData);
 
-            // Collect data from dynamic training tables (learning_1, learning_2, etc.)
+            // Collect dynamic training (learning_1, learning_2, etc.) — sorted naturally
             $extraTrain = collect();
-            $allInputs = $req->all();
-            foreach ($allInputs as $key => $value) {
-                if (preg_match('/^learning_(\d+)$/', $key, $matches)) {
-                    $tableData = $value;
-                    $titles = $tableData['title_of_ld'] ?? [];
-                    foreach ($titles as $i => $title) {
-                        // Check if any data field has content (excluding user_id)
-                        $hasData = collect([$title, $tableData['from'][$i] ?? null, $tableData['to'][$i] ?? null, $tableData['hours'][$i] ?? null, $tableData['type_of_ld'][$i] ?? null, $tableData['conducted_sponsored_by'][$i] ?? null])
-                            ->some(fn ($v) => strlen(trim((string) $v)) > 0);
-                        if (!$hasData) continue;
+            $learningKeys = collect(array_keys($allInputs))
+                ->filter(fn ($k) => preg_match('/^learning_(\d+)$/', $k))
+                ->sort(function ($a, $b) {
+                    preg_match('/(\d+)/', $a, $ma);
+                    preg_match('/(\d+)/', $b, $mb);
+                    return (int)$ma[1] <=> (int)$mb[1];
+                });
+            foreach ($learningKeys as $key) {
+                $tableData = $allInputs[$key];
+                $titles = $tableData['title_of_ld'] ?? [];
+                foreach ($titles as $i => $title) {
+                    $hasData = collect([$title, $tableData['from'][$i] ?? null, $tableData['to'][$i] ?? null, $tableData['hours'][$i] ?? null, $tableData['type_of_ld'][$i] ?? null, $tableData['conducted_sponsored_by'][$i] ?? null])
+                        ->some(fn ($v) => strlen(trim((string) $v)) > 0);
+                    if (!$hasData) continue;
 
-                        $extraTrain->push([
-                            'user_id' => $userId,
-                            'title' => $title,
-                            'from' => $tableData['from'][$i] ?? null,
-                            'to' => $tableData['to'][$i] ?? null,
-                            'hours' => $tableData['hours'][$i] ?? null,
-                            'type_of_ld' => $tableData['type_of_ld'][$i] ?? null,
-                            'conducted_by' => $tableData['conducted_sponsored_by'][$i] ?? null,
-                        ]);
-                    }
+                    $extraTrain->push([
+                        'user_id' => $userId,
+                        'source' => 'added',
+                        'title' => $title,
+                        'from' => $tableData['from'][$i] ?? null,
+                        'to' => $tableData['to'][$i] ?? null,
+                        'hours' => $tableData['hours'][$i] ?? null,
+                        'type_of_ld' => $tableData['type_of_ld'][$i] ?? null,
+                        'conducted_by' => $tableData['conducted_sponsored_by'][$i] ?? null,
+                    ]);
                 }
             }
 
-            // Merge main and extra training data
-            $train = $mainTrain->concat($extraTrain)->values();
-
-            if ($train->isNotEmpty()) {
-                $validateNa([$req->input('learning_title_of_ld', [])], 'Training');
-                $this->syncTableRows('pds_training_programs', $train, $userId);
-            } else {
-                DB::table('pds_training_programs')->where('user_id', $userId)->delete();
+            $validateNa([$req->input('learning_title_of_ld', [])], 'Training');
+            DB::table('pds_training_programs')->where('user_id', $userId)->delete();
+            $allTraining = $mainTrain->concat($extraTrain)->values();
+            if ($allTraining->isNotEmpty()) {
+                foreach ($allTraining->chunk(500) as $chunk) {
+                    DB::table('pds_training_programs')->insert($chunk->all());
+                }
             }
 
+            // --- Other Info (batch delete + insert) ---
             $skills = collect($req->input('special_skills_hobbies', []))->map(fn ($v) => ['category' => 'skills', 'description' => $v]);
             $recognition = collect($req->input('non_academic_distinctions_recognition', []))->map(fn ($v) => ['category' => 'recognition', 'description' => $v]);
             $assoc = collect($req->input('membership_in_association_organization', []))->map(fn ($v) => ['category' => 'association', 'description' => $v]);
             $otherCombined = $skills->concat($recognition)->concat($assoc)->map(fn ($row) => array_merge($row, ['user_id' => $userId]))->filter($rowHasData);
+            DB::table('pds_other_info')->where('user_id', $userId)->delete();
             if ($otherCombined->isNotEmpty()) {
                 $validateNa([$req->input('special_skills_hobbies', []), $req->input('non_academic_distinctions_recognition', []), $req->input('membership_in_association_organization', [])], 'Other info');
-                $this->syncTableRows('pds_other_info', $otherCombined->values(), $userId);
-            } else {
-                DB::table('pds_other_info')->where('user_id', $userId)->delete();
+                foreach ($otherCombined->values()->chunk(500) as $chunk) {
+                    DB::table('pds_other_info')->insert($chunk->all());
+                }
             }
 
+            // --- References (batch delete + insert) ---
             $refs = collect($req->input('reference_name', []))->map(function ($name, $i) use ($req, $userId) {
                 return [
                     'user_id' => $userId,
@@ -364,9 +390,10 @@ class PdsSubmissionController extends Controller
 
             DB::table('pds_references')->where('user_id', $userId)->delete();
             if ($refs->isNotEmpty()) {
-                DB::table('pds_references')->insert($refs->all());
+                DB::table('pds_references')->insert($refs->values()->all());
             }
 
+            // --- Form 5 Remarks ---
             PdsForm5Remark::where('user_id', $userId)->delete();
 
             $durations = $req->input('duration', []);
@@ -413,7 +440,7 @@ class PdsSubmissionController extends Controller
                     ];
                 }
             }
-            
+
             if (!empty($workExperienceData)) {
                 foreach ($workExperienceData as $row) {
                     PdsForm5Remark::create($row);
@@ -443,32 +470,30 @@ class PdsSubmissionController extends Controller
                     ]
                 );
 
-                    PdsRejection::where('user_id', $userId)->delete();
+                PdsRejection::where('user_id', $userId)->delete();
             }
 
-            // Clear training and extra education data from draft since it's now in DB
-            // This prevents duplication when form reloads and syncs from DB
+            // Clear dynamic table keys from draft since data is now in DB
             $draft = PdsDraft::where('user_id', $userId)->first();
             if ($draft && !empty($draft->data)) {
-                $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-                // Remove all learning-related keys (main table and dynamic tables)
-                $trainingKeys = [
-                    'learning_title_of_ld', 'learning_from', 'learning_to',
-                    'learning_hours', 'learning_type_of_ld', 'learning_conducted_sponsored_by'
-                ];
-                foreach ($trainingKeys as $key) {
-                    unset($draftData[$key]);
+                $cleanData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
+                $staleKeys = ['learning_title_of_ld', 'learning_from', 'learning_to',
+                    'learning_hours', 'learning_type_of_ld', 'learning_conducted_sponsored_by'];
+                foreach ($staleKeys as $key) {
+                    unset($cleanData[$key]);
                 }
-                // Remove all learning_N and education_N keys (dynamic tables)
-                foreach (array_keys($draftData) as $key) {
+                foreach (array_keys($cleanData) as $key) {
                     if (preg_match('/^(learning|education)_\d+$/', $key)) {
-                        unset($draftData[$key]);
+                        unset($cleanData[$key]);
                     }
                 }
-                $draft->data = $draftData;
+                $draft->data = $cleanData;
                 $draft->save();
             }
         });
+
+        // Clear cache after successful submission
+        $this->repository->clearCache($userId);
 
         session()->forget('pds');
 
@@ -483,26 +508,6 @@ class PdsSubmissionController extends Controller
         return back()->with('status', 'PDS saved');
     }
 
-    private function syncTableRows(string $table, \Illuminate\Support\Collection $rows, int $userId): void
-    {
-        $existing = DB::table($table)->where('user_id', $userId)->orderBy('id')->get();
-
-        $rows->each(function ($row, $idx) use ($table, $existing) {
-            $existingRow = $existing[$idx] ?? null;
-            if ($existingRow) {
-                DB::table($table)->where('id', $existingRow->id)->update($row);
-            }
-        });
-
-        if ($rows->count() > $existing->count()) {
-            DB::table($table)->insert($rows->slice($existing->count())->all());
-        }
-
-        if ($rows->count() < $existing->count()) {
-            DB::table($table)->whereIn('id', $existing->slice($rows->count())->pluck('id'))->delete();
-        }
-    }
-
     private function draftFallback(Request $request, array $draftData, string $key): mixed
     {
         $val = $request->input($key);
@@ -513,6 +518,11 @@ class PdsSubmissionController extends Controller
     {
         $base = $draft;
         foreach ($session as $key => $value) {
+            // For dynamic table keys, draft is authoritative — session may
+            // have been compressed/corrupted by removeEmptyRows.
+            if (preg_match('/^(education|learning)_\d+$/', $key) && isset($base[$key])) {
+                continue;
+            }
             $base[$key] = $value;
         }
         foreach ($incoming as $key => $value) {

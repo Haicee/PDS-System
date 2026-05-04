@@ -4,158 +4,89 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Models\PdsRejection;
-use App\Models\PdsSubmission;
 use App\Models\PdsForm5Remark;
-use App\Services\PdsDraftDataService;
+use App\Repositories\PdsRepository;
 
 class PdsController extends Controller
 {
-    public function __construct(private PdsDraftDataService $draftDataService) {}
+    public function __construct(private PdsRepository $repository) {}
 
     public function view()
     {
         $userId = $this->requireUserId();
-
+        $pdsData = $this->repository->getAllPdsData($userId);
         [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
-        $personal = DB::table('pds_personal_infos')->where('user_id', $userId)->first();
-        $address = DB::table('pds_addresses')->where('user_id', $userId)->first();
-        $contact = DB::table('pds_contact_infos')->where('user_id', $userId)->first();
-        $idInfo = DB::table('pds_id_infos')->where('user_id', $userId)->first();
+        $family = $pdsData['family'];
+        $education = $pdsData['education'];
 
-        $family   = DB::table('pds_family_members')->where('user_id', $userId)->get();
-        $spouse   = $family->where('type', 'spouse')->first();
-        $father   = $family->where('type', 'father')->first();
-        $mother   = $family->where('type', 'mother')->first();
-        $children = $family->where('type', 'child')->values();
+        // Build extra education tables using repository
+        $extraEduTables = $this->repository->buildExtraEducationTables($education);
 
-        // Fetch education from database (authoritative source for review)
-        $education = DB::table('pds_education_records')->where('user_id', $userId)->get();
-
-        // Build extra education tables from DB data (split non-base levels into separate tables)
-        $extraEduTables = collect();
-        if ($education->isNotEmpty()) {
-            $baseLevels = ['elementary', 'secondary', 'vocational', 'college', 'graduate_studies'];
-            $extraRows = $education->filter(fn ($row) => !in_array(strtolower($row->level), $baseLevels))->values();
-
-            // Create extra tables (5 rows per table)
-            $extraTableCount = ceil($extraRows->count() / 5);
-            for ($i = 0; $i < $extraTableCount; $i++) {
-                $tableRows = $extraRows->slice($i * 5, 5)->values();
-                $extraEduTables->push($tableRows->map(fn ($row) => [
-                    'level' => $row->level,
-                    'school_name' => $row->school_name,
-                    'degree_course' => $row->degree_course,
-                    'basic_education' => $row->degree_course,
-                    'from' => $row->from,
-                    'to' => $row->to,
-                    'highest_level' => $row->highest_level,
-                    'year_graduated' => $row->year_graduated,
-                    'academic_honors' => $row->academic_honors,
-                    'scholarship_acadhonors' => $row->academic_honors,
-                ]));
-            }
-        }
-
-        // Fallback: load from draft only when DB is empty
-        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
-        if ($draft && !empty($draft->data) && $education->isEmpty()) {
-            $data = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $extraEduTables = $this->draftDataService->buildExtraEduTables($data);
-        }
-        $eligibilities = DB::table('pds_eligibilities')->where('user_id', $userId)->get();
-        $work = DB::table('pds_work_experiences')->where('user_id', $userId)->orderByDesc('from')->get();
-        $voluntary = DB::table('pds_voluntary_work')->where('user_id', $userId)->orderByDesc('from')->get();
-        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
-        
-        return view('pdsreview.pdsreview1', compact(
-            'personal',
-            'address',
-            'contact',
-            'idInfo',
-            'spouse',
-            'father',
-            'mother',
-            'children',
-            'education',
-            'extraEduTables',
-            'eligibilities',
-            'work',
-            'voluntary',
-            'declaration',
-            'signaturePath',
-            'photoPath'
-        ));
+        return view('pdsreview.pdsreview1', [
+            'personal' => $pdsData['personal'],
+            'address' => $pdsData['address'],
+            'contact' => $pdsData['contact'],
+            'idInfo' => $pdsData['idInfo'],
+            'spouse' => $family->where('type', 'spouse')->first(),
+            'father' => $family->where('type', 'father')->first(),
+            'mother' => $family->where('type', 'mother')->first(),
+            'children' => $family->where('type', 'child')->values(),
+            'education' => $education,
+            'extraEduTables' => $extraEduTables,
+            'eligibilities' => $pdsData['eligibilities'],
+            'work' => $pdsData['workExperiences'],
+            'voluntary' => $pdsData['voluntaryWorks'],
+            'declaration' => $pdsData['declaration'],
+            'signaturePath' => $signaturePath,
+            'photoPath' => $photoPath,
+        ]);
     }
 
     public function review2()
     {
         $userId = $this->requireUserId();
-
+        $pdsData = $this->repository->getAllPdsData($userId);
         [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
-        $eligibilities = DB::table('pds_eligibilities')
-            ->where('user_id', $userId)
-            ->where(function ($query) {
-                $query->whereNotNull('eligibility')
-                      ->where('eligibility', '!=', '')
-                      ->whereNotIn('eligibility', ['NA', 'N/A', 'NONE']);
-            })
-            ->get();
-        $workExperiences = DB::table('pds_work_experiences')->where('user_id', $userId)->get();
-        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
-
-        return view('pdsreview.pdsreview2', compact('eligibilities', 'workExperiences', 'declaration', 'signaturePath', 'photoPath'));
+        return view('pdsreview.pdsreview2', [
+            'eligibilities' => $pdsData['eligibilities'],
+            'workExperiences' => $pdsData['workExperiences'],
+            'declaration' => $pdsData['declaration'],
+            'signaturePath' => $signaturePath,
+            'photoPath' => $photoPath,
+        ]);
     }
 
     public function review3()
     {
         $userId = $this->requireUserId();
-
+        $pdsData = $this->repository->getAllPdsData($userId);
         [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
-        $voluntaryWorks = DB::table('pds_voluntary_work')
-            ->where('user_id', $userId)
-            ->get();
+        $training = $pdsData['training'];
 
-        // Fetch training from database (authoritative source for review)
-        $training = DB::table('pds_training_programs')
-            ->where('user_id', $userId)
-            ->get();
+        // Build extra training tables using repository
+        $extraTrainingTables = $this->repository->buildExtraTrainingTables($training['added']);
 
-        // Extra training tables (dynamic tables) only exist in drafts
-        $draft = DB::table('pds_drafts')->where('user_id', $userId)->first();
-        $extraTrainingTables = collect();
-        if ($draft && !empty($draft->data)) {
-            $draftData = is_array($draft->data) ? $draft->data : json_decode($draft->data, true);
-            $extraTrainingTables = $this->draftDataService->buildExtraTrainingTables($draftData);
-        }
-
-        $other = DB::table('pds_other_info')
-            ->where('user_id', $userId)
-            ->get();
-
-        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
-
-        return view('pdsreview.pdsreview3', compact('voluntaryWorks', 'training', 'extraTrainingTables', 'other', 'declaration', 'signaturePath', 'photoPath'));
+        return view('pdsreview.pdsreview3', [
+            'voluntaryWorks' => $pdsData['voluntaryWorks'],
+            'training' => $training['main'],
+            'extraTrainingTables' => $extraTrainingTables,
+            'other' => $pdsData['otherInfo'],
+            'declaration' => $pdsData['declaration'],
+            'signaturePath' => $signaturePath,
+            'photoPath' => $photoPath,
+        ]);
     }
 
     public function review4()
     {
         $userId = $this->requireUserId();
-
+        $pdsData = $this->repository->getAllPdsData($userId);
         [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
-        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
-        $idInfo = DB::table('pds_id_infos')->where('user_id', $userId)->first();
-        $references = DB::table('pds_references')
-            ->where('user_id', $userId)
-            ->orderBy('id')
-            ->limit(7)
-            ->get();
         $passportPhotoUrl = null;
         if ($photoPath) {
             $filename = basename($photoPath);
@@ -165,19 +96,27 @@ class PdsController extends Controller
             }
         }
 
-        return view('pdsreview.pdsreview4', compact('declaration', 'idInfo', 'references', 'passportPhotoUrl', 'signaturePath'));
+        return view('pdsreview.pdsreview4', [
+            'declaration' => $pdsData['declaration'],
+            'idInfo' => $pdsData['idInfo'],
+            'references' => $pdsData['references'],
+            'passportPhotoUrl' => $passportPhotoUrl,
+            'signaturePath' => $signaturePath,
+        ]);
     }
 
     public function review5()
     {
         $userId = $this->requireUserId();
-
+        $pdsData = $this->repository->getAllPdsData($userId);
         [$signaturePath, $photoPath] = $this->getSignaturePaths($userId);
 
-        $workExperiences = PdsForm5Remark::where('user_id', $userId)->orderBy('id')->get();
-        $declaration = DB::table('pds_declarations')->where('user_id', $userId)->first();
-
-        return view('pdsreview.pdsreview5', compact('workExperiences', 'declaration', 'signaturePath', 'photoPath'));
+        return view('pdsreview.pdsreview5', [
+            'workExperiences' => $pdsData['remarks'],
+            'declaration' => $pdsData['declaration'],
+            'signaturePath' => $signaturePath,
+            'photoPath' => $photoPath,
+        ]);
     }
 
     private function requireUserId(): int
@@ -191,11 +130,12 @@ class PdsController extends Controller
 
     private function getSignaturePaths(int $userId): array
     {
-        $row = DB::table('pds_signature_files')->where('user_id', $userId)->first();
+        $signatureFiles = $this->repository->getSignatureFiles($userId);
 
         return [
             ($row->signature_file_path ?? null) === 'NA' ? null : ($row->signature_file_path ?? null),
             ($row->photo_file_path ?? null) === 'NA' ? null : ($row->photo_file_path ?? null),
         ];
     }
+
 }

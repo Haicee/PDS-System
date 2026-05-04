@@ -233,13 +233,29 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('[loadCache] serverData normalized:', serverData);
     }
 
-    // IMPORTANT: localStorage takes priority even for empty values
-    if (localData && Object.keys(localData).length > 0) {
-      data = { ...(serverData || {}), ...localData };
-      console.log('[loadCache] merged data (localStorage wins):', data);
+    // Merge: start with server data, then for array fields keep whichever has more non-empty values
+    if (localData && Object.keys(localData).length > 0 && serverData && Object.keys(serverData).length > 0) {
+      data = { ...serverData };
+      const workArrayKeys = ['duration[]','position_title[]','office_unit[]','immediate_supervisor[]','agency_location[]','accomplishments[]','duties[]','accomplishments_indexed'];
+      Object.entries(localData).forEach(([k, v]) => {
+        if (workArrayKeys.includes(k) && Array.isArray(v) && Array.isArray(data[k])) {
+          // Keep whichever has more non-empty entries
+          const localNonEmpty = v.filter(x => x !== '' && x !== null && x !== undefined).length;
+          const serverNonEmpty = data[k].filter(x => x !== '' && x !== null && x !== undefined).length;
+          if (localNonEmpty > serverNonEmpty) {
+            data[k] = v;
+          }
+        } else if (!(k in data)) {
+          data[k] = v;
+        }
+      });
+      console.log('[loadCache] merged data (server wins, localStorage fills gaps):', data);
     } else if (serverData && Object.keys(serverData).length > 0) {
       data = serverData;
       console.log('[loadCache] using serverData only:', data);
+    } else if (localData && Object.keys(localData).length > 0) {
+      data = localData;
+      console.log('[loadCache] using localStorage only:', data);
     } else {
       data = {};
       console.log('[loadCache] no data, starting fresh');

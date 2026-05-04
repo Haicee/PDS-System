@@ -262,13 +262,14 @@
       <th class="border text-center font-light bg-[#e7e7e7]">TO</th>
      </tr>
 
-      @php
-    $trainingRows = ($training ?? collect())->values(); // keep user-entered order
-    $maxTraining = max(21, $trainingRows->count());
+@php
+    // Main table shows all training rows continuously
+    $mainTrainingRows = ($training ?? collect())->values();
+    $maxTraining = max(21, $mainTrainingRows->count());
 @endphp
 
 @for ($i = 0; $i < $maxTraining; $i++)
-  @php $trow = $trainingRows[$i] ?? null; @endphp
+  @php $trow = $mainTrainingRows[$i] ?? null; @endphp
   <tr>
     <td class="border align-middle text-center">{{ $trow->title ?? ' ' }}</td>
     <td class="border align-middle text-center">{{ $trow ? (format_pds_date($trow->from) ?: ($i === 0 ? 'NA' : ' ')) : ($i === 0 ? 'NA' : ' ') }}</td>
@@ -282,16 +283,13 @@
     </table>
 
 @php
-    $dbTrTitles = ($training ?? collect())
-        ->map(fn($r) => strtoupper(trim((string)($r->title ?? ''))))
-        ->filter()->values();
-    $filteredExtraTables = collect($extraTrainingTables ?? [])->map(
-        fn($tbl) => collect($tbl)->filter(
-            fn($row) => $dbTrTitles->doesntContain(strtoupper(trim((string)($row->title ?? ''))))
-        )
-    )->filter(fn($t) => $t->isNotEmpty());
+  // Extra training tables - each dynamic table is shown separately (continuous, not chunked)
+  $extraTrainingTablesList = collect($extraTrainingTables ?? [])->filter(function($table) {
+    return $table->isNotEmpty();
+  })->values();
 @endphp
-@foreach($filteredExtraTables as $draftKey => $extraTable)
+
+@foreach($extraTrainingTablesList as $extraTable)
 <table class="border border-black w-full font-['Arial_Narrow','Arial',sans-serif]">
   <colgroup>
     <col style="width: 45.5%;">
@@ -303,7 +301,7 @@
   </colgroup>
   <tr>
     <th class="font-['Arial_Narrow','Arial',sans-serif] text-left bg-[#8a8a8a] text-white italic text-xl px-2 border-2 border-black font-bold" colspan="6">
-      VII.  LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED
+      VII. LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS/TRAINING PROGRAMS ATTENDED (Continued)
     </th>
   </tr>
   <tr class="border">

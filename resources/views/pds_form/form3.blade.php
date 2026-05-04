@@ -1623,13 +1623,46 @@ window.addLearningTable = function() {
         f.value = '';
     });
 
-    // Keep only 5 data rows (header rows = those containing <th>)
-    let dataRowCount = 0;
-    newTable.querySelectorAll('tr').forEach(row => {
-        if (!row.querySelector('th')) {
-            dataRowCount++;
-            if (dataRowCount > 5) row.remove();
+    // Keep only 45 data rows (header rows = those containing <th>)
+    // First, get all data rows (rows without <th>)
+    const dataRows = Array.from(newTable.querySelectorAll('tr')).filter(row => !row.querySelector('th'));
+    const tbody = dataRows[0]?.parentElement;
+    console.log(`[AddTraining] Initial row count: ${dataRows.length}, target: 45`);
+    
+    // Remove excess rows if more than 45
+    if (dataRows.length > 45) {
+        for (let i = 45; i < dataRows.length; i++) {
+            dataRows[i].remove();
         }
+        console.log(`[AddTraining] Removed excess rows, now: 45`);
+    }
+    // Add rows if less than 45 (clone the last data row)
+    else if (dataRows.length < 45 && tbody) {
+        const lastRow = dataRows[dataRows.length - 1];
+        const rowsNeeded = 45 - dataRows.length;
+        console.log(`[AddTraining] Adding ${rowsNeeded} rows to reach 45`);
+        for (let i = 0; i < rowsNeeded; i++) {
+            const newRow = lastRow.cloneNode(true);
+            // Clear values in the new row
+            newRow.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
+                f.value = '';
+                // Update name to include new index if needed
+                const origName = f.getAttribute('name');
+                if (origName) {
+                    // Name is already mapped above, just ensure it's unique per row
+                    f.setAttribute('name', origName);
+                }
+            });
+            tbody.appendChild(newRow);
+        }
+        const finalCount = Array.from(newTable.querySelectorAll('tr')).filter(r => !r.querySelector('th')).length;
+        console.log(`[AddTraining] Final row count: ${finalCount}`);
+    }
+
+    // Enable all fields (prevent disabled state from clone)
+    newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
+        f.removeAttribute('disabled');
+        f.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
     });
 
     // Ensure date inputs are hidden (clone may have inherited visible state from original)
@@ -1775,7 +1808,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tableIndices.size === 0) return;
 
-        const merged = Object.assign({}, serverFlat, localData);
+        // Server data is authoritative for learning_N keys — localStorage may be stale/truncated
+        const merged = Object.assign({}, localData, serverFlat);
 
         // Only restore indices that have at least one non-empty value
         const indicesWithData = new Set();
@@ -1792,11 +1826,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (raw) JSON.parse(raw).forEach(i => removedIndices.add(i));
         } catch(e) {}
 
-        // Seed flat-only keys into localStorage (skip removed)
+        // Seed server data into localStorage (server is authoritative, skip removed)
         flatLearningKeys.forEach(key => {
             const m = key.match(/^learning_(\d+)\[/);
             if (m && removedIndices.has(parseInt(m[1], 10))) return;
-            if (!(key in localData)) localData[key] = serverFlat[key];
+            localData[key] = serverFlat[key];
         });
         try { localStorage.setItem(sk, JSON.stringify(localData)); } catch(e) {}
 
@@ -1849,25 +1883,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 'learning_conducted_sponsored_by[]':`learning_${index}[conducted_sponsored_by][]`,
             };
 
-            // Rename fields and populate from merged data
+            // Rename fields
             newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
                 const orig = f.getAttribute('name');
                 if (orig && fieldMap[orig]) f.setAttribute('name', fieldMap[orig]);
                 f.removeAttribute('required');
             });
 
-            // Populate values
+            // Pad to 45 rows BEFORE populating so all values have a target field
+            const dataRows = Array.from(newTable.querySelectorAll('tr')).filter(row => !row.querySelector('th'));
+            const tbody = dataRows[0]?.parentElement;
+            if (dataRows.length > 45) {
+                for (let i = 45; i < dataRows.length; i++) {
+                    dataRows[i].remove();
+                }
+            } else if (dataRows.length < 45 && tbody) {
+                const lastRow = dataRows[dataRows.length - 1];
+                const rowsNeeded = 45 - dataRows.length;
+                for (let i = 0; i < rowsNeeded; i++) {
+                    const newRow = lastRow.cloneNode(true);
+                    newRow.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
+                        f.value = '';
+                        const origName = f.getAttribute('name');
+                        if (origName) f.setAttribute('name', origName);
+                    });
+                    tbody.appendChild(newRow);
+                }
+            }
+
+            // Populate values — collect indexed keys per field name prefix, then fill in order
+            const fieldGroups = {};
             newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
                 const name = f.getAttribute('name');
-                if (name && merged[name] !== undefined) f.value = merged[name];
+                if (!name) return;
+                if (!fieldGroups[name]) fieldGroups[name] = [];
+                fieldGroups[name].push(f);
             });
-
-            // Keep only 5 data rows
-            let dataRowCount = 0;
-            newTable.querySelectorAll('tr').forEach(row => {
-                if (!row.querySelector('th')) {
-                    dataRowCount++;
-                    if (dataRowCount > 5) row.remove();
+            Object.entries(fieldGroups).forEach(([name, fields]) => {
+                // Direct match (localStorage flat keys)
+                if (merged[name] !== undefined) {
+                    const val = merged[name];
+                    if (Array.isArray(val)) {
+                        // Array value — distribute across fields
+                        fields.forEach((f, i) => { if (val[i] !== undefined) f.value = val[i]; });
+                    } else {
+                        fields.forEach(f => { f.value = val; });
+                    }
+                    return;
+                }
+                // Indexed match: learning_1[title_of_ld][] → learning_1[title_of_ld][0], [1], ...
+                const prefix = name.replace(/\[\]$/, '');
+                const vals = [];
+                for (let i = 0; i < 100; i++) {
+                    const key = `${prefix}[${i}]`;
+                    if (merged[key] !== undefined) vals.push(merged[key]);
+                    else break;
+                }
+                if (vals.length > 0) {
+                    fields.forEach((f, i) => { if (vals[i] !== undefined) f.value = vals[i]; });
                 }
             });
 
@@ -1896,6 +1969,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         d.style.display = 'none';
                     });
                 }
+            });
+
+            // Enable all fields in restored table (prevents disabling from sequential logic clone)
+            newTable.querySelectorAll('textarea, input:not([type="button"]):not([type="submit"])').forEach(f => {
+                f.removeAttribute('disabled');
+                f.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
             });
         });
     }, 300);
