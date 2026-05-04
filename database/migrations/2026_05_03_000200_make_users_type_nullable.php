@@ -13,7 +13,10 @@ return new class extends Migration
 
         if ($driver === 'pgsql') {
             DB::statement('ALTER TABLE users ALTER COLUMN type DROP NOT NULL');
+        } elseif ($driver === 'mysql') {
+            DB::statement("ALTER TABLE `users` MODIFY `type` ENUM('Permanent Employee','Contract of Service','Job Order') NULL");
         } else {
+            // Fallback for drivers that support change() without DBAL
             Schema::table('users', function (Blueprint $table) {
                 $table->enum('type', [
                     'Permanent Employee',
@@ -31,6 +34,8 @@ return new class extends Migration
         if ($driver === 'pgsql') {
             DB::statement("ALTER TABLE users ALTER COLUMN type SET NOT NULL");
             DB::statement("ALTER TABLE users ALTER COLUMN type SET DEFAULT 'Permanent Employee'");
+        } elseif ($driver === 'mysql') {
+            DB::statement("ALTER TABLE `users` MODIFY `type` ENUM('Permanent Employee','Contract of Service','Job Order') NOT NULL DEFAULT 'Permanent Employee'");
         } else {
             Schema::table('users', function (Blueprint $table) {
                 $table->enum('type', [
